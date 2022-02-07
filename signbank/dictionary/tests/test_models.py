@@ -96,7 +96,7 @@ class GlossTestCase(TestCase):
         """Tests the field idgloss_mi."""
         # Check that the max_length can't be exceeded.
         with self.assertRaises(DataError):
-            en = Gloss.objects.create(idgloss="testgloss_en", idgloss_mi="äöå1@r" * 10 + "1", dataset=self.dataset,
+            en = Gloss.objects.create(idgloss="testgloss_en", idgloss_mi="äöå1@räöå1" * 10 + "1", dataset=self.dataset,
                                       created_by=self.user, updated_by=self.user)
 
     def test_created_by(self):

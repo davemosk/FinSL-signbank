@@ -325,7 +325,7 @@ class Gloss(models.Model):
                                help_text=_("""This is the unique identifying name of a Gloss."""))
     # Translators: Gloss field: idgloss_mi (english), verbose name
     #: Gloss in Māori. This is the Māori name of the Gloss.
-    idgloss_mi = models.CharField(_("Gloss in Māori"), blank=True, max_length=60,
+    idgloss_mi = models.CharField(_("Gloss in Māori"), blank=True, null=True, max_length=150,
                                   # Translators: Help text for Gloss field: idgloss_mi (maori)
                                   help_text=_("""This is the Māori name for the Gloss"""))
                                       # Translators: Gloss field: idgloss_mi (maori), verbose name
@@ -463,6 +463,13 @@ class Gloss(models.Model):
         # Translators: Help text for Gloss models field: number_of_occurences
         help_text=_("Number of occurences in annotation materials"))
 
+    #: Hints are aids for hearing learners of NZSL to help them to produce or remember the Gloss.
+    hint = models.TextField(_("Hint"), null=True, blank=True)
+
+    #: The signer of this Gloss.
+    signer = models.ForeignKey("Signer", null=True, verbose_name=_("Signer"),
+            help_text=_("Signer for the Gloss"), on_delete=models.PROTECT)
+    
     def __str__(self):
         return self.idgloss
 
@@ -628,6 +635,21 @@ class MorphologyDefinition(models.Model):
 
     def __str__(self):
         return str(self.morpheme.idgloss) + ' is ' + str(self.role) + ' of ' + str(self.parent_gloss.idgloss)
+
+
+@python_2_unicode_compatible
+class Signer(models.Model):
+    """The list of signers"""
+    #: Signer name.
+    name = models.CharField(max_length=150, unique=False)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = _('Signer')
+        verbose_name_plural = _('Signers')
+
+    def __str__(self):
+        return self.name
 
 
 # Register Models for django-tagging to add wrappers around django-tagging API.

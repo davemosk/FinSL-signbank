@@ -16,7 +16,7 @@ from guardian.admin import GuardedModelAdmin
 
 from tagging.models import TaggedItem, Tag
 
-from .models import Dataset, Gloss, Translation, GlossURL, Language, SignLanguage, Dialect, FieldChoice, GlossRelation,\
+from .models import Dataset, Gloss, Signer, Translation, GlossURL, Language, SignLanguage, Dialect, FieldChoice, GlossRelation,\
     AllowedTags, GlossTranslations
 from ..video.admin import GlossVideoInline
 
@@ -174,7 +174,7 @@ class GlossAdmin(VersionAdmin):
     readonly_fields = ('created_at', 'created_by', 'updated_at', 'updated_by',)
     actions = [publish, unpublish, exclude_from_ecv, include_in_ecv]
 
-    fieldsets = ((None, {'fields': ('dataset', 'published', 'exclude_from_ecv', 'idgloss', 'idgloss_mi', 'notes',)},),
+    fieldsets = ((None, {'fields': ('dataset', 'published', 'exclude_from_ecv', 'idgloss', 'idgloss_mi', 'notes', 'hint', 'signer')},),
                  (_('Created/Updated'), {'fields': ('created_at', 'created_by', 'updated_at', 'updated_by')},),
                  (_('Phonology'), {'fields': ('handedness', 'location', 'strong_handshape', 'weak_handshape',
                                               'relation_between_articulators', 'absolute_orientation_palm',
@@ -244,6 +244,9 @@ class FieldChoiceAdmin(admin.ModelAdmin):
     model = FieldChoice
     list_display = ('field', 'english_name', 'machine_value',)
 
+#class SignerAdmin(GuardedModelAdmin, ModelTranslationAdmin):
+ #   model = Dataset
+  #  list_display = ('name', 'is_public', 'signlanguage',)
 
 admin.site.register(Language, LanguageAdmin)
 admin.site.register(SignLanguage, SignLanguageAdmin)
