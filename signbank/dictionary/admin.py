@@ -244,9 +244,9 @@ class FieldChoiceAdmin(admin.ModelAdmin):
     model = FieldChoice
     list_display = ('field', 'english_name', 'machine_value',)
 
-#class SignerAdmin(GuardedModelAdmin, ModelTranslationAdmin):
- #   model = Dataset
-  #  list_display = ('name', 'is_public', 'signlanguage',)
+class SignerAdmin(VersionAdmin):
+    model = Signer
+    list_display = ('name',)
 
 admin.site.register(Language, LanguageAdmin)
 admin.site.register(SignLanguage, SignLanguageAdmin)
@@ -255,6 +255,7 @@ admin.site.register(Translation, TranslationAdmin)
 admin.site.register(Dataset, DatasetAdmin)
 admin.site.register(GlossRelation, GlossRelationAdmin)
 admin.site.register(AllowedTags, AllowedTagsAdmin)
+admin.site.register(Signer, SignerAdmin)
 
 # The following models have been removed from the admin because they are not used at the moment.
 # admin.site.register(FieldChoice, FieldChoiceAdmin)

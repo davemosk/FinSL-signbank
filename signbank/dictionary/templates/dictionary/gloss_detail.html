@@ -373,6 +373,11 @@ $('#id_comment').atwho({
                         </form>
                     </td>
                 </tr>
+                {# Translators: Information about a Gloss #}
+                <tr>
+                    <th>{% blocktrans %}Signer:{% endblocktrans %}</th>
+                    <td id='signer'>{{gloss.signer}}</td>
+                </tr>
                 <tr>
                     <th>{% blocktrans %}Created:{% endblocktrans %}</th>
                     <td id='created'>{% if gloss.created_at %}<span class="glyphicon glyphicon-time" aria-hidden="true"></span> <em>{{ gloss.created_at|date:'Y-m-d H:i' }}</em> <span class="glyphicon glyphicon-user" aria-hidden="true"></span> {{ gloss.created_by.username }}{% endif %}</td>
