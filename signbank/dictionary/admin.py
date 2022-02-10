@@ -134,7 +134,7 @@ class GlossTagInline(TagAdminInline):
 
 class GlossTranslationsInline(admin.TabularInline):
     model = GlossTranslations
-    fields = ('language', 'translations', )
+    fields = ('language', 'translations', 'translations_secondary', 'translations_minor')
     extra = 0
 
     def has_add_permission(self, request):

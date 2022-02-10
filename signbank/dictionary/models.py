@@ -62,6 +62,10 @@ class GlossTranslations(models.Model):
     language = models.ForeignKey("Language", verbose_name=_("Language"), on_delete=models.CASCADE)
     #: The fields that contains the translations, a text field.
     translations = models.TextField(blank=True)
+    #: The fields that contains the secondary translations, a text field.
+    translations_secondary = models.TextField(blank=True)
+    #: The fields that contains the minor translations, a text field.
+    translations_minor = models.TextField(blank=True)
 
     class Meta:
         unique_together = (("gloss", "language"),)
@@ -106,8 +110,13 @@ class GlossTranslations(models.Model):
         """Returns keywords parsed from self.translations."""
         # Remove number(s) that end with a dot (e.g. '1.') from the 'value'.
         translations_cleaned = re.sub('\d\.', '', str(self.translations))
+        translations_cleaned_secondary = re.sub('\d\.', '', str(self.translations_secondary))
+        translations_cleaned_minor = re.sub('\d\.', '', str(self.translations_minor))
+
+        all_translations_cleaned = translations_cleaned + ',' + translations_cleaned_secondary + ',' + translations_cleaned_minor
+
         # Splitting the remaining string on comma, dot or semicolon. Then strip spaces around the keyword(s).
-        keywords = [k.strip() for k in re.split('[,.;]', translations_cleaned)]
+        keywords = [k.strip() for k in re.split('[,.;]', all_translations_cleaned)]
         return keywords
 
     def get_keywords_unique(self):
@@ -117,9 +126,6 @@ class GlossTranslations(models.Model):
     def has_duplicates(self):
         keywords_str = self.get_keywords()
         return len(keywords_str) != (len(set(keywords_str)))
-
-    def __str__(self):
-        return self.translations
 
 
 @python_2_unicode_compatible
@@ -503,7 +509,8 @@ class Gloss(models.Model):
                 # Get translations from GlossTranslation object, if it exists for gloss+language.
                 translation_list.append(GlossTranslations.objects.get(gloss=self, language=language))
             except GlossTranslations.DoesNotExist:
-                # If it doesn't exist, try to get translations from Translation objects.
+                translation_list.append(GlossTranslations.objects.filter(gloss=self, language=language))
+                """# If it doesn't exist, try to get translations from Translation objects.
                 translations = Translation.objects.filter(gloss=self, language=language)
                 kwd_str = ""
                 first = True
@@ -513,7 +520,7 @@ class Gloss(models.Model):
                         first = False
                     else:
                         kwd_str += ", " + trans.keyword.text
-                translation_list.append(kwd_str)
+                translation_list.append(kwd_str)"""
 
         return list(zip(translation_languages, translation_list))
 

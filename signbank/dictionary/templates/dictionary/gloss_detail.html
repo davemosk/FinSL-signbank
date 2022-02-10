@@ -329,7 +329,25 @@ $('#id_comment').atwho({
                                title="{% blocktrans %}After each translation enter a comma (,) or a semicolon (;).
                                Usage of numbers that end with a dot (.) is allowed (e.g. 11.) and they will not be part
                                of translations.{% endblocktrans %}"></span>:</th>
-                    <td class='edit edit_area_translations' id='keywords_{{ translation_language.language_code_2char }}'>{{ translations }}</td>
+                    <td>
+                        <table>
+                            <tr>
+                                <td>{% blocktrans %}Major {% endblocktrans %}</td>
+                                <td>&nbsp;</td>
+                                <td class='edit edit_area_translations' id='keywords_{{ translation_language.language_code_2char }}'>{{ translations.translations }}</td>
+                            </tr>
+                            <tr>
+                                <td>{% blocktrans %}Secondary {% endblocktrans %}</td>
+                                <td>&nbsp;</td>
+                                <td class='edit edit_area_translations' id='keywords_secondary_{{ translation_language.language_code_2char }}'>{{ translations.translations_secondary }}</td>
+                            </tr>
+                            <tr>
+                                <td>{% blocktrans %}Minor {% endblocktrans %}</td>
+                                <td>&nbsp;</td>
+                                <td class='edit edit_area_translations' id='keywords_minor_gloss_{{ translation_language.language_code_2char }}'>{{ translations.translations_minor }}</td>
+                            </tr>       
+                        </table>    
+                    </td>
                 </tr>
                 {% endfor %}
 
