@@ -648,7 +648,7 @@ class MorphologyDefinition(models.Model):
 class Signer(models.Model):
     """The list of signers"""
     #: Signer name.
-    name = models.CharField(max_length=150, unique=False)
+    name = models.CharField(max_length=150, unique=True)
 
     class Meta:
         ordering = ['name']

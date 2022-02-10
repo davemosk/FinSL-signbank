@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from django.forms import Textarea
+from django.db import models
 from django.contrib import admin
 from django.utils.translation import ugettext as _
 from django.utils.translation import ugettext_lazy as _lazy
@@ -134,6 +136,9 @@ class GlossTagInline(TagAdminInline):
 
 class GlossTranslationsInline(admin.TabularInline):
     model = GlossTranslations
+    formfield_overrides = {
+        models.TextField: {'widget': Textarea(attrs={'rows':5, 'cols':50})},
+    }
     fields = ('language', 'translations', 'translations_secondary', 'translations_minor')
     extra = 0
 
