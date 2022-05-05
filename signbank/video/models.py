@@ -13,6 +13,10 @@ from django.utils.module_loading import import_string
 from django.utils.translation import ugettext_lazy as _
 
 
+class GlossVideoDynamicStorage(import_string(settings.GLOSS_VIDEO_FILE_STORAGE)):
+    pass
+
+
 class GlossVideoStorage(FileSystemStorage):
     """Video storage, handles saving to directories based on filenames first two characters."""
 
@@ -38,11 +42,11 @@ class GlossVideo(models.Model):
     title = models.CharField(_("Title"), blank=True, unique=False, max_length=100,
                              help_text=_("Descriptive name of the video."))
     #: Video file of the GlossVideo.
-    videofile = models.FileField(_("Video file"), storage=import_string(settings.GLOSS_VIDEO_FILE_STORAGE)(),
+    videofile = models.FileField(_("Video file"), storage=GlossVideoDynamicStorage(),
                                  help_text=_("Video file."))
     #: Poster image of the GlossVideo.
     posterfile = models.FileField(_("Poster file"), upload_to=os.path.join("posters"),
-                                  storage=import_string(settings.GLOSS_VIDEO_FILE_STORAGE)(), blank=True,
+                                  storage=GlossVideoDynamicStorage(), blank=True,
                                   help_text=_("Still image representation of the video."), default="")
     #: Boolean: Is this GlossVideo public? Do you want to show it in the public interface, for a published Gloss?
     is_public = models.BooleanField(
