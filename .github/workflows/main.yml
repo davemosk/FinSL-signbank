@@ -16,4 +16,4 @@ jobs:
     - name: Check logs
       run: docker-compose logs backend
     - name: Run test suite
-      run: docker-compose run backend python3 bin/develop.py test
+      run: docker-compose run backend python3 bin/runtests.py
