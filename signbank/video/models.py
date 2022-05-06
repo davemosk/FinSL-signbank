@@ -13,10 +13,6 @@ from django.utils.module_loading import import_string
 from django.utils.translation import ugettext_lazy as _
 
 
-class GlossVideoDynamicStorage(import_string(settings.GLOSS_VIDEO_FILE_STORAGE)):
-    pass
-
-
 class GlossVideoStorage(FileSystemStorage):
     """Video storage, handles saving to directories based on filenames first two characters."""
 
@@ -33,6 +29,10 @@ class GlossVideoStorage(FileSystemStorage):
 
     def url(self, name):
         return os.path.join(self.base_url, name)
+
+
+class GlossVideoDynamicStorage(import_string(settings.GLOSS_VIDEO_FILE_STORAGE)):
+    pass
 
 
 @python_2_unicode_compatible
