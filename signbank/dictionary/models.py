@@ -534,6 +534,11 @@ class Gloss(models.Model):
     #: Adding filmbatch which holds records of which 'batch' of recordings the video is from.
     filmbatch = models.CharField(max_length=150, null=True, blank=True, help_text="Which batch of recordings the video is from")
 
+    #: Adding sign ID number field
+    sn = models.IntegerField(_("Sign Number"),
+                             help_text="Sign Number must be a unique integer and defines the ordering of signs in the dictionary",
+                             null=True, blank=True, unique=True)
+
     def __str__(self):
         return self.idgloss
 
