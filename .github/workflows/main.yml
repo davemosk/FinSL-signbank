@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - feature/deploy-to-heroku
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,7 +19,7 @@ jobs:
     - name: Run test suite
       run: docker-compose run backend python3 bin/runtests.py
     - name: Deploy app to Heroku
-      if: github.ref == 'refs/heads/feature/deploy-to-heroku'
+      if: github.ref == 'refs/heads/master'
       env:
         HEROKU_API_KEY: ${{secrets.HEROKU_UAT_API_KEY}}
         HEROKU_APP_NAME: ${{secrets.HEROKU_UAT_APP_NAME}}
