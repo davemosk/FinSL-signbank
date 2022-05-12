@@ -332,6 +332,16 @@ def build_choice_list(field):
     except OperationalError:
         return choice_list
 
+#: This function mimics the auto-incrementing feature for sign id field.
+#: All the data that has been migrated from Freelex already has a value for this, this method will be mainly used
+#: when adding new dictionary_gloss items through signbank.
+def get_sn_id():
+    largest_sn = getattr((Gloss.objects.all().order_by('sn').last()), 'sn')
+
+    if not largest_sn or largest_sn < 8000:
+        return 8000
+
+    return largest_sn + 1
 
 @python_2_unicode_compatible
 class Gloss(models.Model):
@@ -537,7 +547,7 @@ class Gloss(models.Model):
     #: Adding sign ID number field
     sn = models.IntegerField(_("Sign Number"),
                              help_text="Sign Number must be a unique integer and defines the ordering of signs in the dictionary",
-                             null=True, blank=True, unique=True)
+                             null=True, blank=True, unique=True, default=get_sn_id)
 
     def __str__(self):
         return self.idgloss
