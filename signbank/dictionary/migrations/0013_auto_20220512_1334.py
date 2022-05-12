@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='gloss',
             name='sn',
-            field=models.IntegerField(blank=True, default=signbank.dictionary.models.from_8000, help_text='Sign Number must be a unique integer and defines the ordering of signs in the dictionary', null=True, unique=True, verbose_name='Sign Number'),
+            field=models.IntegerField(blank=True, default=signbank.dictionary.models.get_sn_id, help_text='Sign Number must be a unique integer and defines the ordering of signs in the dictionary', null=True, unique=True, verbose_name='Sign Number'),
         ),
     ]
