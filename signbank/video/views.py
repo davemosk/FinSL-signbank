@@ -281,8 +281,10 @@ def update_glossvideo(request):
                         glossvideo.video_type = FieldChoice.objects.get(
                             machine_value=item['video_type'])
                         if 'view_dataset' in get_perms(request.user, glossvideo.gloss.dataset):
-                            # Set version number.
-                            glossvideo.version = glossvideo.next_version()
+                            # Set version number if there is not already one
+                            if glossvideo.version is None:
+                                glossvideo.version = glossvideo.next_version()
+
                             # Save if user has permission to add videos to the selected dataset.
                             glossvideo.save()
                         else:
@@ -313,7 +315,10 @@ def update_glossvideo(request):
                     # Make sure that the user has rights to edit this datasets glosses.
                     if 'view_dataset' in get_perms(request.user, glossvideo.gloss.dataset):
                         # Set version number.
-                        glossvideo.version = glossvideo.next_version()
+                        # Set version number if there is not already one
+                        if glossvideo.version is None:
+                            glossvideo.version = glossvideo.next_version()
+
                         # Save if user has permission to add videos to the selected dataset.
                         glossvideo.save()
                     else:
