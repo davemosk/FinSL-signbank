@@ -78,7 +78,8 @@ def upload_glossvideo_gloss(request):
             video.save()
 
             redirect_url = form.cleaned_data['redirect']
-            return redirect(redirect_url)
+            if redirect_url:
+                return redirect(redirect_url)
 
     if 'HTTP_REFERER' in request.META:
         url = request.META['HTTP_REFERER']
