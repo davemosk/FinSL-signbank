@@ -213,6 +213,23 @@ $('#id_comment').atwho({
                                 <div class="poster-edit">
                                     <button type="button" class="btn btn-success" id="vidbtn-{{glossvideo.pk}}" onclick="grabScreenshot({{glossvideo.pk}})" data-toggle="modal" data-target="#glossvideo{{glossvideo.pk}}-Modal">{% blocktrans %}Capture new poster image{% endblocktrans %}</button>
                                 </div>
+                                <form class="change-video-type" action="{% url 'video:glossvideo_update' %}" method="post">{% csrf_token %}
+                                    <input type="hidden" name="glossvideo" value="{{glossvideo.pk}}">
+                                    <input type="hidden" name="gloss" value="{{glossvideo.gloss.pk}}">
+
+                                    <select name="video_type" onchange="this.form.submit()">
+                                      {% for value, name in field_choices.video_type.items %}
+                                        <option
+                                            {% if value == glossvideo.video_type.machine_value %}selected {%endif%}
+                                            value="{{value}}">{{name}}</option>
+                                      {% endfor %}
+                                    </select>
+
+                                    <noscript>
+                                        <button type="submit" class="btn btn-sm btn-primary">Change type</button>
+                                    </noscript>
+                                </form>
+
                                 <div class="change-video-publicity">
                                     <form class="change-video-publicity-form" action="{% url 'video:change_glossvideo_publicity' %}" method="post">{% csrf_token %}
                                         <input type="hidden" name="videoid" value="{{glossvideo.pk}}">
@@ -294,6 +311,7 @@ $('#id_comment').atwho({
                                     <input type='hidden' name='gloss' value='{{gloss.pk}}'>
                                     {% bootstrap_field glossvideoform.videofile show_help=False %}
                                     {% bootstrap_field glossvideoform.title %}
+                                    {% bootstrap_field glossvideoform.video_type %}
 
                                     {# Translators: Submit button #}
                                     <input class='btn btn-primary' type='submit'
