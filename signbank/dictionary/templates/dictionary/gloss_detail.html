@@ -185,7 +185,7 @@ $('#id_comment').atwho({
                     {% for glossvideo in gloss.glossvideo_set.all %}
                         <div class="player well well-sm{% if glossvideo.is_public %} video-is-public{% else %} video-not-public{% endif %}">
                             <div class="video-title">
-                                <h4 class="edit edit_text" id="video_title{{glossvideo.pk}}">{{glossvideo.title}}</h4>
+                                <h4 class="edit edit_text" id="video_title{{glossvideo.pk}}">{{glossvideo.title}} - {{glossvideo.video_type}}</h4>
                             </div>
                             <div class="embed-responsive embed-responsive-16by9">
                                 <video id="glossvideo-{{glossvideo.pk}}" class="embed-responsive-item" width="450" preload="metadata" controls muted
