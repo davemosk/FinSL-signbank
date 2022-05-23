@@ -181,7 +181,7 @@ $( document ).ready(function() {
             {% endif %}
             </div>
             <div class="panel-footer">
-            {% for glosstranslations in obj.glosstranslations_set.all %}
+            {% for glosstranslations in obj.glosstranslations_set.all reversed %}
                 <h5><strong>{% blocktrans context "publicglosslist" %}Translation equivalents{% endblocktrans %} ({{ glosstranslations.language }}):</strong></h5>
                 <span class="gloss-keywords">
                     {{glosstranslations.translations}}
