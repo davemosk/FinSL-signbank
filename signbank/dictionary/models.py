@@ -537,6 +537,31 @@ class Gloss(models.Model):
     filmbatch = models.CharField(max_length=150, null=True, blank=True,
                                  help_text="Which batch of recordings the video is from")
 
+    #: Store example content for this sign. This is in two forms:
+    # videoexample[1-4]: The literal translation, annotated with gloss IDs when a gloss is used,
+    #                    as well as editorial annotations.
+    # videoexample[1-4]translation: The translated example sentence in English. This column is
+    #                               natural language and is not annotated.
+    # In the future, this should be combined in some way with glossvideo so that these examples
+    # sit directly alongside, or on a glossvideo.
+    videoexample1 = models.CharField(
+        max_length=255, null=True, blank=True, help_text="Annotated translation for video example 1")
+    videoexample2 = models.CharField(
+        max_length=255, null=True, blank=True, help_text="Annotated translation for video example 2")
+    videoexample3 = models.CharField(
+        max_length=255, null=True, blank=True, help_text="Annotated translation for video example 3")
+    videoexample4 = models.CharField(
+        max_length=255, null=True, blank=True, help_text="Annotated translation for video example 4")
+
+    videoexample1_translation = models.CharField(
+        max_length=255, null=True, blank=True, help_text="Natural language translation for video example 1")
+    videoexample2_translation = models.CharField(
+        max_length=255, null=True, blank=True, help_text="Natural language translation for video example 2")
+    videoexample3_translation = models.CharField(
+        max_length=255, null=True, blank=True, help_text="Natural language translation for video example 3")
+    videoexample4_translation = models.CharField(
+        max_length=255, null=True, blank=True, help_text="Natural language translation for video example 4")
+
     def __str__(self):
         return self.idgloss
 
