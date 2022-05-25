@@ -537,6 +537,10 @@ class Gloss(models.Model):
     filmbatch = models.CharField(max_length=150, null=True, blank=True,
                                  help_text="Which batch of recordings the video is from")
 
+    # concise - boolean indicating gloss is included in print 2002 Concise Dictionary of NZSL.
+    concise = models.BooleanField(_("Concise"), default=False,
+                                    help_text=_("Included in print 2002 Concise Dictionary of NZSL"))
+
     def __str__(self):
         return self.idgloss
 
