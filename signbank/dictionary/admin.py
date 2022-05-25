@@ -177,10 +177,10 @@ include_in_ecv.short_description = _("Include glosses in ECV")
 class GlossAdmin(VersionAdmin):
     # Making sure these fields are not edited in admin
     readonly_fields = ('id', 'created_at', 'created_by',
-                       'updated_at', 'updated_by',)
+                       'updated_at', 'updated_by', 'filmbatch')
     actions = [publish, unpublish, exclude_from_ecv, include_in_ecv]
 
-    fieldsets = ((None, {'fields': ('dataset', 'published', 'exclude_from_ecv', 'id', 'idgloss', 'idgloss_mi', 'notes', 'hint', 'signer')},),
+    fieldsets = ((None, {'fields': ('dataset', 'published', 'exclude_from_ecv', 'id', 'idgloss', 'idgloss_mi', 'notes', 'hint', 'signer', 'filmbatch')},),
                  (_('Created/Updated'), {'fields': ('created_at',
                   'created_by', 'updated_at', 'updated_by')},),
                  (_('Phonology'), {'fields': ('handedness', 'location', 'strong_handshape', 'weak_handshape',
@@ -193,6 +193,11 @@ class GlossAdmin(VersionAdmin):
                                    'classes': ('collapse',)},),
                  (_('Semantics'), {'fields': ('iconic_image', 'named_entity', 'semantic_field'),
                                    'classes': ('collapse',)}),
+                 (_('Examples'), {'fields': (
+                     ('videoexample1', 'videoexample1_translation'),
+                     ('videoexample2', 'videoexample2_translation'),
+                     ('videoexample3', 'videoexample3_translation'),
+                     ('videoexample4', 'videoexample4_translation'))}),
                  (_('Frequency'), {
                   'fields': ('number_of_occurences',), 'classes': ('collapse',)}),
                  )
