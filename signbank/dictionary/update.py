@@ -168,13 +168,8 @@ def update_gloss(request, glossid):
 
                     # Some fields take ints
                     # if valdict.keys() != [] and type(valdict.keys()[0]) == int:
-                    try:
-                        newvalue = valdict.get(int(value), value)
-                    # else:
-                    except:
-                        # either it's not an int or there's no flatchoices
-                        # so here we use get with a default of the value itself
-                        newvalue = valdict.get(value, value)
+                    newvalue = valdict.get(
+                        int(value)) or valdict.get(value) or value
 
             # If field is idgloss and if the value has changed
             # Then change the filename on system and in glossvideo.videofile
