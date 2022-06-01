@@ -92,10 +92,11 @@ def update_gloss(request, glossid):
                 # Translators: HttpResponseBadRequest
                 return HttpResponseBadRequest("%s %s" % _("Unknown Dialect"), values, content_type='text/plain')
         elif field == 'wordclass':
-            # expecting possibly multiple values
             try:
-                wordclasses = FieldChoice.objects.filter(
-                    machine_value__in=values)
+                # Find fieldchoices that meet the wordclass association's limit choices
+                # that match the provided machine values
+                wordclasses = FieldChoice.objects.complex_filter(Gloss._meta.get_field(
+                    "wordclasses").get_limit_choices_to()).filter(machine_value__in=values)
                 gloss.wordclasses.set(wordclasses)
                 gloss.save()
                 newvalue = ", ".join([str(wc.english_name)
