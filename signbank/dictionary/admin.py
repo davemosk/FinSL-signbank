@@ -6,7 +6,7 @@ from django.contrib.contenttypes.admin import GenericTabularInline
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.forms import ModelForm, Textarea
+from django.forms import CheckboxSelectMultiple, ModelForm, Textarea
 from django.utils.translation import ugettext as _
 from django.utils.translation import ugettext_lazy as _lazy
 from guardian.admin import GuardedModelAdmin
@@ -228,6 +228,11 @@ class GlossAdmin(VersionAdmin):
         obj.created_by = request.user
         obj.updated_by = request.user
         obj.save()
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['wordclasses'].widget = CheckboxSelectMultiple()
+        return form
 
     def save_formset(self, request, form, formset, change):
         """Saves the formsets created_by and updated_by with request.user"""
