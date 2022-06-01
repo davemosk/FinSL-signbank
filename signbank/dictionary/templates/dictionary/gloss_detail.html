@@ -391,6 +391,12 @@ $('#id_comment').atwho({
                     <th>{% blocktrans %}Hint:{% endblocktrans %}</th>
                     <td class='edit edit_area_notes' id='hint'>{% value gloss.hint %}</td>
                 </tr>
+
+                <tr>
+                    <th>{% blocktrans %}Wordclasses:{% endblocktrans %}</th>
+                    <td class="edit edit_list_multiple" id="wordclass">{{gloss.wordclasses.all|join:", "}}</td>
+                </tr>
+
                 {# Translators: Information about a Gloss #}
                 <tr>
                     <th>{% blocktrans %}Sign language:{% endblocktrans %}</th>
