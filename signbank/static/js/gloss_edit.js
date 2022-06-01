@@ -179,12 +179,16 @@ function configure_edit() {
             data    : choice_lists[$(this).attr('id')]
         });
      });
-     $('.edit_list').on('click', function()
-	 {
+     $('.edit_list').on('click', function() {
+         var choices = choice_lists[$(this).attr('id')];
+         var selected;
+         for (var key in choices ) {
+             choices[key] == this.textContent && (selected = key);
+         }
+
 		 $(this).editable(edit_post_url, {
 		     type      : 'select',
-             multiple: true,
-		     data    : choice_lists[$(this).attr('id')]
+		     data    : $.extend(choice_lists[$(this).attr('id')], { selected: selected })
 		 });
      });
 
