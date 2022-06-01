@@ -180,7 +180,7 @@ class GlossAdmin(VersionAdmin):
                        'updated_at', 'updated_by')
     actions = [publish, unpublish, exclude_from_ecv, include_in_ecv]
 
-    fieldsets = ((None, {'fields': ('dataset', 'published', 'exclude_from_ecv', 'id', 'idgloss', 'idgloss_mi', 'notes', 'hint', 'signer', 'filmbatch')},),
+    fieldsets = ((None, {'fields': ('dataset', 'published', 'exclude_from_ecv', 'id', 'idgloss', 'idgloss_mi', 'wordclasses', 'notes', 'hint', 'signer', 'filmbatch')},),
                  (_('Created/Updated'), {'fields': ('created_at',
                   'created_by', 'updated_at', 'updated_by')},),
                  (_('Phonology'), {'fields': ('handedness', 'location', 'strong_handshape', 'weak_handshape',
@@ -208,7 +208,7 @@ class GlossAdmin(VersionAdmin):
     search_fields = ['^idgloss']
     list_filter = ('dataset', 'published', 'exclude_from_ecv', TagListFilter, )
     inlines = [GlossVideoInline, GlossTranslationsInline, TranslationInline,
-               GlossRelationInline, GlossURLInline, GlossTagInline, ]
+               GlossRelationInline, GlossURLInline, GlossTagInline]
 
     def get_readonly_fields(self, request, obj=None):
         """

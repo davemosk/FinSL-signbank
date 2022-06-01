@@ -506,6 +506,9 @@ class Gloss(models.Model):
     phonetic_variation = models.CharField(
         _("Phonetic Variation"), max_length=50, blank=True, )
 
+    wordclasses = models.ManyToManyField('FieldChoice', verbose_name=_(
+        "Wordclasses"), limit_choices_to={'field': 'wordclass'})
+
     # ### Semantic fields
     # Translators: Gloss models field: iconic_image, verbose name
     iconic_image = models.CharField(
