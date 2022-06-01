@@ -625,7 +625,7 @@ class Gloss(models.Model):
                   'relation_between_articulators', 'absolute_orientation_palm', 'absolute_orientation_fingers',
                   'relative_orientation_movement', 'relative_orientation_location', 'handshape_change',
                   'repeated_movement', 'alternating_movement', 'movement_shape', 'movement_direction',
-                  'movement_manner', 'contact_type', 'named_entity', 'orientation_change', 'semantic_field', 'video_type']
+                  'movement_manner', 'contact_type', 'named_entity', 'orientation_change', 'semantic_field', 'video_type', 'wordclass']
 
         qs = FieldChoice.objects.filter(field__in=fields).values(
             'field', 'machine_value', 'english_name')
