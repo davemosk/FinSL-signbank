@@ -562,6 +562,8 @@ class Gloss(models.Model):
     videoexample4_translation = models.CharField(_("Example video 4 English translation"),
                                                  max_length=255, null=True, blank=True, help_text="English translation for video example 4")
 
+    fingerspelling = models.NullBooleanField(default=False, blank=True, null=True)
+
     def __str__(self):
         return self.idgloss
 
@@ -617,12 +619,12 @@ class Gloss(models.Model):
     @staticmethod
     def get_choice_lists():
         """Return FieldChoices for selected fields in JSON, grouped by field, key = machine_value, value = english_name"""
-        # The fields we want to generate choice lists for
+        # Tjhe fields we want to generate choice lists for
         fields = ['handedness', 'location', 'strong_handshape', 'weak_handshape',
                   'relation_between_articulators', 'absolute_orientation_palm', 'absolute_orientation_fingers',
                   'relative_orientation_movement', 'relative_orientation_location', 'handshape_change',
                   'repeated_movement', 'alternating_movement', 'movement_shape', 'movement_direction',
-                  'movement_manner', 'contact_type', 'named_entity', 'orientation_change', 'semantic_field', 'video_type']
+                  'movement_manner', 'contact_type', 'named_entity', 'orientation_change', 'semantic_field', 'video_type', 'fingerspelling']
 
         qs = FieldChoice.objects.filter(field__in=fields).values(
             'field', 'machine_value', 'english_name')
