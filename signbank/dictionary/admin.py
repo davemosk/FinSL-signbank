@@ -177,10 +177,10 @@ include_in_ecv.short_description = _("Include glosses in ECV")
 class GlossAdmin(VersionAdmin):
     # Making sure these fields are not edited in admin
     readonly_fields = ('id', 'created_at', 'created_by',
-                       'updated_at', 'updated_by')
+                       'updated_at', 'updated_by', 'concise')
     actions = [publish, unpublish, exclude_from_ecv, include_in_ecv]
 
-    fieldsets = ((None, {'fields': ('dataset', 'published', 'exclude_from_ecv', 'id', 'idgloss', 'idgloss_mi', 'wordclasses', 'notes', 'hint', 'signer', 'filmbatch')},),
+    fieldsets = ((None, {'fields': ('dataset', 'published', 'exclude_from_ecv', 'id', 'idgloss', 'idgloss_mi', 'wordclasses', 'notes', 'hint', 'signer', 'filmbatch', 'concise')},),
                  (_('Created/Updated'), {'fields': ('created_at',
                   'created_by', 'updated_at', 'updated_by')},),
                  (_('Morphology'), {'fields': ('inflection_temporal', 'inflection_manner_degree', 'inflection_plural'),
@@ -191,7 +191,7 @@ class GlossAdmin(VersionAdmin):
                                               'relative_orientation_location', 'orientation_change',
                                               'handshape_change', 'repeated_movement', 'alternating_movement',
                                               'movement_shape', 'movement_direction', 'movement_manner', 'contact_type',
-                                              'phonology_other', 'mouth_gesture', 'mouthing', 'phonetic_variation'),
+                                              'phonology_other', 'mouth_gesture', 'mouthing', 'phonetic_variation', 'fingerspelling'),
                                    'classes': ('collapse',)},),
                  (_('Semantics'), {'fields': ('iconic_image', 'named_entity', 'semantic_field'),
                                    'classes': ('collapse',)}),
@@ -208,7 +208,7 @@ class GlossAdmin(VersionAdmin):
     list_display = ['idgloss', 'dataset',
                     'published', 'exclude_from_ecv', 'idgloss_mi']
     search_fields = ['^idgloss']
-    list_filter = ('dataset', 'published', 'exclude_from_ecv', TagListFilter, )
+    list_filter = ('dataset', 'published', 'exclude_from_ecv', 'concise', TagListFilter, )
     inlines = [GlossVideoInline, GlossTranslationsInline, TranslationInline,
                GlossRelationInline, GlossURLInline, GlossTagInline]
 
