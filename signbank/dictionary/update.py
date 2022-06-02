@@ -1,29 +1,31 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-import re
-import csv
 import codecs
+import csv
+import re
 
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden, HttpResponseBadRequest, Http404, \
-    HttpResponseNotAllowed, HttpResponseServerError
-from django.shortcuts import render, get_object_or_404, redirect, reverse
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.decorators import permission_required, login_required
-from django.db.models.fields import BooleanField
-from django.utils.translation import ugettext as _
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.db.models.fields import BooleanField
+from django.http import (Http404, HttpResponse, HttpResponseBadRequest,
+                         HttpResponseForbidden, HttpResponseNotAllowed,
+                         HttpResponseRedirect, HttpResponseServerError)
+from django.shortcuts import get_object_or_404, redirect, render, reverse
+from django.utils.translation import ugettext as _
+from guardian.shortcuts import get_objects_for_user, get_perms
+from tagging.models import Tag, TaggedItem
 
-from tagging.models import TaggedItem, Tag
-from guardian.shortcuts import get_perms, get_objects_for_user
-
-from .models import Gloss, Dataset, Translation, Keyword, Language, Dialect, GlossURL, \
-    GlossRelation, GlossTranslations, FieldChoice, MorphologyDefinition, RelationToForeignSign, Relation
-from .models import build_choice_list
-from .forms import TagsAddForm, TagUpdateForm, TagDeleteForm, GlossRelationForm, RelationForm, \
-    RelationToForeignSignForm, MorphologyForm, CSVUploadForm
 from ..video.models import GlossVideo
+from .forms import (CSVUploadForm, GlossRelationForm, MorphologyForm,
+                    RelationForm, RelationToForeignSignForm, TagDeleteForm,
+                    TagsAddForm, TagUpdateForm)
+from .models import (Dataset, Dialect, FieldChoice, Gloss, GlossRelation,
+                     GlossTranslations, GlossURL, Keyword, Language,
+                     MorphologyDefinition, Relation, RelationToForeignSign,
+                     Translation, build_choice_list)
 
 
 @permission_required('dictionary.change_gloss')
@@ -149,7 +151,8 @@ def update_gloss(request, glossid):
             if value != ' ' or value != '':
                 # See if the field is a ForeignKey
                 if gloss._meta.get_field(field).get_internal_type() == "ForeignKey":
-                    gloss.__setattr__(field, FieldChoice.objects.get(machine_value=value))
+                    gloss.__setattr__(
+                        field, FieldChoice.objects.get(machine_value=value))
                 else:
                     gloss.__setattr__(field, value)
                 gloss.save()
@@ -168,8 +171,12 @@ def update_gloss(request, glossid):
 
                     # Some fields take ints
                     # if valdict.keys() != [] and type(valdict.keys()[0]) == int:
-                    newvalue = valdict.get(
-                        int(value)) or valdict.get(value) or value
+                    try:
+                        newvalue = valdict.get(
+                            int(value)) or valdict.get(value) or value
+                    except ValueError:  # Not an int
+                        newvalue = valdict.get(value) or value
+
 
             # If field is idgloss and if the value has changed
             # Then change the filename on system and in glossvideo.videofile
