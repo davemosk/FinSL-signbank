@@ -564,9 +564,7 @@ class Gloss(models.Model):
                                                  max_length=255, null=True, blank=True, help_text="English translation for video example 3")
     videoexample4_translation = models.CharField(_("Example video 4 English translation"),
                                                  max_length=255, null=True, blank=True, help_text="English translation for video example 4")
-
-
-    fingerspelling = models.NullBooleanField(default=False, blank=True, null=True)
+    fingerspelling = models.NullBooleanField(_("Fingerspelling"), default=False, help_text=_("Does the sign contain fingerspelling?"))
     # inflections - booleans labelled (1)"temporal", (2)"manner and degree", (3)"pluralisation"
     inflection_temporal = models.BooleanField(_("Inflection: Temporal"), default=False, choices=[(True, 'Yes'), (False, 'No')],
                                     help_text=_("Can the sign have a temporal inflection?’"))
@@ -630,7 +628,7 @@ class Gloss(models.Model):
     @staticmethod
     def get_choice_lists():
         """Return FieldChoices for selected fields in JSON, grouped by field, key = machine_value, value = english_name"""
-        # Tjhe fields we want to generate choice lists for
+        # The fields we want to generate choice lists for
         fields = ['handedness', 'location', 'strong_handshape', 'weak_handshape',
                   'relation_between_articulators', 'absolute_orientation_palm', 'absolute_orientation_fingers',
                   'relative_orientation_movement', 'relative_orientation_location', 'handshape_change',
