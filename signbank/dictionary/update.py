@@ -141,7 +141,7 @@ def update_gloss(request, glossid):
                 return HttpResponseBadRequest(_("Unknown field"), content_type='text/plain')
 
             # Translate the value if a boolean
-            if isinstance(Gloss._meta.get_field(field), NullBooleanField):
+            if isinstance(Gloss._meta.get_field(field), NullBooleanField) or (field == 'fingerspelling'):
                 newvalue = value
                 value = (value == 'Yes')
 
