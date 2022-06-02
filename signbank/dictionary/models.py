@@ -506,6 +506,9 @@ class Gloss(models.Model):
     phonetic_variation = models.CharField(
         _("Phonetic Variation"), max_length=50, blank=True, )
 
+    wordclasses = models.ManyToManyField('FieldChoice', verbose_name=_(
+        "Wordclasses"), limit_choices_to={'field': 'wordclass'})
+
     # ### Semantic fields
     # Translators: Gloss models field: iconic_image, verbose name
     iconic_image = models.CharField(
@@ -565,6 +568,14 @@ class Gloss(models.Model):
     # concise - boolean indicating gloss is included in print 2002 Concise Dictionary of NZSL.
     concise = models.BooleanField(_("Concise"), default=False, choices=[(True, 'Yes'), (False, 'No')],
                                      help_text=_("Was this gloss included in print 2002 Concise Dictionary of NZSL?"))
+
+    # inflections - booleans labelled (1)"temporal", (2)"manner and degree", (3)"pluralisation"
+    inflection_temporal = models.BooleanField(_("Inflection: Temporal"), default=False, choices=[(True, 'Yes'), (False, 'No')],
+                                    help_text=_("Can the sign have a temporal inflection?’"))
+    inflection_manner_degree = models.BooleanField(_("Inflection: Manner and Degree"), default=False, choices=[(True, 'Yes'), (False, 'No')],
+                                    help_text=_("Can the sign be inflected for manner and degree?"))
+    inflection_plural = models.BooleanField(_("Inflection: Pluralisation"), default=False, choices=[(True, 'Yes'), (False, 'No')],
+                                    help_text=_("Can the sign have a plural inflection?"))
 
     def __str__(self):
         return self.idgloss
@@ -626,7 +637,7 @@ class Gloss(models.Model):
                   'relation_between_articulators', 'absolute_orientation_palm', 'absolute_orientation_fingers',
                   'relative_orientation_movement', 'relative_orientation_location', 'handshape_change',
                   'repeated_movement', 'alternating_movement', 'movement_shape', 'movement_direction',
-                  'movement_manner', 'contact_type', 'named_entity', 'orientation_change', 'semantic_field', 'video_type']
+                  'movement_manner', 'contact_type', 'named_entity', 'orientation_change', 'semantic_field', 'video_type', 'wordclass']
 
         qs = FieldChoice.objects.filter(field__in=fields).values(
             'field', 'machine_value', 'english_name')
