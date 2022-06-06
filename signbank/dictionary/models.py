@@ -578,6 +578,7 @@ class Gloss(models.Model):
                                     help_text=_("Can the sign be inflected for manner and degree?"))
     inflection_plural = models.BooleanField(_("Inflection: Pluralisation"), default=False, choices=[(True, 'Yes'), (False, 'No')],
                                     help_text=_("Can the sign have a plural inflection?"))
+    locatable = models.BooleanField(default=False, null=False, blank=False)
 
     def __str__(self):
         return self.idgloss
