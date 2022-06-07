@@ -486,7 +486,7 @@ class GlossDetailView(DetailView):
 
                 if field in ['phonology_other', 'mouth_gesture', 'mouthing', 'phonetic_variation', 'iconic_image']:
                     kind = 'text'
-                elif field in ['repeated_movement', 'alternating_movement', 'fingerspelling', 'one_or_two_hand', 'number_incorporated', 'locatable', 'directional', 'inflection_temporaral', 'inflection_manner_degree', 'inflection_plural']:
+                elif field in ['repeated_movement', 'alternating_movement', 'fingerspelling', 'one_or_two_hand', 'number_incorporated', 'locatable', 'directional', 'inflection_temporal', 'inflection_manner_degree', 'inflection_plural']:
                     kind = 'check'
                 else:
                     kind = 'list'
