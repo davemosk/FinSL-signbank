@@ -296,6 +296,13 @@ and proper version pinning, but otherwise doesn't have much value.
   'advanced' view, and the admin view. Generally, the basic view is a
   low-priority for us, and we may remove it entirely in time, since the main
   public interface for Signbank are the NZSL Dictionary applications.
+- If a repository is forked, Github _always_ assumes you are opening a pull
+  request to the upstream, not to a branch in your fork. When opening a PR,
+  ensure you choose 'odnzsl/NZSL-signbank' as the base repository so that the
+  diff is correct (_and so that FinSL doesn't get a giant PR with all of our
+  changes, ever_). Remember that pull requests cannot be deleted, only closed,
+  so making this mistake will live in the history of NZSL-signbank and FinSL
+  forevermore. Ask me how I know.
 
 ### Differences between NZSL Signbank and FinSL Signbank
 
