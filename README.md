@@ -29,7 +29,8 @@ Main features:
 - Use your Glosses in [ELAN][elan-link] with ECV (externally controlled dictionary).
   - ECV's are available for all lexicons automatically.
 - Record videos with a webcam on the website, making the annotation process faster.
-- Upload videos and connect them to glosses.
+- Upload images and videos and connect them to glosses.
+- Organise videos and images based on their purpose
 - Add comments on glosses and tag them.
 - Store relationships between glosses, view a network graph of these relationships.
 - Interface easily translatable to multiple languages.
@@ -268,6 +269,59 @@ Note that the migration does not create a superuser account, this needs to be
 done manually after the migration finishes (it takes 15-20 minutes). The django
 site is also reset to example.com, and needs to be changed for some links (like
 those in emails) to have the correct hostname.
+
+### Assets
+
+This project has a mixture of assets that are built into the source tree (things
+like Bootstrap 3, and a range of older jQuery plugins), and dependencies from
+package.json (like jQuery and recordrtc). This is useful to know, since
+depending on the feature, a developer might be referencing either or both of
+these sources.
+
+We have not yet developed an architecture approach for the frontend of this
+project. It's likely to live on in it's current form for some time, since
+refactoring frontend dependencies into package.json gains us security auditing
+and proper version pinning, but otherwise doesn't have much value.
+
+### Gotchas/known issues
+
+- Parts of the application functionality rely on `FieldChoice` records existing in the database.
+  The Freelex migration scripts create these fieldchoice records, but if you set up this project
+  from scratch, they won't be included by default.
+- The application configuration has been refactored to use environment variables
+  for configuration, rather than `settings_secret.py`. You'll see a warning
+  about this file being missing each time a Django command is run - it can be
+  disregarded.
+- There are three ways glosses are presented - the 'basic' (public) view, the
+  'advanced' view, and the admin view. Generally, the basic view is a
+  low-priority for us, and we may remove it entirely in time, since the main
+  public interface for Signbank are the NZSL Dictionary applications.
+
+### Differences between NZSL Signbank and FinSL Signbank
+
+- We refactored how glossvideos are handled to use the Django File storage APIs.
+  This allowed us to add django-storages and introduce an adapter pattern for
+  file storage so that S3 OR local file storage can be used. FinSL works with
+  local file storage, but not S3, since it was utilising a lot of local `os`
+  commands to move or rename files.
+- We refactored the configuration files to load a lot of settings from
+  environment variables. This allows us to use `.env` files locally, and
+  Heroku's config framework in deployments, to configure the application.
+- Global signbank uses FieldChoices heavily for establishing connections between
+  records. FinSL has walked some of this back to use Tags, and introduced
+  AllowedTags, which enables tags to be 'permitted' for a particular record
+  type. We use a mixture, using tags for editorial purposes, but FieldChoices
+  for gloss data fields where a choice or multiple choices are made from a list.
+- We added support for choosing fieldchoices from checkboxes or a multiselect to
+  enable some many-many relationships added.
+- We added several new datafields to the gloss model to hold data from Freelex
+  (the old editorial tool).
+- We set up Github CI, automated deployments, infrastructure config, and support
+  for running the application in Docker. This was mostly for dev/support
+  convenience since we don't have a lot of in-house Python capability.
+
+The above is a summary of differences between FinSL and NZSL Signbank. For a more up-to-date
+and comprehensive view, Github provides a diff between the two repositories at https://github.com/Signbank/FinSL-signbank/compare/master...ODNZSL:master.
 
 ## Running in production
 
