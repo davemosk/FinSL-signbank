@@ -2,42 +2,31 @@
 
 ## Purpose
 
-NZSL-signbank is a web based database for **sign language** lexicons and
-corpuses, originally based on
-[FinSL-Signbank](https://github.com/Signbank/FinSL-signbank). FinSL-signbank is
-developed based on the needs of Finnish sign language researchers, but can be
-used for any sign language(s) that share similar requirements.
+NZSL-signbank is a web based database for sign language lexicons and
+corpora. The original Signbank (for Auslan) was developed by Steve Cassidy [https://github.com/Signbank/Auslan-signbank][auslan-signbank] and subsequently built upon by other projects, now gathered at [https://github.com/Signbank]. 
 
-Signbank was originally developed by Steve Cassidy
-[https://github.com/Signbank/Auslan-signbank][auslan-signbank]. FinSL-Signbank
-is based on NGT Signbank
-[https://github.com/Signbank/Global-signbank][ngt-signbank], NGT Signbank is a
-branch of Auslan Signbank.
+NZSL-Signbank is most closely based on[FinSL-Signbank](https://github.com/Signbank/FinSL-signbank). The main differences between FinSL-Signbank and NZSL-Signbank are documented in this ReadMe.
 
-This application exists to enable the Deaf Studies Research Unit of Victoria University of Wellington,
-NZ to manage NZSL language data for use in the [NZSL Dictionary](https://nzsl.nz), NZSL Dictionary apps,
-NZSL learning resources, and for research purposes.
+Unlike other Signbanks, NZSL-Signbank is not intended as a public lexicon or dictionary. Instead, the application is used to enable the Deaf Studies Research Unit (DSRU) of Victoria University of Wellington, NZ to manage NZSL language data for use in the [NZSL Dictionary](https://nzsl.nz), NZSL Dictionary apps, NZSL learning resources, and for research purposes.
 
-The application is primarily an application for managed access usage. Precedence is given to research and editorial features over performance.
+The application is primarily intended for managed access usage. Precedence is given to research and editorial features over performance.
 
 ## Overview
 
 Main features:
 
-- Manage and organize sign language lexicons and corpuses.
-- Store multiple lexicons of different sign languages.
+- Manage and organize sign language lexicons and corpora.
+- Store multiple lexicons.
 - Use your Glosses in [ELAN][elan-link] with ECV (externally controlled dictionary).
   - ECV's are available for all lexicons automatically.
-- Record videos with a webcam on the website, making the annotation process faster.
 - Upload images and videos and connect them to glosses.
-- Organise videos and images based on their purpose
+- Organise videos and images based on their purpose.
 - Add comments on glosses and tag them.
-- Store relationships between glosses, view a network graph of these relationships.
-- Interface easily translatable to multiple languages.
+- Store relationships between glosses.
 - Control access to lexicons per user/group.
 - Publish lexicons and their glosses.
-  - Separate interface for published glosses, detailed interface for researchers/annotators.
-- Add translation equivalents to your glosses in any language.
+- Detailed interface for researchers/annotators.
+- add detailed information to glosses including translation equivalents, word class, phonology, morphology, semantics, usage and variation
 
 ## Operations:
 
@@ -211,7 +200,7 @@ To start the application using docker-compose, simply run:
 `docker-compose up`
 
 And the service will start bound to port 8000 on your host, with a companion Postgres database
-running in it's own container, and an SMTP mailcatcher that will receive outbound mail from the application bound to port 1025 on your host.
+running in its own container, and an SMTP mailcatcher that will receive outbound mail from the application bound to port 1025 on your host.
 
 You may wish to run `docker-compose run backend ./bin/develop.py createsuperuser` to set up an admin user.
 
@@ -279,7 +268,7 @@ depending on the feature, a developer might be referencing either or both of
 these sources.
 
 We have not yet developed an architecture approach for the frontend of this
-project. It's likely to live on in it's current form for some time, since
+project. It's likely to live on in its current form for some time, since
 refactoring frontend dependencies into package.json gains us security auditing
 and proper version pinning, but otherwise doesn't have much value.
 
@@ -295,7 +284,7 @@ and proper version pinning, but otherwise doesn't have much value.
 - There are three ways glosses are presented - the 'basic' (public) view, the
   'advanced' view, and the admin view. Generally, the basic view is a
   low-priority for us, and we may remove it entirely in time, since the main
-  public interface for Signbank are the NZSL Dictionary applications.
+  public interface for Signbank is through the NZSL Dictionary applications.
 - If a repository is forked, Github _always_ assumes you are opening a pull
   request to the upstream, not to a branch in your fork. When opening a PR,
   ensure you choose 'odnzsl/NZSL-signbank' as the base repository so that the
