@@ -3,7 +3,7 @@
 ## Purpose
 
 NZSL-signbank is a web based database for sign language lexicons and
-corpora. The original Signbank (for Auslan) was developed by Steve Cassidy [https://github.com/Signbank/Auslan-signbank][auslan-signbank] and subsequently built upon by other projects, now gathered at [https://github.com/Signbank]. 
+corpora. The original Signbank (for Auslan) was developed by Steve Cassidy [https://github.com/Signbank/Auslan-signbank][auslan-signbank] and subsequently built upon by other projects, now gathered at [https://github.com/Signbank].
 
 NZSL-Signbank is most closely based on[FinSL-Signbank](https://github.com/Signbank/FinSL-signbank). The main differences between FinSL-Signbank and NZSL-Signbank are documented in this ReadMe.
 
