@@ -237,9 +237,17 @@ function configure_edit() {
              choices[key] == this.textContent && (selected = key);
          }
 
+         if ($(this).attr("id") === 'assigned_user') {
+            choices = {}
+            assignable_users.forEach(user => {
+                user.label === this.textContent && (selected = user.value.toString());
+                choices[user.value] = user.label;
+            })
+         }
+
 		 $(this).editable(edit_post_url, {
 		     type      : 'select',
-		     data    : $.extend(choice_lists[$(this).attr('id')], { selected: selected })
+		     data    : $.extend(choices, { selected: selected })
 		 });
      });
 
