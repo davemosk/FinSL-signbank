@@ -59,7 +59,7 @@ class TranslationInline(admin.TabularInline):
             [field.name for field in self.opts.local_many_to_many]
         ))
 
-    def has_add_permission(self, request, args):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -144,7 +144,7 @@ class GlossTranslationsInline(admin.TabularInline):
               'translations_secondary', 'translations_minor')
     extra = 0
 
-    def has_add_permission(self, request, args):
+    def has_add_permission(self, request, obj=None):
         # return False
         return True
 
@@ -186,8 +186,8 @@ class GlossAdmin(VersionAdmin):
                  (_('Created/Updated'), {'fields': ('created_at',
                   'created_by', 'updated_at', 'updated_by')},),
                  (_('Morphology'), {'fields': ('inflection_temporal', 'inflection_manner_degree', 'inflection_plural', 'number_incorporated', 'locatable', 'directional',
-                                              'fingerspelling'),
-                                    'classes': ('collapse',)} ),
+                                               'fingerspelling'),
+                                    'classes': ('collapse',)}),
                  (_('Phonology'), {'fields': ('handedness', 'location', 'strong_handshape', 'weak_handshape',
                                               'relation_between_articulators', 'absolute_orientation_palm',
                                               'absolute_orientation_fingers', 'relative_orientation_movement',
@@ -214,7 +214,8 @@ class GlossAdmin(VersionAdmin):
     list_display = ['idgloss', 'dataset',
                     'published', 'exclude_from_ecv', 'idgloss_mi']
     search_fields = ['^idgloss']
-    list_filter = ('dataset', 'published', 'exclude_from_ecv', 'concise', TagListFilter, )
+    list_filter = ('dataset', 'published', 'exclude_from_ecv',
+                   'concise', TagListFilter, )
     inlines = [GlossVideoInline, GlossTranslationsInline, TranslationInline,
                GlossRelationInline, GlossURLInline, GlossTagInline]
 
@@ -288,7 +289,7 @@ class AssignedGlossInline(admin.StackedInline):
     verbose_name_plural = "Assigned glosses"
     fieldsets = ((None, {'fields': ('idgloss',)}),)
 
-    def has_add_permission(self, request, obj):
+    def has_add_permission(self, request, obj=None):
         return False
 
 
