@@ -9,8 +9,9 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, F, Prefetch, Q
-from django.db.models.fields import NullBooleanField
+from django.db.models import Count, F, Prefetch, Q, Value
+from django.db.models.fields import CharField, NullBooleanField
+from django.db.models.functions import Concat
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -421,8 +422,13 @@ class GlossDetailView(DetailView):
         context['commenttagform'] = CommentTagForm()
         context['glossvideoform'] = GlossVideoForGlossForm()
         context['field_choices'] = Gloss.get_choice_lists()
-        context['assignable_users'] = list(User.objects.filter(
-            is_staff=True).values(label=F('username'), value=F('id')))
+
+        context['assignable_users'] = list(
+            User.objects
+                .filter(is_staff=True, is_active=True)
+                .annotate(full_name=Concat(F('first_name'), Value(' '), F('last_name'), output_field=CharField()))
+                .values(label=F('full_name'), value=F('id')))
+
         context['relationform'] = RelationForm()
         context['morphologyform'] = MorphologyForm()
         context['glossrelationform'] = GlossRelationForm(
