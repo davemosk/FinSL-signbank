@@ -79,9 +79,9 @@ def update_gloss(request, glossid):
         elif field.startswith('morphology-definition'):
             return update_morphology_definition(gloss, field, value)
         elif field == 'assigned_user':
-            gloss.assigned_user_id = value
+            gloss.assigned_user_id = value if value and value.strip() != '' else None
             gloss.save()
-            newvalue = gloss.assigned_user.username
+            newvalue = gloss.assigned_user.username if gloss.assigned_user else "None"
 
         elif field == 'dialect':
             # expecting possibly multiple values

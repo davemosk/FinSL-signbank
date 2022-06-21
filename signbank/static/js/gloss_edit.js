@@ -230,19 +230,27 @@ function configure_edit() {
          })
      });
 
+     $('.edit_assignable_user').on('click', function() {
+        var choices = { "": "--Unassigned--" }
+        var selected = ""
+
+        assignable_users.forEach(user => {
+            user.label === this.textContent && (selected = user.value.toString());
+            choices[user.value] = user.label;
+        });
+
+        $(this).editable(edit_post_url, {
+            type      : 'select',
+            sortselectoptions: true,
+            data    : $.extend(choices, { selected: selected })
+        });
+     });
+
      $('.edit_list').on('click', function() {
          var choices = choice_lists[$(this).attr('id')];
          var selected;
          for (var key in choices ) {
              choices[key] == this.textContent && (selected = key);
-         }
-
-         if ($(this).attr("id") === 'assigned_user') {
-            choices = {}
-            assignable_users.forEach(user => {
-                user.label === this.textContent && (selected = user.value.toString());
-                choices[user.value] = user.label;
-            })
          }
 
 		 $(this).editable(edit_post_url, {
