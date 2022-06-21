@@ -112,7 +112,7 @@ class GlossListView(ListView):
             for f in fields:
                 value = getattr(gloss, f.name)
                 # If the value contains ';', put it in quotes.
-                if ";" in value:
+                if value and ";" in value:
                     row.append('"{}"'.format(value))
                 else:
                     row.append(value)
