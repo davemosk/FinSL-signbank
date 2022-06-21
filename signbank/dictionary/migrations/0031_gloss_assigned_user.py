@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             model_name='gloss',
             name='assigned_user',
             field=models.ForeignKey(limit_choices_to={
-                                    'is_staff': True},
+                                    'is_staff': True, 'is_active': True},
                                     null=True,
                                     on_delete=django.db.models.deletion.SET_NULL,
                                     to=settings.AUTH_USER_MODEL,
