@@ -275,10 +275,6 @@ class FieldChoiceAdmin(admin.ModelAdmin):
     list_display = ('field', 'english_name', 'machine_value',)
 
 
-class SignerAdmin(VersionAdmin):
-    model = Signer
-    list_display = ('name',)
-
 
 class AssignedGlossInline(admin.StackedInline):
     model = Gloss
