@@ -72,13 +72,16 @@ def update_gloss(request, glossid):
 
         elif field.startswith('relationforeign'):
             return update_relationtoforeignsign(gloss, field, value)
-
         # Had to add field != 'relation_between_articulators' because I changed its field name, and it conflicted here.
         elif field.startswith('relation') and field != 'relation_between_articulators':
             return update_relation(gloss, field, value)
 
         elif field.startswith('morphology-definition'):
             return update_morphology_definition(gloss, field, value)
+        elif field == 'assigned_user':
+            gloss.assigned_user_id = value if value and value.strip() != '' else None
+            gloss.save()
+            newvalue = gloss.assigned_user.get_full_name() if gloss.assigned_user else "None"
 
         elif field == 'dialect':
             # expecting possibly multiple values
@@ -114,11 +117,24 @@ def update_gloss(request, glossid):
                     "usage").get_limit_choices_to()).filter(machine_value__in=values)
                 gloss.usage.set(usages)
                 gloss.save()
-                newvalue = ", ".join([str(usage.english_name)
+                newvalue = "&#10;<br>".join([str(usage.english_name)
                                       for usage in gloss.usage.all()])
             except:
                 # Translators: HttpResponseBadRequest
                 return HttpResponseBadRequest("%s %s" % _("Unknown usage"), values, content_type='text/plain')
+        elif field == 'semantic_field':
+            try:
+                # Find fieldchoices that meet the semantic_field association's limit choices
+                # that match the provided machine values
+                semantic_fields = FieldChoice.objects.complex_filter(Gloss._meta.get_field(
+                    "semantic_field").get_limit_choices_to()).filter(machine_value__in=values)
+                gloss.semantic_field.set(semantic_fields)
+                gloss.save()
+                newvalue = "&#10;<br>".join(str(semantic_field.english_name)
+                                      for semantic_field in gloss.semantic_field.all())
+            except:
+                # Translators: HttpResponseBadRequest
+                return HttpResponseBadRequest("%s %s" % _("Unknown semantic_field"), values, content_type='text/plain')
         elif field.startswith('video_title'):
             # If editing video title, update the GlossVideo's title
             if request.user.has_perm('video.change_glossvideo'):
