@@ -761,20 +761,6 @@ class MorphologyDefinition(models.Model):
         return str(self.morpheme.idgloss) + ' is ' + str(self.role) + ' of ' + str(self.parent_gloss.idgloss)
 
 
-class Signer(models.Model):
-    """The list of signers"""
-    #: Signer name.
-    name = models.CharField(max_length=150, unique=True)
-
-    class Meta:
-        ordering = ['name']
-        verbose_name = _('Signer')
-        verbose_name_plural = _('Signers')
-
-    def __str__(self):
-        return self.name
-
-
 # Register Models for django-tagging to add wrappers around django-tagging API.
 models_to_register_for_tagging = (Gloss, GlossRelation,)
 for model in models_to_register_for_tagging:

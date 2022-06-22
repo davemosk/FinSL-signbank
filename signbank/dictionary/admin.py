@@ -17,7 +17,7 @@ from tagging.models import Tag, TaggedItem
 from ..video.admin import GlossVideoInline
 from .models import (AllowedTags, Dataset, Dialect, FieldChoice, Gloss,
                      GlossRelation, GlossTranslations, GlossURL, Language,
-                     Signer, SignLanguage, Translation)
+                     SignLanguage, Translation)
 
 
 class TagListFilter(admin.SimpleListFilter):
@@ -272,11 +272,6 @@ class FieldChoiceAdmin(admin.ModelAdmin):
     list_display = ('field', 'english_name', 'machine_value',)
 
 
-class SignerAdmin(VersionAdmin):
-    model = Signer
-    list_display = ('name',)
-
-
 admin.site.register(Language, LanguageAdmin)
 admin.site.register(SignLanguage, SignLanguageAdmin)
 admin.site.register(Gloss, GlossAdmin)
@@ -284,7 +279,6 @@ admin.site.register(Translation, TranslationAdmin)
 admin.site.register(Dataset, DatasetAdmin)
 admin.site.register(GlossRelation, GlossRelationAdmin)
 admin.site.register(AllowedTags, AllowedTagsAdmin)
-admin.site.register(Signer, SignerAdmin)
 
 # The following models have been removed from the admin because they are not used at the moment.
 admin.site.register(FieldChoice, FieldChoiceAdmin)
