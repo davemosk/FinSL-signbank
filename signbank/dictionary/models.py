@@ -593,6 +593,11 @@ class Gloss(models.Model):
                                        db_column='age_variation', limit_choices_to={'field': 'age_variation'},
                                        related_name="age_variation", blank=True, null=True, on_delete=models.SET_NULL)
 
+    # lemma
+    lemma = models.ForeignKey('FieldChoice', verbose_name=_("Lemma"), to_field='machine_value',
+                                       db_column='lemma', limit_choices_to={'field': 'lemma'},
+                                       related_name="lemma", blank=True, null=True, on_delete=models.SET_NULL)
+
     def __str__(self):
         return self.idgloss
 
@@ -654,7 +659,7 @@ class Gloss(models.Model):
                   'repeated_movement', 'alternating_movement', 'movement_shape', 'movement_direction',
                   'movement_manner', 'contact_type', 'named_entity', 'orientation_change', 'semantic_field',
                   'video_type', 'wordclass', 'fingerspelling', 'usage', 'signer',
-                  'age_variation']
+                  'age_variation', 'lemma']
 
         qs = FieldChoice.objects.filter(field__in=fields).values(
             'field', 'machine_value', 'english_name')
