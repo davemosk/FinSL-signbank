@@ -8,7 +8,6 @@ def get_queue_items(request):
         As per the first comment of N2-92, get the glosses which are assigned to you
         """
     user = request.user
-    print('URL **** ', request.path)
     glosses = Gloss.objects.filter(assigned_user=user)
     gloss_data = []
     for gloss in glosses:
