@@ -1,6 +1,6 @@
 {% load i18n %}
 <div class="latest_comments">
-    <h2><a href="{% url 'search_comments' %}">{% blocktrans %}Glosses in the Queue{% endblocktrans %}</a></h2>
+    <h2><a href="{% url 'queue' %}">{% blocktrans %}Editorial Queue{% endblocktrans %}</a></h2>
 {% for gloss in glosses %}
     {% load tagging_tags %}
     {% tags_for_object gloss.gloss as tag_list %}
