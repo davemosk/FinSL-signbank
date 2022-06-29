@@ -82,11 +82,6 @@ def update_gloss(request, glossid):
             gloss.assigned_user_id = value if value and value.strip() != '' else None
             gloss.save()
             newvalue = gloss.assigned_user.get_full_name() if gloss.assigned_user else "None"
-        elif field == 'signer':
-            gloss.signer = FieldChoice.objects.filter(machine_value=value)[0] if value and value.strip() != '' else None
-            gloss.save()
-            newvalue = gloss.signer if value and value.strip() != '' else None
-
         elif field == 'dialect':
             # expecting possibly multiple values
             try:
