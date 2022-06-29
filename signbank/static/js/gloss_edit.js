@@ -267,6 +267,7 @@ function configure_edit() {
 
 		 $(this).editable(edit_post_url, {
 		     type      : 'select',
+             sortselectoptions: true,
 		     data    : $.extend(choices, { selected: selected })
 		 });
      });
