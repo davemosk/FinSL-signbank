@@ -255,10 +255,10 @@ function configure_edit() {
 
      $('.edit_list').on('click', function() {
          var choices = choice_lists[$(this).attr('id')];
-         var current_list = $(this)[0].id;
-         if (current_list == 'signer') {
-             choices[''] = 'None';
+         if ($(this).hasClass("edit_list_optional")) {
+            choices[''] = '--None--';
          }
+
          var selected;
          for (var key in choices ) {
              choices[key] == this.textContent && (selected = key);
