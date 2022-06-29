@@ -101,6 +101,10 @@ class GlossSearchForm(forms.ModelForm):
     hasnovideo = forms.BooleanField(label=_('No videos'), required=False)
     multiplevideos = forms.BooleanField(label=_('Multiple videos'), required=False)
 
+    # Adding usage
+    usage = forms.ModelMultipleChoiceField(label=_('Usage'), queryset=FieldChoice.objects.filter(field='usage'),
+                                           required=False)
+
     # These have been disabled until they are later needed
     # TODO: To enable these, uncomment them.
     """
