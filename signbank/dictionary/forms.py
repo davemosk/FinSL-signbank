@@ -102,6 +102,10 @@ class GlossSearchForm(forms.ModelForm):
     hasnovideo = forms.BooleanField(label=_('No videos'), required=False)
     multiplevideos = forms.BooleanField(label=_('Multiple videos'), required=False)
 
+    relation_to_foreign_signs = forms.ModelChoiceField(label=_('Relation to foreign signs'),
+                                    queryset=RelationToForeignSign.objects.order_by().distinct().values_list('other_lang', flat=True),
+                                    required=False)
+
     # These have been disabled until they are later needed
     # TODO: To enable these, uncomment them.
     """

@@ -265,6 +265,9 @@ class GlossListView(ListView):
 
             # print "K :", len(qs)
 
+        if 'relation_to_foreign_signs' in get and get['relation_to_foreign_signs'] != '':
+            val = get['relation_to_foreign_signs']
+
         if 'relation' in get and get['relation'] != '':
             potential_targets = Gloss.objects.filter(
                 idgloss__icontains=get['relation'])
