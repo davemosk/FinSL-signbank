@@ -103,7 +103,7 @@ class GlossSearchForm(forms.ModelForm):
     multiplevideos = forms.BooleanField(label=_('Multiple videos'), required=False)
 
     location = forms.ModelChoiceField(label=_('Location'), queryset=FieldChoice.objects.filter(field='location'),
-                                      required=False)
+                                      to_field_name='machine_value', required=False)
 
     # These have been disabled until they are later needed
     # TODO: To enable these, uncomment them.

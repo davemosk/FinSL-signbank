@@ -267,8 +267,7 @@ class GlossListView(ListView):
 
         if 'location' in get and get['location'] != '':
             val = get['location']
-            location = FieldChoice.objects.filter(id=val).first()
-            qs = qs.filter(location=location.machine_value)
+            qs = qs.filter(location=val)
 
         if 'relation' in get and get['relation'] != '':
             potential_targets = Gloss.objects.filter(
