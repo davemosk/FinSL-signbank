@@ -19,11 +19,6 @@ sentry_sdk.init(
     send_default_pii=True
 )
 
-# A list of directories where Django looks for translation files.
-LOCALE_PATHS = (
-    '/home/www-bin/signbank/FinSL-signbank/locale',
-)
-
 # This setting defines the additional locations the staticfiles app will traverse if the FileSystemFinder finder
 # is enabled, e.g. if you use the collectstatic or findstatic management command or use the static file serving view.
 # STATICFILES_DIRS = (
