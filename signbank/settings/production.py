@@ -2,16 +2,15 @@
 # DAM - need to configure this
 """Production environment specific settings for FinSL-signbank."""
 from __future__ import unicode_literals
+
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
-
 from signbank.settings.base import *
+
 # settings.base imports settings_secret
 # The following settings are defined in settings_secret:
 # SECRET_KEY, ADMINS, DATABASES, EMAIL_HOST, EMAIL_PORT, DEFAULT_FROM_EMAIL
 
-#: IMPORTANT: Debug should always be False in production
-DEBUG = True
 
 sentry_sdk.init(
     dsn=os.environ.get('SENTRY_DSN'),
@@ -19,9 +18,6 @@ sentry_sdk.init(
     traces_sample_rate=1.0,
     send_default_pii=True
 )
-
-#: IMPORTANT: The hostname that this signbank runs on, this prevents HTTP Host header attacks
-ALLOWED_HOSTS = ['signbank.nz']
 
 # A list of directories where Django looks for translation files.
 LOCALE_PATHS = (
@@ -33,9 +29,9 @@ LOCALE_PATHS = (
 STATIC_ROOT = '/home/www-bin/signbank/FinSL-signbank/signbank/static/'
 # This setting defines the additional locations the staticfiles app will traverse if the FileSystemFinder finder
 # is enabled, e.g. if you use the collectstatic or findstatic management command or use the static file serving view.
-#STATICFILES_DIRS = (
+# STATICFILES_DIRS = (
 #    os.path.join(PROJECT_DIR, "signbank", "static"),
-#)
+# )
 
 #: Use Local-memory caching for specific views (if you have bigger needs, use something else).
 CACHES = {
@@ -55,8 +51,6 @@ MEDIA_URL = '/media/'
 UPLOAD_ROOT = MEDIA_ROOT + "upload/"
 UPLOAD_URL = MEDIA_URL + "upload/"
 
-#: The backend to use for sending emails.
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 #: A sample logging configuration. The only tangible logging
 #: performed by this configuration is to send an email to
@@ -92,3 +86,6 @@ DO_LOGGING = True
 # DAM LOG_FILENAME = "debug.log"
 # note that the above has been superceded to stream to stderr
 
+
+# REQUIRE SSL in production
+SECURE_SSL_REDIRECT = True

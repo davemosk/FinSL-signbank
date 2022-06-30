@@ -64,6 +64,7 @@ STATICFILES_FINDERS = (
 #: A list of middleware classes to use. The order of middleware classes is critical!
 MIDDLEWARE = [
     # If want to use some of the HTTPS settings in secret_settings, enable SecurityMiddleware
+    'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
@@ -214,3 +215,11 @@ else:
 
 mimetypes.add_type("video/mp4", ".mov", True)
 mimetypes.add_type("video/webm", ".webm", True)
+
+# Allow DEBUG to be set using an environment variable
+DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
+
+# Set ALLOWED_HOSTS from an environment variable, with defaults
+DEFAULT_ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS").split(
+    ",") if os.getenv("ALLOWED_HOSTS") else DEFAULT_ALLOWED_HOSTS

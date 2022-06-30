@@ -8,13 +8,6 @@ from signbank.settings.base import *
 # The following settings are defined in settings_secret:
 # SECRET_KEY, ADMINS, DATABASES, EMAIL_HOST, EMAIL_PORT, DEFAULT_FROM_EMAIL
 
-#: Debug should be True in development but not in production!
-DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
-
-DEFAULT_ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'signbank.nz']
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS").split(
-    ",") if os.getenv("ALLOWED_HOSTS") else DEFAULT_ALLOWED_HOSTS
-
 #: A list of directories where Django looks for translation files.
 LOCALE_PATHS = (
     os.path.join(PROJECT_DIR, 'locale'),
