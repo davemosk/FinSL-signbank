@@ -120,7 +120,9 @@ ROOT_URLCONF = 'signbank.urls'
 # The full Python path of the WSGI application object that Django's built-in servers (e.g. runserver) will use.
 WSGI_APPLICATION = 'signbank.wsgi.application'
 
-#: A list of strings designating all applications that are enabled in this Django installation.
+# Use 'django.db.models.AutoField' when generating AutoFields on models
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 #: Dotted Python path to: an application configuration class (preferred), or a package containing an application.
 #: The order of the apps matter!
 INSTALLED_APPS = (
