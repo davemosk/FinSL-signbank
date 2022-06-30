@@ -52,6 +52,10 @@ LANGUAGES = (
     ('en', _('English')),
 )
 
+# The absolute path to the directory where collectstatic will collect static files for deployment.
+# Example: "/var/www/example.com/static/"
+STATIC_ROOT = os.path.join(PROJECT_DIR, 'static')
+
 # URL to use when referring to static files located in STATIC_ROOT.
 # Example: "/static/" or "http://static.example.com/"
 STATIC_URL = '/static/'
