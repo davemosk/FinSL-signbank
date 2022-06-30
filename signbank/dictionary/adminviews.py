@@ -307,7 +307,7 @@ class GlossListView(ListView):
         # Filter by usage
         if 'usage' in get and get['usage'] != '':
             vals = get.getlist('usage')
-            qs = Gloss.objects.filter(usage__id__in=vals)
+            qs = qs.filter(usage__id__in=vals)
             
         # Set order according to GET field 'order'
         if 'order' in get:
