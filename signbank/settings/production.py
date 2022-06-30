@@ -24,9 +24,6 @@ LOCALE_PATHS = (
     '/home/www-bin/signbank/FinSL-signbank/locale',
 )
 
-#: The absolute path to the directory where collectstatic will collect static files for deployment.
-#: Example: "/var/www/example.com/static/"
-STATIC_ROOT = '/home/www-bin/signbank/FinSL-signbank/signbank/static/'
 # This setting defines the additional locations the staticfiles app will traverse if the FileSystemFinder finder
 # is enabled, e.g. if you use the collectstatic or findstatic management command or use the static file serving view.
 # STATICFILES_DIRS = (
@@ -37,12 +34,12 @@ STATIC_ROOT = '/home/www-bin/signbank/FinSL-signbank/signbank/static/'
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'finsl-signbank-localmemcache',
+        'LOCATION': 'nzsl-signbank-localmemcache',
     }
 }
 
 #: Absolute filesystem path to the directory that will hold user-uploaded files.
-MEDIA_ROOT = '/home/www-bin/signbank/FinSL-signbank/media/'
+MEDIA_ROOT = '/media'
 # URL that handles the media served from MEDIA_ROOT, used for managing stored files.
 # It must end in a slash if set to a non-empty value.
 MEDIA_URL = '/media/'
