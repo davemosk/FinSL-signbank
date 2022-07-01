@@ -56,8 +56,11 @@ LANGUAGES = (
 # Example: "/var/www/example.com/static/"
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'static')
 
-# URL to use when referring to static files located in STATIC_ROOT.
-# Example: "/static/" or "http://static.example.com/"
+#: A list of directories where Django looks for translation files.
+LOCALE_PATHS = (
+    os.path.join(PROJECT_DIR, 'locale'),
+)
+
 STATIC_URL = '/static/'
 #: The list of finder backends that know how to find static files in various locations.
 STATICFILES_FINDERS = (
