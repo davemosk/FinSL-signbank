@@ -44,8 +44,8 @@ ADD requirements.txt /app
 RUN pip --no-cache-dir install --src=/opt pyinotify -r requirements.txt
 
 # Copy frontend assets
-COPY --from=node /app/signbank/static/js ./
-COPY --from=node /app/signbank/static/css ./
+COPY --from=node /app/signbank/static/js ./signbank/static/js
+COPY --from=node /app/signbank/static/css ./signbank/static/css
 
 # Install application
 ADD . /app
