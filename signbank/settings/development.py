@@ -14,12 +14,6 @@ LOCALE_PATHS = (
 )
 
 
-# This setting defines the additional locations the staticfiles app will traverse if the FileSystemFinder finder
-# is enabled, e.g. if you use the collectstatic or findstatic management command or use the static file serving view.
-STATICFILES_DIRS = (
-    os.path.join(PROJECT_DIR, 'signbank', 'static'),
-)
-
 # Set up a dummy cache for development, it doesn't actually cache anything.
 CACHES = {
     'default': {
