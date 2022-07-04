@@ -108,6 +108,9 @@ class GlossSearchForm(forms.ModelForm):
     location = forms.ModelChoiceField(label=_('Location'), queryset=FieldChoice.objects.filter(field='location'),
                                       to_field_name='machine_value', required=False)
 
+    strong_handshape = forms.ModelChoiceField(label=_('Strong handshape'), queryset=FieldChoice.objects.filter(field='strong_handshape'),
+                                              to_field_name='machine_value', required=False)
+
     # These have been disabled until they are later needed
     # TODO: To enable these, uncomment them.
     """
