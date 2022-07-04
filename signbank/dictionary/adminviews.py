@@ -32,7 +32,7 @@ from .forms import (GlossRelationForm, GlossRelationSearchForm,
                     GlossSearchForm, MorphologyForm, RelationForm, TagsAddForm)
 from .models import (Dataset, Gloss, GlossRelation, GlossTranslations,
                      GlossURL, MorphologyDefinition, Relation,
-                     RelationToForeignSign, Translation)
+                     RelationToForeignSign, Translation, FieldChoice)
 
 
 class GlossListView(ListView):
@@ -228,7 +228,7 @@ class GlossListView(ListView):
 
         if 'semantic_field' in get and get['semantic_field'] != '':
             vals = get.getlist('semantic_field')
-            qs = Gloss.objects.filter(semantic_field__id__in=vals)
+            qs = qs.filter(semantic_field__id__in=vals)
 
         if 'tags' in get and get['tags'] != '':
             vals = get.getlist('tags')
@@ -264,6 +264,10 @@ class GlossListView(ListView):
             qs = [q for q in qs if q not in tqs]
 
             # print "K :", len(qs)
+
+        if 'location' in get and get['location'] != '':
+            val = get['location']
+            qs = qs.filter(location=val)
 
         if 'relation' in get and get['relation'] != '':
             potential_targets = Gloss.objects.filter(
