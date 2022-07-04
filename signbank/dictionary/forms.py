@@ -108,6 +108,8 @@ class GlossSearchForm(forms.ModelForm):
     location = forms.ModelChoiceField(label=_('Location'), queryset=FieldChoice.objects.filter(field='location'),
                                       to_field_name='machine_value', required=False)
 
+    example_search = forms.CharField(label=_('Example Field search'), required=False)
+
     # These have been disabled until they are later needed
     # TODO: To enable these, uncomment them.
     """
