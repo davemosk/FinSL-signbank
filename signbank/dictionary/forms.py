@@ -102,9 +102,15 @@ class GlossSearchForm(forms.ModelForm):
     hasnovideo = forms.BooleanField(label=_('No videos'), required=False)
     multiplevideos = forms.BooleanField(label=_('Multiple videos'), required=False)
 
-    relation_to_foreign_signs = forms.ModelChoiceField(label=_('Relation to foreign signs'),
-                                    queryset=RelationToForeignSign.objects.order_by().distinct().values_list('other_lang', flat=True),
-                                    required=False)
+    # Creating choices for related to foreign sign list
+    related_to = [(0, '---------')]
+    qs = RelationToForeignSign.objects.order_by().distinct().values_list('other_lang', flat=True)
+    for i in range(len(qs)):
+        val = (qs[i], qs[i])
+        related_to.append(val)
+
+    relation_to_foreign_signs = forms.ChoiceField(label=_('Relation to foreign signs'), choices=related_to,
+                                                  required=False, widget=forms.Select(attrs=ATTRS_FOR_FORMS))
     # Adding usage
     usage = forms.ModelMultipleChoiceField(label=_('Usage'), queryset=FieldChoice.objects.filter(field='usage'),
                                            required=False)

@@ -265,9 +265,8 @@ class GlossListView(ListView):
 
             # print "K :", len(qs)
 
-        if 'relation_to_foreign_signs' in get and get['relation_to_foreign_signs'] != '':
+        if 'relation_to_foreign_signs' in get and get['relation_to_foreign_signs'] not in ('', '0'):
             val = get['relation_to_foreign_signs']
-
             gloss_ids = RelationToForeignSign.objects.filter(other_lang=val).values_list('gloss_id', flat=True)
             qs = qs.filter(id__in=gloss_ids)
 
