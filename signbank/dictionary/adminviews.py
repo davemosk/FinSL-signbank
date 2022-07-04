@@ -271,6 +271,7 @@ class GlossListView(ListView):
 
         if 'example_search' in get and get['example_search'] != '':
             val = get['example_search']
+            val = '[' + val + ']'
             # Searches for multiple fields at the same time. Looking if any of the fields match.
             query = (Q(videoexample1__icontains=val) | Q(videoexample2__icontains=val) | Q(videoexample3__icontains=val) |
                      Q(videoexample4__icontains=val))
