@@ -268,6 +268,10 @@ class GlossListView(ListView):
         if 'relation_to_foreign_signs' in get and get['relation_to_foreign_signs'] != '':
             val = get['relation_to_foreign_signs']
 
+            gloss_ids = RelationToForeignSign.objects.filter(other_lang=val)
+            print('***** ', gloss_ids)
+            qs = qs.filter(id__in=gloss_ids)
+
         if 'relation' in get and get['relation'] != '':
             potential_targets = Gloss.objects.filter(
                 idgloss__icontains=get['relation'])
