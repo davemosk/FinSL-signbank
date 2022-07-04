@@ -103,7 +103,7 @@ class GlossSearchForm(forms.ModelForm):
     multiplevideos = forms.BooleanField(label=_('Multiple videos'), required=False)
 
     # Creating choices for related to foreign sign list
-    related_to = [(0, '---------')]
+    related_to = [(None, '---------')]
     qs = RelationToForeignSign.objects.order_by().distinct().values_list('other_lang', flat=True)
     for i in range(len(qs)):
         val = (qs[i], qs[i])
