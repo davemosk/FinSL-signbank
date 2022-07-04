@@ -105,6 +105,11 @@ class GlossSearchForm(forms.ModelForm):
     relation_to_foreign_signs = forms.ModelChoiceField(label=_('Relation to foreign signs'),
                                     queryset=RelationToForeignSign.objects.order_by().distinct().values_list('other_lang', flat=True),
                                     required=False)
+    # Adding usage
+    usage = forms.ModelMultipleChoiceField(label=_('Usage'), queryset=FieldChoice.objects.filter(field='usage'),
+                                           required=False)
+    location = forms.ModelChoiceField(label=_('Location'), queryset=FieldChoice.objects.filter(field='location'),
+                                      to_field_name='machine_value', required=False)
 
     # These have been disabled until they are later needed
     # TODO: To enable these, uncomment them.
