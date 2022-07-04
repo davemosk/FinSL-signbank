@@ -108,6 +108,8 @@ class GlossSearchForm(forms.ModelForm):
     location = forms.ModelChoiceField(label=_('Location'), queryset=FieldChoice.objects.filter(field='location'),
                                       to_field_name='machine_value', required=False)
 
+    one_or_two_handed = forms.BooleanField(label=_('One or two handed'), required=False)
+
     # These have been disabled until they are later needed
     # TODO: To enable these, uncomment them.
     """

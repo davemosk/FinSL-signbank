@@ -269,6 +269,10 @@ class GlossListView(ListView):
             val = get['location']
             qs = qs.filter(location=val)
 
+        if 'one_or_two_handed' in get and get['one_or_two_handed'] != '':
+            val = get['one_or_two_handed'] == 'on'
+            qs = qs.filter(one_or_two_hand=val)
+
         if 'relation' in get and get['relation'] != '':
             potential_targets = Gloss.objects.filter(
                 idgloss__icontains=get['relation'])
