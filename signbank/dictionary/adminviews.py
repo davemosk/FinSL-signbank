@@ -301,6 +301,10 @@ class GlossListView(ListView):
         if 'strong_handshape' in get and get['strong_handshape'] != '':
             val = get['strong_handshape']
             qs = qs.filter(strong_handshape=val)
+            
+        if 'word_classes' in get and get['word_classes'] != '':
+            vals = get.getlist('word_classes')
+            qs = qs.filter(wordclasses__id__in=vals)
 
         if 'number_incorporated' in get and get['number_incorporated'] != '':
             val = get['number_incorporated'] == 'on'
