@@ -102,12 +102,24 @@ class GlossSearchForm(forms.ModelForm):
     hasnovideo = forms.BooleanField(label=_('No videos'), required=False)
     multiplevideos = forms.BooleanField(label=_('Multiple videos'), required=False)
 
+    # Creating choices for related to foreign sign list
+    related_to = [(None, '---------')]
+    qs = RelationToForeignSign.objects.order_by().distinct().values_list('other_lang', flat=True)
+    for i in range(len(qs)):
+        val = (qs[i], qs[i])
+        related_to.append(val)
+
+    relation_to_foreign_signs = forms.ChoiceField(label=_('Relation to foreign signs'), choices=related_to,
+                                                  required=False, widget=forms.Select(attrs=ATTRS_FOR_FORMS))
     # Adding usage
     usage = forms.ModelMultipleChoiceField(label=_('Usage'), queryset=FieldChoice.objects.filter(field='usage'),
                                            required=False)
     location = forms.ModelChoiceField(label=_('Location'), queryset=FieldChoice.objects.filter(field='location'),
                                       to_field_name='machine_value', required=False)
 
+    age_variation = forms.ModelChoiceField(label=_('Age Variation'), queryset=FieldChoice.objects.filter(field='age_variation'),
+                                           to_field_name='machine_value', required=False)
+                                           
     example_search = forms.CharField(label=_('Example Field search'), required=False)
 
     # These have been disabled until they are later needed
