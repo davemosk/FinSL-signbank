@@ -127,6 +127,15 @@ class GlossSearchForm(forms.ModelForm):
                                               to_field_name='machine_value', required=False)
     one_or_two_handed = forms.BooleanField(label=_('One or two handed'), required=False)
 
+    # Adding morphology fields
+    number_incorporated = forms.BooleanField(label=_('Number incorporated'), required=False)
+    locatable = forms.BooleanField(label=_('Locatable'), required=False)
+    directional = forms.BooleanField(label=_('Directional'), required=False)
+    fingerspelling = forms.BooleanField(label=_('Fingerspelling'), required=False)
+    inflection_temporal = forms.BooleanField(label=_('Inflection: Temporal'), required=False)
+    inflection_manner_degree = forms.BooleanField(label=_('Inflection: Manner and Degree'), required=False)
+    inflection_plural = forms.BooleanField(label=_('Inflection: Plural'), required=False)
+
     # These have been disabled until they are later needed
     # TODO: To enable these, uncomment them.
     """
