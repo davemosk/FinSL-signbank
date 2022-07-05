@@ -270,9 +270,17 @@ class GlossListView(ListView):
             qs = qs.filter(location=val)
 
         if 'example_search' in get and get['example_search'] != '':
+            """
+                This search is intended to search for gloss IDs in fields videoexample1 to videoexample4. In these 
+                fields, gloss IDs are within square brackets (eg: cat[123], 123 is the gloss ID). 
+                When we search for a gloss ID (eg: 123), the search should return all the glosses that contain gloss ID 
+                123 in one of their videoexample fields.
+                Search parameter is just the gloss id, so we are adding []s before doing the search.
+            """
+
             val = get['example_search']
             val = '[' + val + ']'
-            # Searches for multiple fields at the same time. Looking if any of the fields match.
+
             query = (Q(videoexample1__icontains=val) | Q(videoexample2__icontains=val) | Q(videoexample3__icontains=val) |
                      Q(videoexample4__icontains=val))
             qs = qs.filter(query)
