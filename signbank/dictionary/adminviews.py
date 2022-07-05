@@ -265,6 +265,11 @@ class GlossListView(ListView):
 
             # print "K :", len(qs)
 
+        if 'relation_to_foreign_signs' in get and get['relation_to_foreign_signs'] != '':
+            val = get['relation_to_foreign_signs']
+            gloss_ids = RelationToForeignSign.objects.filter(other_lang=val).values_list('gloss_id', flat=True)
+            qs = qs.filter(id__in=gloss_ids)
+
         if 'location' in get and get['location'] != '':
             val = get['location']
             qs = qs.filter(location=val)
@@ -284,6 +289,11 @@ class GlossListView(ListView):
             query = (Q(videoexample1__icontains=val) | Q(videoexample2__icontains=val) | Q(videoexample3__icontains=val) |
                      Q(videoexample4__icontains=val))
             qs = qs.filter(query)
+
+        if 'age_variation' in get and get['age_variation'] != '':
+            val = get['age_variation']
+            qs = qs.filter(age_variation=val)
+
 
         if 'relation' in get and get['relation'] != '':
             potential_targets = Gloss.objects.filter(
