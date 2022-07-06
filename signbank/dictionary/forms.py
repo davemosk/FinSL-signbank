@@ -70,6 +70,16 @@ class TagsAddForm(forms.Form):
 ATTRS_FOR_FORMS = {'class': 'form-control'}
 
 
+def build_related_to_choices():
+    related_to = [(None, '---------')]
+    qs = RelationToForeignSign.objects.order_by().distinct().values_list('other_lang', flat=True)
+    for i in range(len(qs)):
+        val = (qs[i], qs[i])
+        related_to.append(val)
+
+    return related_to
+
+
 class GlossSearchForm(forms.ModelForm):
     # Translators: GlossSearchForm label
     dataset = forms.ModelMultipleChoiceField(label=_('Dataset'), queryset=Dataset.objects.all(), required=False)
@@ -102,11 +112,32 @@ class GlossSearchForm(forms.ModelForm):
     hasnovideo = forms.BooleanField(label=_('No videos'), required=False)
     multiplevideos = forms.BooleanField(label=_('Multiple videos'), required=False)
 
+    relation_to_foreign_signs = forms.ChoiceField(label=_('Relation to foreign signs'), choices=build_related_to_choices,
+                                                  required=False, widget=forms.Select(attrs=ATTRS_FOR_FORMS))
     # Adding usage
     usage = forms.ModelMultipleChoiceField(label=_('Usage'), queryset=FieldChoice.objects.filter(field='usage'),
                                            required=False)
     location = forms.ModelChoiceField(label=_('Location'), queryset=FieldChoice.objects.filter(field='location'),
                                       to_field_name='machine_value', required=False)
+                                      
+    age_variation = forms.ModelChoiceField(label=_('Age Variation'), queryset=FieldChoice.objects.filter(field='age_variation'),
+                                           to_field_name='machine_value', required=False)                                        
+    example_search = forms.CharField(label=_('Example Field search'), required=False)
+    strong_handshape = forms.ModelChoiceField(label=_('Strong handshape'), queryset=FieldChoice.objects.filter(field='strong_handshape'),
+                                              to_field_name='machine_value', required=False)
+    one_or_two_handed = forms.BooleanField(label=_('One or two handed'), required=False)
+    word_classes = forms.ModelMultipleChoiceField(label=_('Word classes'),
+                                                  queryset=FieldChoice.objects.filter(field='wordclass'),
+                                                  required=False)
+
+    # Adding morphology fields
+    number_incorporated = forms.BooleanField(label=_('Number incorporated'), required=False)
+    locatable = forms.BooleanField(label=_('Locatable'), required=False)
+    directional = forms.BooleanField(label=_('Directional'), required=False)
+    fingerspelling = forms.BooleanField(label=_('Fingerspelling'), required=False)
+    inflection_temporal = forms.BooleanField(label=_('Inflection: Temporal'), required=False)
+    inflection_manner_degree = forms.BooleanField(label=_('Inflection: Manner and Degree'), required=False)
+    inflection_plural = forms.BooleanField(label=_('Inflection: Plural'), required=False)
 
     # These have been disabled until they are later needed
     # TODO: To enable these, uncomment them.

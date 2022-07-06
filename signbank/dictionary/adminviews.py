@@ -198,20 +198,14 @@ class GlossListView(ListView):
             # Include glosses that have more than one GlossVideo
             qs = qs.annotate(videocount=Count('glossvideo')).filter(videocount__gt=1)
 
-
         # A list of phonology fieldnames
-        """  fieldnames = ['handedness', 'strong_handshape', 'weak_handshape', 'location', 'relation_between_articulators',
+        fieldnames = ['handedness', 'strong_handshape', 'weak_handshape', 'location', 'relation_between_articulators',
                       'absolute_orientation_palm', 'absolute_orientation_fingers', 'relative_orientation_movement',
                       'relative_orientation_location', 'orientation_change', 'handshape_change', 'repeated_movement',
                       'alternating_movement', 'movement_shape', 'movement_direction', 'movement_manner',
                       'contact_type', 'phonology_other', 'mouth_gesture', 'mouthing', 'phonetic_variation',
                       'iconic_image', 'named_entity', 'number_of_occurences', 'fingerspelling',
-                      'one_or_two_hand', 'number_incorporated', 'locatable', 'directional', 'variant_no'] """
-
-        """These were removed from fieldnames because they are not needed there:
-        'idgloss', 'idgloss_mi', 'notes',
-        """
-
+                      'one_or_two_hand', 'number_incorporated', 'locatable', 'directional', 'variant_no']
 
         # Language and basic property filters
         vals = get.getlist('dialect', [])
@@ -229,6 +223,17 @@ class GlossListView(ListView):
         if 'semantic_field' in get and get['semantic_field'] != '':
             vals = get.getlist('semantic_field')
             qs = qs.filter(semantic_field__id__in=vals)
+
+        # phonology and semantics field filters
+        for fieldname in fieldnames:
+            if fieldname in get:
+                key = fieldname + '__exact'
+                val = get[fieldname]
+                if isinstance(Gloss._meta.get_field(fieldname), NullBooleanField):
+                    val = {'0': '', '1': None, '2': True, '3': False}[val]
+                if val != '':
+                    kwargs = {key: val}
+                    qs = qs.filter(**kwargs)
 
         if 'tags' in get and get['tags'] != '':
             vals = get.getlist('tags')
@@ -265,9 +270,74 @@ class GlossListView(ListView):
 
             # print "K :", len(qs)
 
+        if 'relation_to_foreign_signs' in get and get['relation_to_foreign_signs'] != '':
+            val = get['relation_to_foreign_signs']
+            gloss_ids = RelationToForeignSign.objects.filter(other_lang=val).values_list('gloss_id', flat=True)
+            qs = qs.filter(id__in=gloss_ids)
+
         if 'location' in get and get['location'] != '':
             val = get['location']
             qs = qs.filter(location=val)
+
+        if 'one_or_two_handed' in get and get['one_or_two_handed'] != '':
+            val = get['one_or_two_handed'] == 'on'
+            qs = qs.filter(one_or_two_hand=val)
+
+        if 'example_search' in get and get['example_search'] != '':
+            """
+                This search is intended to search for gloss IDs in fields videoexample1 to videoexample4. In these
+                fields, gloss IDs are within square brackets (eg: cat[123], 123 is the gloss ID).
+                When we search for a gloss ID (eg: 123), the search should return all the glosses that contain gloss ID
+                123 in one of their videoexample fields.
+                Search parameter is just the gloss id, so we are adding []s before doing the search.
+            """
+
+            val = get['example_search']
+            val = '[' + val + ']'
+
+            query = (Q(videoexample1__icontains=val) | Q(videoexample2__icontains=val) | Q(videoexample3__icontains=val) |
+                     Q(videoexample4__icontains=val))
+            qs = qs.filter(query)
+
+        if 'age_variation' in get and get['age_variation'] != '':
+            val = get['age_variation']
+            qs = qs.filter(age_variation=val)
+
+        if 'strong_handshape' in get and get['strong_handshape'] != '':
+            val = get['strong_handshape']
+            qs = qs.filter(strong_handshape=val)
+            
+        if 'word_classes' in get and get['word_classes'] != '':
+            vals = get.getlist('word_classes')
+            qs = qs.filter(wordclasses__id__in=vals)
+
+        if 'number_incorporated' in get and get['number_incorporated'] != '':
+            val = get['number_incorporated'] == 'on'
+            qs = qs.filter(number_incorporated=val)
+
+        if 'locatable' in get and get['locatable'] != '':
+            val = get['locatable'] == 'on'
+            qs = qs.filter(locatable=val)
+
+        if 'directional' in get and get['directional'] != '':
+            val = get['directional'] == 'on'
+            qs = qs.filter(directional=val)
+
+        if 'fingerspelling' in get and get['fingerspelling'] != '':
+            val = get['fingerspelling'] == 'on'
+            qs = qs.filter(fingerspelling=val)
+
+        if 'inflection_temporal' in get and get['inflection_temporal'] != '':
+            val = get['inflection_temporal'] == 'on'
+            qs = qs.filter(inflection_temporal=val)
+
+        if 'inflection_manner_degree' in get and get['inflection_manner_degree'] != '':
+            val = get['inflection_manner_degree'] == 'on'
+            qs = qs.filter(inflection_manner_degree=val)
+
+        if 'inflection_plural' in get and get['inflection_plural'] != '':
+            val = get['inflection_plural'] == 'on'
+            qs = qs.filter(inflection_plural=val)
 
         if 'relation' in get and get['relation'] != '':
             potential_targets = Gloss.objects.filter(
@@ -312,7 +382,7 @@ class GlossListView(ListView):
         if 'usage' in get and get['usage'] != '':
             vals = get.getlist('usage')
             qs = qs.filter(usage__id__in=vals)
-            
+
         # Set order according to GET field 'order'
         if 'order' in get:
             qs = qs.order_by(get['order'])
@@ -451,11 +521,9 @@ class GlossDetailView(DetailView):
         fields['morphology'] = ['number_incorporated', 'locatable', 'directional', 'fingerspelling',
                                 'inflection_temporal', 'inflection_manner_degree', 'inflection_plural']
         fields['phonology'] = ['handedness', 'strong_handshape', 'weak_handshape', 'handshape_change',
-                               'relation_between_articulators', 'location', 'absolute_orientation_palm',
-                               'absolute_orientation_fingers', 'relative_orientation_movement',
-                               'relative_orientation_location', 'orientation_change', 'contact_type', 'movement_shape',
-                               'movement_direction', 'movement_manner', 'repeated_movement', 'alternating_movement',
-                               'phonology_other', 'mouth_gesture', 'mouthing', 'phonetic_variation', 'one_or_two_hand']
+                               'relation_between_articulators', 'location', 'contact_type',
+                               'repeated_movement', 'alternating_movement',
+                               'mouth_gesture', 'mouthing', 'phonetic_variation', 'one_or_two_hand']
 
         fields['semantics'] = ['iconic_image',
                                'named_entity']

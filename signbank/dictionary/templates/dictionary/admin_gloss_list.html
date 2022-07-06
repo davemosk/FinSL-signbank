@@ -126,6 +126,7 @@ function clearForm(myFormElement) {
                           <li class="list-group-item list-group-item-warning">{% bootstrap_field searchform.hasvideo show_label=False bound_css_class="not-bound" %}</li>
                           <li class="list-group-item list-group-item-danger">{% bootstrap_field searchform.hasnovideo show_label=False bound_css_class="not-bound" %}</li>
                           <li class="list-group-item">{% bootstrap_field searchform.multiplevideos show_label=False bound_css_class="not-bound" %}</li>
+                          <li class="list-group-item">{% bootstrap_field searchform.one_or_two_handed show_label=False bound_css_class="not-bound" %}</li>
                         </ul>
                 </div>
                 <div class="col-md-6 col-sm-6 searchinput">
@@ -151,6 +152,49 @@ function clearForm(myFormElement) {
                            <label class="input-group-addon" for="id_location">{{searchform.location.label}}</label>
                            {% bootstrap_field searchform.location show_label=False bound_css_class="not-bound" %}
                        </div>
+                </div>
+                <div class="col-md-6 col-sm-6 searchinput">
+                       <div class="input-group">
+                       <label class="input-group-addon" for="id_relation_to_foreign_signs">{{searchform.relation_to_foreign_signs.label}}</label>
+                           {% bootstrap_field searchform.relation_to_foreign_signs show_label=False bound_css_class="not-bound" %}
+                       </div>
+                </div>
+                <div class="col-md-6 col-sm-6 searchinput">
+                       <div class="input-group">
+                           <label class="input-group-addon" for="id_age_variation">{{searchform.age_variation.label}}</label>
+                           {% bootstrap_field searchform.age_variation show_label=False bound_css_class="not-bound" %}
+                       </div>
+                </div>
+                <div class="col-md-6 col-sm-6 searchinput">
+                   <div class='input-group'>
+                        <label class='input-group-addon' for='id_example_search'>{{searchform.example_search.label}}</label>
+                        <input id="id_example_search" name='example_search' class='form-control'
+                               {% if searchform.example_search.value %}value='{{searchform.example_search.value}}' {% endif %}
+                               placeholder='{% blocktrans %}Contains Gloss ID{% endblocktrans %}'>
+                   </div>
+                </div>
+                <div class="col-md-6 col-sm-6 searchinput">
+                      <div class="input-group">
+                           <label class="input-group-addon" for="id_strong_handshape">{{searchform.strong_handshape.label}}</label>
+                           {% bootstrap_field searchform.strong_handshape show_label=False bound_css_class="not-bound" %}
+                       </div>
+                </div>
+                <div class="col-md-6 col-sm-6 searchinput">
+                     <div class="input-group">
+                         <label class="input-group-addon" for="id_word_classes">{{searchform.word_classes.label}}</label>
+                         {% bootstrap_field searchform.word_classes show_label=False bound_css_class="not-bound" %}
+                     </div>
+                </div>
+                <div class="col-md-12 searchinput searchcolor">
+                        <ul class="list-group list-inline">
+                          <li class="list-group-item list-group-item-success">{% bootstrap_field searchform.number_incorporated show_label=False bound_css_class="not-bound" %}</li>
+                          <li class="list-group-item list-group-item-warning">{% bootstrap_field searchform.locatable show_label=False bound_css_class="not-bound" %}</li>
+                          <li class="list-group-item">{% bootstrap_field searchform.directional show_label=False bound_css_class="not-bound" %}</li>
+                          <li class="list-group-item list-group-item-danger">{% bootstrap_field searchform.fingerspelling show_label=False bound_css_class="not-bound" %}</li>
+                          <li class="list-group-item">{% bootstrap_field searchform.inflection_temporal show_label=False bound_css_class="not-bound" %}</li>
+                          <li class="list-group-item">{% bootstrap_field searchform.inflection_manner_degree show_label=False bound_css_class="not-bound" %}</li>
+                          <li class="list-group-item">{% bootstrap_field searchform.inflection_plural show_label=False bound_css_class="not-bound" %}</li>
+                        </ul>
                 </div>
             </div>
         </div>
