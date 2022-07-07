@@ -33,7 +33,8 @@ from .forms import (GlossRelationForm, GlossRelationSearchForm,
 from .models import (Dataset, Gloss, GlossRelation, GlossTranslations,
                      GlossURL, MorphologyDefinition, Relation,
                      RelationToForeignSign, Translation, FieldChoice)
-
+import sys
+from pprint import pprint
 
 class GlossListView(ListView):
     model = Gloss
@@ -303,7 +304,7 @@ class GlossListView(ListView):
         if 'strong_handshape' in get and get['strong_handshape'] != '':
             val = get['strong_handshape']
             qs = qs.filter(strong_handshape=val)
-            
+
         if 'word_classes' in get and get['word_classes'] != '':
             vals = get.getlist('word_classes')
             qs = qs.filter(wordclasses__id__in=vals)
@@ -486,28 +487,91 @@ class GlossDetailView(DetailView):
         context['translation_languages_and_translations'] = gloss.get_translations_for_translation_languages()
 
         if self.request.user.is_staff:
-            # Get some version history data
+            # Get version history data
             version_history = Version.objects.get_for_object(
-                context['gloss']).prefetch_related('revision__user')[:20]
-            translation_ct = ContentType.objects.get_for_model(Translation)
+                context['gloss']).prefetch_related('revision__user')
+
+            #translation_ct = ContentType.objects.get_for_model(Translation)
+
+            revisions = []
+            revisions_filtered = ('updated_at')
+            gloss_fieldchoice_fields=['handedness', 'strong_handshape', 'weak_handshape', 'location', 'relation_between_articulators',
+                                        'absolute_orientation_palm', 'absolute_orientation_fingers', 'relative_orientation_movement',
+                                        'relative_orientation_location', 'orientation_change', 'handshape_change', 'movement_shape',
+                                        'movement_direction', 'movement_manner', 'contact_type', 'wordclasses', 'usage', 'named_entity',
+                                        'semantic_field', 'signer', 'age_variation']
+
             for i, version in enumerate(version_history):
                 if not i+1 >= len(version_history):
-                    ver1 = version.field_dict
-                    ver2 = version_history[i+1].field_dict
-                    t1 = list(version_history[i].revision.version_set.filter(
-                        content_type=translation_ct).values_list('object_repr', flat=True))
-                    t2 = list(version_history[i+1].revision.version_set.filter(
-                        content_type=translation_ct).values_list('object_repr', flat=True))
-                    version.translations_added = ", ".join(
-                        ["+"+x for x in t1 if x not in set(t2)])
-                    version.translations_removed = ", ".join(
-                        ["-"+x for x in t2 if x not in set(t1)])
-                    version.data_removed = dict([(key, value) for key, value in ver1.items() if value != ver2[key] and
-                                                 key != 'updated_at' and key != 'updated_by_id'])
-                    version.data_added = dict([(key, value) for key, value in ver2.items() if value != ver1[key] and
-                                              key != 'updated_at' and key != 'updated_by_id'])
+                    ver1_field_dict = version.field_dict
+                    ver2_field_dict = version_history[i+1].field_dict
 
-            context['revisions'] = version_history
+                    # Translations
+                    #t1 = list(version_history[i].revision.version_set.filter(
+                        #content_type=translation_ct).values_list('object_repr', flat=True))
+                    #t2 = list(version_history[i+1].revision.version_set.filter(
+                        #content_type=translation_ct).values_list('object_repr', flat=True))
+                    #version.translations_added = ", ".join(
+                        #["+"+x for x in t1 if x not in set(t2)])
+                    #version.translations_removed = ", ".join(
+                        #["-"+x for x in t2 if x not in set(t1)])
+
+                    for key, value in ver1_field_dict.items():
+                        if key in revisions_filtered:
+                            continue
+
+                        changed_old   = ver2_field_dict[key]
+                        changed_new   = value
+
+                        if changed_new != changed_old:
+                            pprint("KEY ["+key+"]")
+
+                            # Use the raw field name (key) to retrieve the field verbose name
+                            changed_fieldname=Gloss._meta.get_field(key).verbose_name
+
+                            # Revision gives us the db column name, which for a ForeignKey is sometimes the field name with '_id'
+                            # NOTE removesuffix() is new in Python 3.9
+                            keycut=key.removesuffix('_id')
+
+                            pprint("KEYcut ["+keycut+"]")
+                            pprint("NAME ["+changed_fieldname+"]")
+
+                            if keycut in gloss_fieldchoice_fields:
+
+                                # If we were given a straight FieldChoice field name, then the values contained in the revision
+                                # are primary keys of FieldChoice records.
+                                # But we were given a dictionary_fieldchoice column name - ie. if it had '_id' on the end - then
+                                # the value in the revision is a (single, unique) machine_value number instead.
+                                # We have to adjust our QuerySet filters accordingly.
+
+                                if key != keycut:
+                                    pprint("DB COLUMN GIVEN, USING machine_value")
+                                    changed_old_qs = FieldChoice.objects.filter(machine_value=changed_old).values_list('english_name', flat=True)
+                                    pprint("CHANGED OLD QS: "+str(changed_old_qs))
+                                    changed_old = ', '.join(list(changed_old_qs))
+
+                                    changed_new_qs = FieldChoice.objects.filter(machine_value=changed_new).values_list('english_name', flat=True)
+                                    pprint("CHANGED NEW QS: "+str(changed_new_qs))
+                                    changed_new = ', '.join(list(changed_new_qs))
+                                else:
+                                    pprint("FIELD NAME GIVEN, USING PRIMARY KEY")
+                                    changed_old_qs = FieldChoice.objects.filter(pk__in=changed_old).values_list('english_name', flat=True)
+                                    pprint("CHANGED OLD QS: "+str(changed_old_qs))
+                                    changed_old = ', '.join(list(changed_old_qs))
+
+                                    changed_new_qs = FieldChoice.objects.filter(pk__in=changed_new).values_list('english_name', flat=True)
+                                    pprint("CHANGED NEW QS: "+str(changed_new_qs))
+                                    changed_new = ', '.join(list(changed_new_qs))
+
+                            if changed_old == '':
+                                changed_old = '-'
+                            if changed_new == '':
+                                changed_new = '-'
+
+                            revisions.append((version.revision.user.username, version.revision.date_created,
+                                              changed_fieldname, changed_old, changed_new))
+
+            context['revisions'] = revisions
 
         # Pass info about which fields we want to see
         gl = context['gloss']
