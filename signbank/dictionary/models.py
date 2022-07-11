@@ -670,7 +670,7 @@ class Gloss(models.Model):
 
         return field_choices
 
-# experiment
+# We do this here so we can pass the model in along with the follow arguments
 reversion.register(Gloss,follow=['wordclasses','strong_handshape'])
 
 
