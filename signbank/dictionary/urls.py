@@ -93,7 +93,8 @@ urlpatterns = [
 
     path('csv/<int:dataset_id>',
         permission_required('dictionary.search_gloss')(adminviews.gloss_list_csv), name='gloss_list_csv'),
-
+    path('video/csv',
+         permission_required('dictionary.search_gloss')(adminviews.get_video_details), name='get_video_details'),
     # Network Graph of GlossRelations
     path('network-graph/',login_required(views.network_graph), name='network_graph'),
 ]

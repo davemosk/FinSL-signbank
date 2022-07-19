@@ -698,6 +698,59 @@ def serialize_glosses_csv(dataset, queryset):
     return render_to_csv_response(queryset)
 
 
+def get_video_details(request):
+    """ This function will return a csv with details of published videos. No filtering the page would affect here. """
+
+    if not request.user.has_perm('dictionary.export_csv'):
+        msg = _("You do not have permissions to export to CSV.")
+        messages.error(request, msg)
+        raise PermissionDenied(msg)
+
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="dictionary-export.csv"'
+
+    writer = csv.writer(response)
+
+    csv_queryset =GlossVideo.objects.filter(is_public=True)
+    # We want to manually set which fields to export here
+    fieldnames = ['id', 'videofile', 'version', 'gloss_id', 'dataset', 'title', 'video_type_id']
+    fields = [GlossVideo._meta.get_field(fieldname) for fieldname in fieldnames]
+
+    # Defines the headings for the file. Signbank ID and Dataset are set first.
+    header = [f.verbose_name for f in fields]
+
+    writer.writerow(header)
+
+    for video in csv_queryset:
+        row = list()
+        # Add data from each field.
+        for f in fields:
+            value = getattr(video, f.name)
+
+            # if the column is `gloss`, get the gloss title and add it instead
+            if f.name == 'gloss':
+                if value is not None:
+                    value = value.idgloss
+
+            # if the column in 'video_type', and the video type instead of the machine value
+            if f.name == 'video_type':
+                if value is not None:
+                    value = value.english_name
+
+            if type(value) != str:
+                value = str(value)
+
+            # If the value contains ';', put it in quotes.
+            if value and ";" in value:
+                row.append('"{}"'.format(value))
+            else:
+                row.append(value)
+
+        writer.writerow(row)
+    return response
+
+
 class GlossRelationListView(ListView):
     model = GlossRelation
     template_name = 'dictionary/admin_glossrelation_list.html'
