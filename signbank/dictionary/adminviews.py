@@ -713,6 +713,7 @@ def get_video_details(request):
     writer = csv.writer(response)
 
     csv_queryset =GlossVideo.objects.filter(is_public=True)
+    # return render_to_csv_response(csv_queryset)
     # We want to manually set which fields to export here
     fieldnames = ['id', 'videofile', 'version', 'gloss_id', 'dataset', 'title', 'video_type_id']
     fields = [GlossVideo._meta.get_field(fieldname) for fieldname in fieldnames]
@@ -726,20 +727,7 @@ def get_video_details(request):
         row = list()
         # Add data from each field.
         for f in fields:
-            value = getattr(video, f.name)
-
-            # if the column is `gloss`, get the gloss title and add it instead
-            if f.name == 'gloss':
-                if value is not None:
-                    value = value.idgloss
-
-            # if the column in 'video_type', and the video type instead of the machine value
-            if f.name == 'video_type':
-                if value is not None:
-                    value = value.english_name
-
-            if type(value) != str:
-                value = str(value)
+            value = str(getattr(video, f.name))
 
             # If the value contains ';', put it in quotes.
             if value and ";" in value:
@@ -748,6 +736,7 @@ def get_video_details(request):
                 row.append(value)
 
         writer.writerow(row)
+
     return response
 
 
