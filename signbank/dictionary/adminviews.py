@@ -713,7 +713,7 @@ def get_video_details(request):
     writer = csv.writer(response)
 
     csv_queryset =GlossVideo.objects.filter(is_public=True)
-    # return render_to_csv_response(csv_queryset)
+
     # We want to manually set which fields to export here
     fieldnames = ['id', 'videofile', 'version', 'gloss_id', 'dataset', 'title', 'video_type_id']
     fields = [GlossVideo._meta.get_field(fieldname) for fieldname in fieldnames]
