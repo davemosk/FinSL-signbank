@@ -698,46 +698,63 @@ def serialize_glosses_csv(dataset, queryset):
     return render_to_csv_response(queryset)
 
 
+def get_field_name(field):
+    return GlossVideo._meta.get_field(field)
+
+
 def get_video_details(request):
     """ This function will return a csv with details of published videos. No filtering the page would affect here. """
+    csv_queryset = GlossVideo.objects.filter(is_public=True).values('id', 'videofile', 'version', 'gloss__idgloss',
+                                                            'dataset__name', 'title', 'video_type_id__english_name')
+    fieldnames = {
+        'id': 'ID',
+        'videofile': 'Videofile',
+        'version': 'Version',
+        'gloss__idgloss': 'Gloss',
+        'dataset__name': 'Dataset',
+        'title': 'Title',
+        'video_type_id__english_name': 'Video_type'
+    }
+    # header_map = map(lambda field: GlossVideo._meta.get_field(field), fieldnames)
+    return render_to_csv_response(queryset=csv_queryset, field_header_map=fieldnames)
 
-    if not request.user.has_perm('dictionary.export_csv'):
-        msg = _("You do not have permissions to export to CSV.")
-        messages.error(request, msg)
-        raise PermissionDenied(msg)
-
-    # Create the HttpResponse object with the appropriate CSV header.
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = 'attachment; filename="dictionary-export.csv"'
-
-    writer = csv.writer(response)
-
-    csv_queryset =GlossVideo.objects.filter(is_public=True)
-
-    # We want to manually set which fields to export here
-    fieldnames = ['id', 'videofile', 'version', 'gloss_id', 'dataset', 'title', 'video_type_id']
-    fields = [GlossVideo._meta.get_field(fieldname) for fieldname in fieldnames]
-
-    # Defines the headings for the file. Signbank ID and Dataset are set first.
-    header = [f.verbose_name for f in fields]
-
-    writer.writerow(header)
-
-    for video in csv_queryset:
-        row = list()
-        # Add data from each field.
-        for f in fields:
-            value = str(getattr(video, f.name))
-
-            # If the value contains ';', put it in quotes.
-            if value and ";" in value:
-                row.append('"{}"'.format(value))
-            else:
-                row.append(value)
-
-        writer.writerow(row)
-
-    return response
+    # if not request.user.has_perm('dictionary.export_csv'):
+    #     msg = _("You do not have permissions to export to CSV.")
+    #     messages.error(request, msg)
+    #     raise PermissionDenied(msg)
+    #
+    # # Create the HttpResponse object with the appropriate CSV header.
+    # response = HttpResponse(content_type='text/csv; charset=utf-8')
+    # response['Content-Disposition'] = 'attachment; filename="dictionary-export.csv"'
+    #
+    # writer = csv.writer(response)
+    #
+    # csv_queryset =GlossVideo.objects.filter(is_public=True)
+    #
+    # # We want to manually set which fields to export here
+    # fieldnames = ['id', 'videofile', 'version', 'gloss_id', 'dataset', 'title', 'video_type_id']
+    # fields = [GlossVideo._meta.get_field(fieldname) for fieldname in fieldnames]
+    #
+    # # Defines the headings for the file. Signbank ID and Dataset are set first.
+    # header = [f.verbose_name for f in fields]
+    #
+    # writer.writerow(header)
+    #
+    # for video in csv_queryset:
+    #     row = list()
+    #     # Add data from each field.
+    #     for f in fields:
+    #         value = str(getattr(video, f.name))
+    #
+    #         # If the value contains ';', put it in quotes.
+    #         if value and ";" in value:
+    #             row.append('"{}"'.format(value))
+    #         else:
+    #             row.append(value)
+    #
+    #     writer.writerow(row)
+    #
+    # return response
 
 
 class GlossRelationListView(ListView):
