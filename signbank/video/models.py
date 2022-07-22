@@ -11,6 +11,7 @@ from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.utils.module_loading import import_string
 from django.utils.translation import ugettext_lazy as _
+from storages.backends.s3boto3 import S3Boto3Storage
 
 
 class GlossVideoStorage(FileSystemStorage):
@@ -32,7 +33,19 @@ class GlossVideoStorage(FileSystemStorage):
 
 
 class GlossVideoDynamicStorage(import_string(settings.GLOSS_VIDEO_FILE_STORAGE)):
-    pass
+    def public_url(self, name):
+        """ Return the public URL to the object in S3 or local storage.
+        This is NOT a presigned URL, use #url for that.
+        """
+        if isinstance(self, S3Boto3Storage):
+            bucket_name = self.bucket.name
+            return f'https://{bucket_name}.s3.amazonaws.com/{name}'
+        else:
+            from django.contrib.sites.models import Site
+            domain = Site.objects.get_current().domain
+            path = super(GlossVideoDynamicStorage, self).url(name)
+
+            return f'{domain}{path}'
 
 
 class GlossVideo(models.Model):
