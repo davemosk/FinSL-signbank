@@ -47,6 +47,21 @@ class GlossVideoDynamicStorage(import_string(settings.GLOSS_VIDEO_FILE_STORAGE))
 
             return f'{domain}{path}'
 
+    def set_public(self, name, is_public):
+        """ Set the object ACL on the object. This is only supported
+        for S3 storage, and is a no-op for local file storage
+        """
+        if not isinstance(self, S3Boto3Storage):
+            return
+
+        self.bucket.meta.client.put_object_acl(
+            ACL='public-read' if is_public else 'private',
+            Bucket=self.bucket.name,
+            Key=name
+        )
+
+
+
 
 class GlossVideo(models.Model):
     """A video that represents a particular idgloss"""
@@ -227,6 +242,13 @@ class GlossVideo(models.Model):
 
     def is_video(self):
         return self.get_content_type().startswith("video/")
+
+    def set_public(self, is_public):
+        self.is_public = is_public
+        self.save()
+        self.videofile.storage.set_public(self.videofile.name, is_public)
+
+        True
 
     def has_poster(self):
         """Returns true if the glossvideo has a poster file."""

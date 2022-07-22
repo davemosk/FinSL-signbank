@@ -406,8 +406,7 @@ def change_glossvideo_publicity(request):
             messages.error(request, msg)
             raise PermissionDenied(msg)
 
-        video.is_public = is_public
-        video.save()
+        video.set_public(is_public)
 
         if request.is_ajax():
             return HttpResponse(status=200)
