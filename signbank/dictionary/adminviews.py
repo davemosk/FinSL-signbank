@@ -27,6 +27,7 @@ from tagging.models import Tag, TaggedItem
 
 from ..comments import CommentTagForm
 from ..video.forms import GlossVideoForGlossForm
+from ..video.models import GlossVideo
 from .forms import (GlossRelationForm, GlossRelationSearchForm,
                     GlossSearchForm, MorphologyForm, RelationForm, TagsAddForm)
 from .models import (Dataset, FieldChoice, Gloss, GlossRelation,
