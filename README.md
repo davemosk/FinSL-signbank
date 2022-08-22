@@ -293,9 +293,9 @@ and proper version pinning, but otherwise doesn't have much value.
   so making this mistake will live in the history of NZSL-signbank and FinSL
   forevermore. Ask me how I know.
 - Some Django views (search is known to be like this, but there might be
-  others), evaluate queryset when the view code is loaded, not on every request.
+  others), evaluate querysets when the view code is loaded, not on every request.
   This means that if something that affects the queryset results (for example, field
-  choices, tags, allowedtags, etc) is modified, the view might not 'see' then
+  choices, tags, allowedtags, etc) is modified, the view might not 'see' the
   changes until it is reloaded. If an issue along the lines of a data update not
   showing up in the UI is reported, a good first step is to restart the
   application. On Heroku, this is easily done via `heroku restart`.
