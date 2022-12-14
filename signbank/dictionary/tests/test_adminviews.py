@@ -48,7 +48,7 @@ class GlossListViewTestCase(TestCase):
         permission = Permission.objects.get(codename='export_csv')
         self.user.user_permissions.add(permission)
         self.user.save()
-        response = self.client.get(reverse('dictionary:admin_gloss_list'), { 'format': 'CSV'})
+        response = self.client.get(reverse('dictionary:admin_gloss_list'), { 'format': 'CSV' })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers['Content-Type'], 'text/csv; charset=utf-8')
         self.assertEqual(response.headers['Content-Disposition'], 'attachment; filename="dictionary-export.csv"')
