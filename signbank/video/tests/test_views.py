@@ -201,21 +201,17 @@ class UpploadGlossVideoTestCase(TestCase):
 class ExportGlossvideoCsvTestCase(TestCase):
     def setUp(self):
         # Create user and add permissions
-        self.user = User.objects.create_user(
-            username="test", email=None, password="test")
-        permission = Permission.objects.get(codename='export_csv')
-        self.user.user_permissions.add(permission)
+        self.user = User.objects.create_user(username="test")
+        self.user.user_permissions.add(Permission.objects.get(codename='export_csv'))
         self.user.save()
         # Create client with export permission.
         self.client = Client()
-        self.client.login(username="test", password="test")
+        self.client.force_login(self.user)
 
         # Create user with no permissions
-        self.user_noperm = User.objects.create_user(
-            username="noperm", email=None, password="noperm")
-        self.user_noperm.save()
+        self.user_noperm = User.objects.create_user(username="noperm")
         self.client_noperm = Client()
-        self.client_noperm.login(username="noperm", password="noperm")
+        self.client_noperm.force_login(self.user_noperm)
 
         # Create client not logged in
         self.client_nologin = Client()
