@@ -426,7 +426,7 @@ change_glossvideo_publicity_view = permission_required('video.change_glossvideo'
 
 def export_glossvideos_csv(request):
     """ This function will return a csv with details of published videos. No filtering the page would affect here. """
-    include_private = request.GET.get('include_private', False)
+    include_private = request.GET.get('include_private', 'false').lower() == 'true'
     gloss_ids = request.GET.getlist('gloss')
 
     csv_queryset = GlossVideo.objects.values('id', 'videofile', 'version', 'gloss__idgloss',
