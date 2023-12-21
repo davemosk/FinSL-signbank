@@ -69,14 +69,14 @@ class UpdateGlossVideoTestCase(TestCase):
         self.assertFalse(response.wsgi_request.user.has_perm(
             'video.manage_videos'))
         # Should return 302 Found, or 403 Forbidden
-        self.assertTrue(response.status_code == 403 or 302)
+        self.assertIn(response.status_code, [403, 302])
 
     def test_post_nologin(self):
         """Testing POST with anonymous user."""
         response = self.client_nologin.post(reverse('video:glossvideo_update'), {
             'glossvideo': self.glossvid.pk, 'gloss': self.testgloss.pk, 'video_type': self.video_type.machine_value})
         # Should return 302 Found, or 403 Forbidden
-        self.assertTrue(response.status_code == 302 or 403)
+        self.assertIn(response.status_code, [403, 302])
 
     def test_no_dataset_permission(self):
         """Test that the user can't update glosses if he doesn't have permissions to view the dataset of the gloss."""
@@ -158,14 +158,14 @@ class UpploadGlossVideoTestCase(TestCase):
         self.assertFalse(response.wsgi_request.user.has_perm(
             'video.add_glossvideo'))
         # Should return 302 Found, or 403 Forbidden
-        self.assertTrue(response.status_code == 403 or 302)
+        self.assertIn(response.status_code, [403, 302])
 
     def test_post_nologin(self):
         """Testing POST with anonymous user."""
         response = self.client_nologin.post(reverse('video:upload_glossvideo_gloss'), {
             'videofile': self.testfile, 'gloss': self.testgloss.pk, 'video_type': self.video_type.machine_value})
         # Should return 302 Found, or 403 Forbidden
-        self.assertTrue(response.status_code == 302 or 403)
+        self.assertIn(response.status_code, [403, 302])
 
     def test_no_dataset_permission(self):
         """Test that the user can't update glosses if he doesn't have permissions to view the dataset of the gloss."""
@@ -244,7 +244,7 @@ class ExportGlossvideoCsvTestCase(TestCase):
         self.assertFalse(response.wsgi_request.user.has_perm(
             'dictionary.export_dictionary'))
         # Should return 302 Found, or 403 Forbidden
-        self.assertTrue(response.status_code == 403 or 302)
+        self.assertIn(response.status_code, [403, 302])
 
     def test_export_csv_with_public(self):
         self.glossvid.is_public = True
