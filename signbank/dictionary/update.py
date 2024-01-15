@@ -3,19 +3,26 @@ from __future__ import unicode_literals
 
 import codecs
 import csv
+import datetime
 import re
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.sites.models import Site
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.db.models.fields import BooleanField
+from django.db import transaction
 from django.http import (Http404, HttpResponse, HttpResponseBadRequest,
                          HttpResponseForbidden, HttpResponseNotAllowed,
                          HttpResponseRedirect, HttpResponseServerError)
 from django.shortcuts import get_object_or_404, redirect, render, reverse
 from django.utils.translation import ugettext as _
+from django.utils.timezone import get_current_timezone
+from django_comments.models import Comment
 from guardian.shortcuts import get_objects_for_user, get_perms
+from urllib.request import urlretrieve
 
 from tagging.models import Tag, TaggedItem
 
@@ -762,6 +769,332 @@ def confirm_import_gloss_csv(request):
     else:
         # If request method is not POST, redirect to the import form
         return HttpResponseRedirect(reverse('dictionary:import_gloss_csv'))
+
+
+share_csv_header_list = [
+    "word",
+    "maori",
+    "secondary",
+    "description",
+    "notes",
+    "created_at",
+    "contributor_email",
+    "contributor_username",
+    "agrees",
+    "disagrees",
+    "topic_names",
+    "videos",
+    "illustrations",
+    "usage_examples",
+    "sign_comments",
+]
+
+
+@login_required
+@permission_required('dictionary.import_csv')
+def import_nzsl_share_gloss_csv(request):
+    """
+    Check which objects exist and which not. Then show the user a list of glosses that will be added if user confirms.
+    Store the glosses to be added into sessions.
+    """
+    # Make sure that the session variables are flushed before using this view.
+    if 'dataset_id' in request.session: del request.session['dataset_id']
+    if 'glosses_new' in request.session: del request.session['glosses_new']
+
+    new_glosses = []
+    if request.method == 'POST':
+        form = CSVUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            dataset = form.cleaned_data['dataset']
+            if 'view_dataset' not in get_perms(request.user, dataset):
+                # If user has no permissions to dataset, raise PermissionDenied to show 403 template.
+                msg = _("You do not have permissions to import glosses to this lexicon.")
+                messages.error(request, msg)
+                raise PermissionDenied(msg)
+            try:
+                glossreader = csv.DictReader(
+                    codecs.iterdecode(form.cleaned_data['file'], 'utf-8'),
+                    fieldnames=share_csv_header_list,
+                    delimiter=',',
+                    quotechar='"'
+                )
+                for row in glossreader:
+                    if glossreader.line_num == 1:
+                        continue
+                    new_glosses.append(row)
+            except csv.Error as e:
+                # Can't open file, remove session variables
+                if 'dataset_id' in request.session: del request.session['dataset_id']
+                if 'glosses_new' in request.session: del request.session['glosses_new']
+                # Set a message to be shown so that the user knows what is going on.
+                messages.add_message(request, messages.ERROR, _('Cannot open the file:' + str(e)))
+                return render(request, 'dictionary/import_nzsl_share_gloss_csv.html', {'import_csv_form': CSVUploadForm()}, )
+            except UnicodeDecodeError as e:
+                # File is not UTF-8 encoded.
+                messages.add_message(request, messages.ERROR, _('File must be UTF-8 encoded!'))
+                return render(request, 'dictionary/import_nzsl_share_gloss_csv.html', {'import_csv_form': CSVUploadForm()}, )
+
+            # Store dataset's id and the list of glosses to be added in session.
+            request.session['dataset_id'] = dataset.id
+            request.session['glosses_new'] = new_glosses
+
+            return render(request, 'dictionary/import_nzsl_share_gloss_csv_confirmation.html',
+                          {'glosses_new': new_glosses,
+                           'dataset': dataset, })
+        else:
+            # If form is not valid, set a error message and return to the original form.
+            messages.add_message(request, messages.ERROR, _('The provided CSV-file does not meet the requirements '
+                                                            'or there is some other problem.'))
+            return render(request, 'dictionary/import_nzsl_share_gloss_csv.html', {'import_csv_form': form}, )
+    else:
+        # If request type is not POST, return to the original form.
+        csv_form = CSVUploadForm()
+        allowed_datasets = get_objects_for_user(request.user, 'dictionary.view_dataset')
+        # Make sure we only list datasets the user has permissions to.
+        csv_form.fields["dataset"].queryset = csv_form.fields["dataset"].queryset.filter(
+            id__in=[x.id for x in allowed_datasets])
+        return render(request, "dictionary/import_nzsl_share_gloss_csv.html",
+                      {'import_csv_form': csv_form}, )
+
+
+def move_glossvideo_to_valid_filepath(glossvideo):
+    """Mimics the rename_file method on GlossVideo without changing the assigned filename"""
+    old_file = glossvideo.videofile
+    full_new_path = glossvideo.videofile.storage.get_valid_name(
+        glossvideo.videofile.name.split("/")[-1]
+    )
+    if not glossvideo.videofile.storage.exists(full_new_path):
+        # Save the file into the new path.
+        saved_file_path = glossvideo.videofile.storage.save(full_new_path, old_file)
+        # Set the actual file path to videofile.
+        glossvideo.videofile = saved_file_path
+    return glossvideo
+
+
+@login_required
+@permission_required('dictionary.import_csv')
+@transaction.atomic()
+def confirm_import_nzsl_share_gloss_csv(request):
+    """This view adds the data to database if the user confirms the action"""
+    if request.method == 'POST':
+        if 'cancel' in request.POST:
+            # If user cancels adding data, flush session variables
+            if 'dataset_id' in request.session: del request.session['dataset_id']
+            if 'glosses_new' in request.session: del request.session['glosses_new']
+            # Set a message to be shown so that the user knows what is going on.
+            messages.add_message(request, messages.WARNING, _('Cancelled adding CSV data.'))
+            return HttpResponseRedirect(reverse('dictionary:import_nzsl_share_gloss_csv'))
+
+        elif 'confirm' in request.POST:
+            glosses_added = []
+            dataset = None
+            translations = []
+            comments = []
+            videos = []
+            new_glosses = {}
+            bulk_create_gloss = []
+            bulk_update_glosses = []
+
+            if 'glosses_new' and 'dataset_id' in request.session:
+                dataset = Dataset.objects.get(id=request.session['dataset_id'])
+                language_en = Language.objects.get(name="English")
+                language_mi = Language.objects.get(name="Māori")
+                gloss_content_type = ContentType.objects.get_for_model(Gloss)
+                video_type = FieldChoice.objects.get(field="video_type", english_name="validation")
+                site = Site.objects.get_current()
+                comment_submit_date = datetime.datetime.now(tz=get_current_timezone())
+
+                for row_num, gloss in enumerate(request.session['glosses_new']):
+                    # will iterate over these glosses again after bulk creating and to make sure
+                    # we preserve order
+                    new_glosses[str(row_num)] = gloss
+                    bulk_create_gloss.append(Gloss(
+                        dataset=dataset,
+                        # need to make idgloss unique in dataset,
+                        # but gloss word can appear in multiple rows, so
+                        # idgloss will be updated to word:pk in second step
+                        idgloss=f"{gloss['word']}_row{row_num}",
+                        idgloss_mi=gloss.get("maori", None),
+                        notes=gloss.get("notes", ""),
+                        created_by=request.user,
+                        updated_by=request.user
+                    ))
+
+                bulk_created = Gloss.objects.bulk_create(bulk_create_gloss)
+                idglosses = [x.idgloss for x in bulk_created]
+                bulk_created_with_pk = Gloss.objects.filter(
+                    idgloss__in=idglosses
+                )
+                for gloss in bulk_created_with_pk:
+                    old_id_gloss = gloss.idgloss.split("_row")
+                    gloss_data = new_glosses[old_id_gloss[1]]
+
+                    cleaned_semantic_fields = [
+                        x for x in gloss_data["topic_names"] if x != "all signs"
+                    ]
+                    semantic_fields = FieldChoice.objects.filter(
+                        field="semantic_field",
+                        english_name__in=cleaned_semantic_fields
+                    )
+                    gloss.semantic_field.set(semantic_fields)
+                    if semantic_fields.count() != len(cleaned_semantic_fields):
+                        # add miscellanous field if not all topic names have  existing field
+                        # choice
+                        gloss.semantic_field.add(FieldChoice.objects.get(
+                            field="semantic_field", english_name="Miscellaneous"
+                        ))
+
+                    # Prepare new idgloss fields for bulk update
+                    gloss.idgloss = f"{old_id_gloss[0]}:{gloss.pk}"
+                    if gloss.idgloss_mi:
+                        gloss.idgloss_mi = f"{gloss.idgloss_mi}:{gloss.pk}"
+                    bulk_update_glosses.append(gloss)
+
+                    translations.append(GlossTranslations(
+                        gloss=gloss,
+                        language=language_en,
+                        translations=gloss_data["word"],
+                        translations_secondary=gloss_data.get("secondary", None)
+                    ))
+                    if gloss_data.get("maori", None):
+                        translations.append(GlossTranslations(
+                            gloss=gloss,
+                            language=language_mi,
+                            translations=gloss_data["maori"]
+                        ))
+
+                    comments.append(Comment(
+                        content_type=gloss_content_type,
+                        object_pk=gloss.pk,
+                        user_name=gloss_data.get("contributor_name", ""),
+                        user_email=gloss_data.get("contributor_email", ""),
+                        comment=gloss_data.get("notes", ""),
+                        site=site,
+                        is_public=False,
+                        submit_date=comment_submit_date
+                    ))
+                    if gloss_data.get("sign_comments", None):
+                        for comment in gloss_data["sign_comments"].split("|"):
+                            try:
+                                comment_content = comment.split(":")
+                                user_name = comment_content[0]
+                                comment_content = comment_content[1]
+                            except IndexError:
+                                comment_content = comment
+                                user_name = "Unknown"
+                            comments.append(Comment(
+                                content_type=gloss_content_type,
+                                object_pk=gloss.pk,
+                                user_name=user_name,
+                                comment=comment_content,
+                                site=site,
+                                is_public=False,
+                                submit_date=comment_submit_date
+                            ))
+
+                    if gloss_data.get("videos", None):
+                        for i, video_url in enumerate(gloss_data["videos"].split("|")):
+                            extension = video_url[-3:]
+                            file, _ = urlretrieve(
+                                f"{settings.NZSL_SHARE_HOSTNAME}{video_url}",
+                                f"{settings.MEDIA_ROOT}/glossvideo/"
+                                f"{gloss.pk}-{gloss.idgloss}_video_{i+1}.{extension}"
+                            )
+                            if i == 0:
+                                glossvideo = GlossVideo(
+                                    title="Main",
+                                    gloss=gloss,
+                                    dataset=gloss.dataset,
+                                    videofile=file,
+                                    version=i,
+                                    is_public=False,
+                                    video_type=video_type
+                                )
+                            else:
+                                glossvideo = GlossVideo(
+                                    title=f"Video_{i+1}",
+                                    gloss=gloss,
+                                    dataset=gloss.dataset,
+                                    videofile=file,
+                                    version=i,
+                                    is_public=False,
+                                    video_type=video_type
+                                )
+                            glossvideo = move_glossvideo_to_valid_filepath(glossvideo)
+                            videos.append(glossvideo)
+
+                    if gloss_data.get("illustrations", None):
+                        for i, video_url in enumerate(gloss_data["illustrations"].split("|")):
+                            extension = video_url[-3:]
+                            file, _ = urlretrieve(
+                                f"{settings.NZSL_SHARE_HOSTNAME}{video_url}",
+                                f"{settings.MEDIA_ROOT}/glossvideo/"
+                                f"{gloss.pk}-{gloss.idgloss}_illustration_{i+1}.{extension}"
+                            )
+                            glossvideo = GlossVideo(
+                                title=f"Illustration_{i+1}",
+                                gloss=gloss,
+                                dataset=gloss.dataset,
+                                videofile=file,
+                                version=i,
+                                is_public=False,
+                                video_type=video_type
+                            )
+                            glossvideo = move_glossvideo_to_valid_filepath(glossvideo)
+                            videos.append(glossvideo)
+
+                    if gloss_data.get("usage_examples", None):
+                        for i, video_url in enumerate(gloss_data["usage_examples"].split("|")):
+                            extension = video_url[-3:]
+                            file, _ = urlretrieve(
+                                f"{settings.NZSL_SHARE_HOSTNAME}{video_url}",
+                                f"{settings.MEDIA_ROOT}/glossvideo/"
+                                f"{gloss.pk}-{gloss.idgloss}_usageexample_{i+1}.{extension}"
+                            )
+                            if i <= 1:
+                                glossvideo = GlossVideo(
+                                    title=f"finalexample{i+1}",
+                                    gloss=gloss,
+                                    dataset=gloss.dataset,
+                                    videofile=file,
+                                    version=i,
+                                    is_public=False,
+                                    video_type=video_type
+                                )
+                            else:
+                                glossvideo = GlossVideo(
+                                    title=f"UsageExample_{i+1}",
+                                    gloss=gloss,
+                                    dataset=gloss.dataset,
+                                    videofile=file,
+                                    version=i,
+                                    is_public=False,
+                                    video_type=video_type
+                                )
+                            glossvideo = move_glossvideo_to_valid_filepath(glossvideo)
+                            videos.append(glossvideo)
+
+                    glosses_added.append(gloss)
+
+                # Bulk create entities related to the gloss, and bulk update the glosses' idgloss
+                Comment.objects.bulk_create(comments)
+                GlossTranslations.objects.bulk_create(translations)
+                GlossVideo.objects.bulk_create(videos)
+                Gloss.objects.bulk_update(bulk_update_glosses, ["idgloss", "idgloss_mi"])
+
+                # Flush request.session['glosses_new'] and request.session['dataset']
+                del request.session['glosses_new']
+                del request.session['dataset_id']
+
+                # Set a message to be shown so that the user knows what is going on.
+                # messages.add_message(request, messages.SUCCESS, _('Glosses were added succesfully.'))
+            return render(request, "dictionary/import_nzsl_share_gloss_csv_confirmation.html", {'glosses_added': glosses_added,
+                                                                                     'dataset': dataset.name})
+        else:
+            return HttpResponseRedirect(reverse('dictionary:import_nzsl_share_gloss_csv'))
+    else:
+        # If request method is not POST, redirect to the import form
+        return HttpResponseRedirect(reverse('dictionary:import_nzsl_share_gloss_csv'))
 
 
 def gloss_relation(request):
