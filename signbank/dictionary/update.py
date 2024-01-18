@@ -894,6 +894,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
             new_glosses = {}
             bulk_create_gloss = []
             bulk_update_glosses = []
+            bulk_semantic_fields = []
 
             if 'glosses_new' and 'dataset_id' in request.session:
                 dataset = Dataset.objects.get(id=request.session['dataset_id'])
@@ -903,6 +904,10 @@ def confirm_import_nzsl_share_gloss_csv(request):
                 video_type = FieldChoice.objects.get(field="video_type", english_name="validation")
                 site = Site.objects.get_current()
                 comment_submit_date = datetime.datetime.now(tz=get_current_timezone())
+                semantic_fields = FieldChoice.objects.filter(
+                    field="semantic_field"
+                ).values_list("english_name", "pk")
+                semantic_fields_dict = {field[0]: field[1] for field in semantic_fields}
 
                 for row_num, gloss in enumerate(request.session['glosses_new']):
                     # will iterate over these glosses again after bulk creating and to make sure
@@ -929,20 +934,27 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     old_id_gloss = gloss.idgloss.split("_row")
                     gloss_data = new_glosses[old_id_gloss[1]]
 
-                    cleaned_semantic_fields = [
-                        x for x in gloss_data["topic_names"] if x != "all signs"
-                    ]
-                    semantic_fields = FieldChoice.objects.filter(
-                        field="semantic_field",
-                        english_name__in=cleaned_semantic_fields
-                    )
-                    gloss.semantic_field.set(semantic_fields)
-                    if semantic_fields.count() != len(cleaned_semantic_fields):
-                        # add miscellanous field if not all topic names have  existing field
-                        # choice
-                        gloss.semantic_field.add(FieldChoice.objects.get(
-                            field="semantic_field", english_name="Miscellaneous"
-                        ))
+                    if gloss_data.get("topic_names", None):
+                        gloss_topics = gloss_data["topic_names"].split("|")
+                        cleaned_gloss_topics = [x for x in gloss_topics if x not in ["all signs", "All signs"]]
+                        add_miscellaneous = False
+                        for topic in cleaned_gloss_topics:
+                            if topic in semantic_fields_dict.keys():
+                                bulk_semantic_fields.append(
+                                    Gloss.semantic_field.through(
+                                        gloss_id=gloss.id,
+                                        fieldchoice_id=semantic_fields_dict[topic]
+                                    )
+                                )
+                            else:
+                                add_miscellaneous = True
+                        if add_miscellaneous:
+                            bulk_semantic_fields.append(
+                                Gloss.semantic_field.through(
+                                    gloss_id=gloss.id,
+                                    fieldchoice_id=semantic_fields_dict["Miscellaneous"]
+                                )
+                            )
 
                     # Prepare new idgloss fields for bulk update
                     gloss.idgloss = f"{old_id_gloss[0]}:{gloss.pk}"
@@ -1004,7 +1016,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                                 glossvideo = GlossVideo(
                                     title="Main",
                                     gloss=gloss,
-                                    dataset=gloss.dataset,
+                                    dataset=dataset,
                                     videofile=file,
                                     version=i,
                                     is_public=False,
@@ -1014,7 +1026,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                                 glossvideo = GlossVideo(
                                     title=f"Video_{i+1}",
                                     gloss=gloss,
-                                    dataset=gloss.dataset,
+                                    dataset=dataset,
                                     videofile=file,
                                     version=i,
                                     is_public=False,
@@ -1034,7 +1046,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                             glossvideo = GlossVideo(
                                 title=f"Illustration_{i+1}",
                                 gloss=gloss,
-                                dataset=gloss.dataset,
+                                dataset=dataset,
                                 videofile=file,
                                 version=i,
                                 is_public=False,
@@ -1055,7 +1067,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                                 glossvideo = GlossVideo(
                                     title=f"finalexample{i+1}",
                                     gloss=gloss,
-                                    dataset=gloss.dataset,
+                                    dataset=dataset,
                                     videofile=file,
                                     version=i,
                                     is_public=False,
@@ -1065,7 +1077,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                                 glossvideo = GlossVideo(
                                     title=f"UsageExample_{i+1}",
                                     gloss=gloss,
-                                    dataset=gloss.dataset,
+                                    dataset=dataset,
                                     videofile=file,
                                     version=i,
                                     is_public=False,
@@ -1081,6 +1093,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                 GlossTranslations.objects.bulk_create(translations)
                 GlossVideo.objects.bulk_create(videos)
                 Gloss.objects.bulk_update(bulk_update_glosses, ["idgloss", "idgloss_mi"])
+                Gloss.semantic_field.through.objects.bulk_create(bulk_semantic_fields)
 
                 # Flush request.session['glosses_new'] and request.session['dataset']
                 del request.session['glosses_new']
