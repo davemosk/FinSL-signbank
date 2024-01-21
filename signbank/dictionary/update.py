@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.management import call_command
 from django.db.models.fields import BooleanField
 from django.db import transaction
 from django.http import (Http404, HttpResponse, HttpResponseBadRequest,
@@ -35,6 +36,8 @@ from .models import (Dataset, Dialect, FieldChoice, Gloss, Lemma, GlossRelation,
                      GlossTranslations, GlossURL, Keyword, Language,
                      MorphologyDefinition, Relation, RelationToForeignSign,
                      Translation, build_choice_list)
+from .tasks import retrieve_videos_for_glosses
+
 
 @permission_required('dictionary.change_gloss')
 def update_gloss(request, glossid):
@@ -857,20 +860,6 @@ def import_nzsl_share_gloss_csv(request):
                       {'import_csv_form': csv_form}, )
 
 
-def move_glossvideo_to_valid_filepath(glossvideo):
-    """Mimics the rename_file method on GlossVideo without changing the assigned filename"""
-    old_file = glossvideo.videofile
-    full_new_path = glossvideo.videofile.storage.get_valid_name(
-        glossvideo.videofile.name.split("/")[-1]
-    )
-    if not glossvideo.videofile.storage.exists(full_new_path):
-        # Save the file into the new path.
-        saved_file_path = glossvideo.videofile.storage.save(full_new_path, old_file)
-        # Set the actual file path to videofile.
-        glossvideo.videofile = saved_file_path
-    return glossvideo
-
-
 @login_required
 @permission_required('dictionary.import_csv')
 @transaction.atomic()
@@ -930,7 +919,11 @@ def confirm_import_nzsl_share_gloss_csv(request):
                 bulk_created_with_pk = Gloss.objects.filter(
                     idgloss__in=idglosses
                 )
+
+                gloss_pks = []
+
                 for gloss in bulk_created_with_pk:
+                    gloss_pks.append(gloss.pk)
                     old_id_gloss = gloss.idgloss.split("_row")
                     gloss_data = new_glosses[old_id_gloss[1]]
 
@@ -1007,83 +1000,60 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     if gloss_data.get("videos", None):
                         for i, video_url in enumerate(gloss_data["videos"].split("|")):
                             extension = video_url[-3:]
-                            file, _ = urlretrieve(
-                                f"{settings.NZSL_SHARE_HOSTNAME}{video_url}",
+                            file_name = (
                                 f"{settings.MEDIA_ROOT}/glossvideo/"
                                 f"{gloss.pk}-{gloss.idgloss}_video_{i+1}.{extension}"
                             )
                             if i == 0:
-                                glossvideo = GlossVideo(
-                                    title="Main",
-                                    gloss=gloss,
-                                    dataset=dataset,
-                                    videofile=file,
-                                    version=i,
-                                    is_public=False,
-                                    video_type=video_type
-                                )
+                                title = "Main"
                             else:
-                                glossvideo = GlossVideo(
-                                    title=f"Video_{i+1}",
-                                    gloss=gloss,
-                                    dataset=dataset,
-                                    videofile=file,
-                                    version=i,
-                                    is_public=False,
-                                    video_type=video_type
-                                )
-                            glossvideo = move_glossvideo_to_valid_filepath(glossvideo)
+                                title = f"Video_{i+1}"
+
+                            glossvideo = {
+                                "url": video_url,
+                                "file_name": file_name,
+                                "gloss_pk": gloss.pk,
+                                "title": title,
+                                "version": i
+                            }
                             videos.append(glossvideo)
 
                     if gloss_data.get("illustrations", None):
                         for i, video_url in enumerate(gloss_data["illustrations"].split("|")):
                             extension = video_url[-3:]
-                            file, _ = urlretrieve(
-                                f"{settings.NZSL_SHARE_HOSTNAME}{video_url}",
+                            file_name = (
                                 f"{settings.MEDIA_ROOT}/glossvideo/"
                                 f"{gloss.pk}-{gloss.idgloss}_illustration_{i+1}.{extension}"
                             )
-                            glossvideo = GlossVideo(
-                                title=f"Illustration_{i+1}",
-                                gloss=gloss,
-                                dataset=dataset,
-                                videofile=file,
-                                version=i,
-                                is_public=False,
-                                video_type=video_type
-                            )
-                            glossvideo = move_glossvideo_to_valid_filepath(glossvideo)
+
+                            glossvideo = {
+                                "url": video_url,
+                                "file_name": file_name,
+                                "gloss_pk": gloss.pk,
+                                "title": f"Illustration_{i+1}",
+                                "version": i
+                            }
                             videos.append(glossvideo)
 
                     if gloss_data.get("usage_examples", None):
                         for i, video_url in enumerate(gloss_data["usage_examples"].split("|")):
                             extension = video_url[-3:]
-                            file, _ = urlretrieve(
-                                f"{settings.NZSL_SHARE_HOSTNAME}{video_url}",
+                            file_name = (
                                 f"{settings.MEDIA_ROOT}/glossvideo/"
                                 f"{gloss.pk}-{gloss.idgloss}_usageexample_{i+1}.{extension}"
                             )
                             if i <= 1:
-                                glossvideo = GlossVideo(
-                                    title=f"finalexample{i+1}",
-                                    gloss=gloss,
-                                    dataset=dataset,
-                                    videofile=file,
-                                    version=i,
-                                    is_public=False,
-                                    video_type=video_type
-                                )
+                                title = f"finalexample{i+1}",
                             else:
-                                glossvideo = GlossVideo(
-                                    title=f"UsageExample_{i+1}",
-                                    gloss=gloss,
-                                    dataset=dataset,
-                                    videofile=file,
-                                    version=i,
-                                    is_public=False,
-                                    video_type=video_type
-                                )
-                            glossvideo = move_glossvideo_to_valid_filepath(glossvideo)
+                                title = f"UsageExample_{i+1}",
+
+                            glossvideo = {
+                                "url": video_url,
+                                "file_name": file_name,
+                                "gloss_pk": gloss.pk,
+                                "title": title,
+                                "version": i
+                            }
                             videos.append(glossvideo)
 
                     glosses_added.append(gloss)
@@ -1091,9 +1061,13 @@ def confirm_import_nzsl_share_gloss_csv(request):
                 # Bulk create entities related to the gloss, and bulk update the glosses' idgloss
                 Comment.objects.bulk_create(comments)
                 GlossTranslations.objects.bulk_create(translations)
-                GlossVideo.objects.bulk_create(videos)
                 Gloss.objects.bulk_update(bulk_update_glosses, ["idgloss", "idgloss_mi"])
                 Gloss.semantic_field.through.objects.bulk_create(bulk_semantic_fields)
+
+                # call background task to retrieve videos for glosses and activate the task
+                # processor for 10 minutes
+                retrieve_videos_for_glosses(gloss_pks, videos)
+                call_command("process_tasks", "--duration=600 --sleep=60 --log-std")
 
                 # Flush request.session['glosses_new'] and request.session['dataset']
                 del request.session['glosses_new']
