@@ -777,7 +777,6 @@ share_csv_header_list = [
     "word",
     "maori",
     "secondary",
-    "description",
     "notes",
     "created_at",
     "contributor_email",
