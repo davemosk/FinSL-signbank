@@ -172,7 +172,6 @@ INSTALLED_APPS = (
     'guardian',
     'notifications',
     'django.contrib.sitemaps',
-    'background_task',
 )
 
 ABSOLUTE_URL_OVERRIDES = {
@@ -270,6 +269,3 @@ TAG_VALIDATION_CHECK_RESULTS = "validation:check-results"
 TAG_VALIDATION_PASS = "validation:pass"
 TAG_VALIDATION_FAIL = "validation:fail"
 TAG_VALIDATION_HOLD = "validation:hold"
-
-# Settings for django-background-tasks
-MAX_ATTEMPTS = 2

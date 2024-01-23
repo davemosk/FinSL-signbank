@@ -1,10 +1,18 @@
+from typing import TypedDict, List
 from urllib.request import urlretrieve
 
-from background_task import background
 from django.conf import settings
 
 from .models import FieldChoice, Gloss
 from ..video.models import GlossVideo
+
+
+class VideoDetail(TypedDict):
+    url: str
+    file_name: str
+    gloss_pk: int
+    title: str
+    version: int
 
 
 def move_glossvideo_to_valid_filepath(glossvideo):
@@ -27,32 +35,28 @@ def move_glossvideo_to_valid_filepath(glossvideo):
     return glossvideo
 
 
-# background task schedule kicks task off 30 seconds after call
-@background(schedule=30)
-def retrieve_videos_for_glosses(video_details, gloss_pks):
+def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
     """
     Takes a list of dictionaries of video details.
+
     The dictionary should contain the following keys:
     - url: url for the video file to be retrieved without the hostname
     - file_name: particular filename that has been created for video
     - gloss_pk: the pk of the gloss for which the GlossVideo is going to be created
     - title
     - version
-
-    Also takes a list of gloss_pks to retrieve a queryset of glosses for which videos will be
-    created.
     """
-    glosses = Gloss.objects.filter(pk__in=gloss_pks).select_related("dataset")
-    gloss_dict = {gloss.pk: gloss for gloss in glosses}
-    video_type = FieldChoice.objects.get(field="video_type", english_name="validation")
+    video_type = FieldChoice.objects.filter(field="video_type", english_name="validation").first()
     videos_to_create = []
 
     for video in video_details:
+        retrieval_url = f"{settings.NZSL_SHARE_HOSTNAME}{video['url']}"
         file, _ = urlretrieve(
-            f"{settings.NZSL_SHARE_HOSTNAME}{video['url']}",
+            retrieval_url,
             video["file_name"]
         )
-        gloss = gloss_dict[video['gloss_pk']]
+        gloss = Gloss.objects.get(pk=video["gloss_pk"])
+
         gloss_video = GlossVideo(
             title=video["title"],
             gloss=gloss,

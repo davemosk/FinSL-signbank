@@ -5,6 +5,7 @@ import codecs
 import csv
 import datetime
 import re
+import threading
 
 from django.conf import settings
 from django.contrib import messages
@@ -12,7 +13,6 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.core.management import call_command
 from django.db.models.fields import BooleanField
 from django.db import transaction
 from django.http import (Http404, HttpResponse, HttpResponseBadRequest,
@@ -23,7 +23,6 @@ from django.utils.translation import ugettext as _
 from django.utils.timezone import get_current_timezone
 from django_comments.models import Comment
 from guardian.shortcuts import get_objects_for_user, get_perms
-from urllib.request import urlretrieve
 
 from tagging.models import Tag, TaggedItem
 
@@ -890,7 +889,6 @@ def confirm_import_nzsl_share_gloss_csv(request):
                 language_en = Language.objects.get(name="English")
                 language_mi = Language.objects.get(name="Māori")
                 gloss_content_type = ContentType.objects.get_for_model(Gloss)
-                video_type = FieldChoice.objects.get(field="video_type", english_name="validation")
                 site = Site.objects.get_current()
                 comment_submit_date = datetime.datetime.now(tz=get_current_timezone())
                 semantic_fields = FieldChoice.objects.filter(
@@ -920,10 +918,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     idgloss__in=idglosses
                 )
 
-                gloss_pks = []
-
                 for gloss in bulk_created_with_pk:
-                    gloss_pks.append(gloss.pk)
                     old_id_gloss = gloss.idgloss.split("_row")
                     gloss_data = new_glosses[old_id_gloss[1]]
 
@@ -1064,10 +1059,10 @@ def confirm_import_nzsl_share_gloss_csv(request):
                 Gloss.objects.bulk_update(bulk_update_glosses, ["idgloss", "idgloss_mi"])
                 Gloss.semantic_field.through.objects.bulk_create(bulk_semantic_fields)
 
-                # call background task to retrieve videos for glosses and activate the task
-                # processor for 10 minutes
-                retrieve_videos_for_glosses(gloss_pks, videos)
-                call_command("process_tasks", "--duration=600 --sleep=60 --log-std")
+                # start Thread to process gloss video retrieval in the background
+                t = threading.Thread(target=retrieve_videos_for_glosses,
+                                     args=[videos], daemon=True)
+                t.start()
 
                 # Flush request.session['glosses_new'] and request.session['dataset']
                 del request.session['glosses_new']
