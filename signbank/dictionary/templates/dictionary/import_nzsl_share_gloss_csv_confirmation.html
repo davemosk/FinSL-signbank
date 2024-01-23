@@ -2,40 +2,28 @@
 {% load stylesheet %}
 {% load bootstrap3 %}
 {% load i18n %}
-{% block bootstrap3_title %}{% blocktrans %}Confirm Import CSV{% endblocktrans %} | {% endblock %}
+{% block bootstrap3_title %}{% blocktrans %}Confirm Import NZSL Share CSV{% endblocktrans %} | {% endblock %}
 
 {% block content %}
 {% if perms.dictionary.import_csv %}
     {% if glosses_new %}
       <h3>{% blocktrans %}Glosses to be added to{% endblocktrans %} <span class="label label-default">{{dataset}}</span></h3>
+      <form action='{% url "dictionary:confirm_import_nzsl_share_gloss_csv" %}' method='post'>
+        {% csrf_token %}
+        <input class='btn btn-primary' name='confirm' type='submit' value='{% blocktrans %}Confirm{% endblocktrans %}'>
+        <input class='btn btn-primary' name='cancel' type='submit' value='{% blocktrans %}Cancel{% endblocktrans %}'>
+      </form>
       <p>{% blocktrans %}Total number of glosses to be added:{% endblocktrans %} {{glosses_new|length}}</p>
       <table class="table">
-          <th>Gloss</th>
           <th>Gloss in English</th>
+          <th>Gloss in Maōri</th>
       {% for gloss in glosses_new %}
           <tr>
               <td>{{ gloss.word }}</td>
-              <td>{{ gloss.maori|default_if_none:"" }}</td>
+              <td>{{ gloss.maori|default_if_none:""}}</td>
           </tr>
       {% endfor %}
       </table>
-    {% endif%}
-
-    {% if glosses_exists %}
-      <h3>{% blocktrans %}Glosses that will not be added because they already exist in{% endblocktrans %} <span class="label label-default">{{dataset}}</span></h3>
-      <ul>
-      {% for gloss in glosses_exists %}
-          <li>{{gloss}}</li>
-      {% endfor %}
-      </ul>
-    {% endif %}
-    {% if not glosses_new %}
-        <h3>{% blocktrans %}No glosses can be added!{% endblocktrans %}</h3>
-        <p><a href="{% url "dictionary:import_nzsl_share_gloss_csv" %}">{% blocktrans %}Return to the form{% endblocktrans %}
-            </a></p>
-    {% endif %}
-
-    {% if glosses_new %}
       <form action='{% url "dictionary:confirm_import_nzsl_share_gloss_csv" %}' method='post'>
         {% csrf_token %}
         <input class='btn btn-primary' name='confirm' type='submit' value='{% blocktrans %}Confirm{% endblocktrans %}'>
@@ -45,9 +33,11 @@
 
     {% if glosses_added %}
         <h3>{% blocktrans %}The following glosses were added to{% endblocktrans %} <span class="label label-default">{{dataset}}</span></h3>
+        <p>{% blocktrans %}GlossTranslations and Comments for the glosses have been created and are available.{% endblocktrans %}</p>
+        <p>{% blocktrans %}GlossVideos are being created in the background and should be available shortly.{% endblocktrans %}</p>
         <table class="table">
-        <th>Gloss</th>
         <th>Gloss in English</th>
+        <th>Gloss in Maōri</th>
         {% for gloss in glosses_added %}
             <tr>
                 <td>{{ gloss.idgloss }}</td>
