@@ -258,7 +258,7 @@ class ShareCSVImportTestCase(TestCase):
 
     _csv_content = {
         "word": "Test",
-        "maori": "maori",
+        "maori": "maori, maori 2",
         "secondary": "test",
         "notes": "a note",
         "created_at": "2023-09-12 22:37:59 UTC",
@@ -340,13 +340,15 @@ class ShareCSVImportTestCase(TestCase):
             mock_tasks.assert_called_once()
         self.assertEqual(response.status_code, 200)
 
+        maori_words = csv_content['maori'].split(', ')
+
         # check the details of the gloss
         gloss_qs = Gloss.objects.filter(dataset=self.dataset,
                                         idgloss__contains=csv_content["word"])
         self.assertTrue(gloss_qs.count(), 1)
         gloss = gloss_qs.first()
         self.assertEqual(f"{csv_content['word']}:{gloss.pk}", gloss.idgloss)
-        self.assertEqual(f"{csv_content['maori']}:{gloss.pk}", gloss.idgloss_mi)
+        self.assertEqual(f"{maori_words[0]}:{gloss.pk}", gloss.idgloss_mi)
         self.assertEqual(csv_content["notes"], gloss.notes)
         self.assertEqual(self.user, gloss.created_by)
         self.assertEqual(self.user, gloss.updated_by)
@@ -365,7 +367,8 @@ class ShareCSVImportTestCase(TestCase):
         mi = translations.get(language=self.language_mi)
         self.assertEqual(csv_content["word"], eng.translations)
         self.assertEqual(csv_content["secondary"], eng.translations_secondary)
-        self.assertEqual(csv_content["maori"], mi.translations)
+        self.assertEqual(maori_words[0], mi.translations)
+        self.assertEqual(", ".join(maori_words[1:]), mi.translations_secondary)
 
         # Check the comments created for the gloss
         comments = comments_get_model().objects.filter(object_pk=str(gloss.id))

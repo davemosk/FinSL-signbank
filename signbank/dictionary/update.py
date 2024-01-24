@@ -924,12 +924,6 @@ def confirm_import_nzsl_share_gloss_csv(request):
                 word_en, row_num = gloss.idgloss.split("_row")
                 gloss_data = new_glosses[row_num]
 
-                # Prepare new idgloss fields for bulk update
-                gloss.idgloss = f"{word_en}:{gloss.pk}"
-                if gloss.idgloss_mi:
-                    gloss.idgloss_mi = f"{gloss.idgloss_mi}:{gloss.pk}"
-                bulk_update_glosses.append(gloss)
-
                 # get semantic fields for gloss_data topics
                 if gloss_data.get("topic_names", None):
                     gloss_topics = gloss_data["topic_names"].split("|")
@@ -967,11 +961,25 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     translations_secondary=gloss_data.get("secondary", None)
                 ))
                 if gloss_data.get("maori", None):
-                    translations.append(GlossTranslations(
+                    # There is potentially several comma separated maori words
+                    maori_words = gloss_data["maori"].split(", ")
+
+                    # Update idgloss_mi using first maori word, then create translation
+                    gloss.idgloss_mi = f"{maori_words[0]}:{gloss.pk}"
+
+                    translation = GlossTranslations(
                         gloss=gloss,
                         language=language_mi,
-                        translations=gloss_data["maori"]
-                    ))
+                        translations=maori_words[0]
+                    )
+                    if len(maori_words) > 1:
+                        translation.translations_secondary = ", ".join(maori_words[1:])
+
+                    translations.append(translation)
+
+                # Prepare new idgloss fields for bulk update
+                gloss.idgloss = f"{word_en}:{gloss.pk}"
+                bulk_update_glosses.append(gloss)
 
                 # Create comment for gloss_data notes
                 comments.append(Comment(

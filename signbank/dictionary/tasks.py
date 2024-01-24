@@ -18,11 +18,12 @@ class VideoDetail(TypedDict):
 
 def move_glossvideo_to_valid_filepath(glossvideo):
     """
-    Mimics the rename_file method on GlossVideo without changing the assigned filename.
+    Mimics the rename_file method on GlossVideo without changing the assigned filename to
+    include the video_type (would cause issues with uniqueness), but still adds the pk-folder into
+    the name.
 
     This step is necessary because we create the videos in bulk, and usually the filename and path
     are updated in the save() step.
-    We only want the path updates, changing the filename would lead to loss of unique file names
     """
     old_file = glossvideo.videofile
     full_new_path = glossvideo.videofile.storage.get_valid_name(

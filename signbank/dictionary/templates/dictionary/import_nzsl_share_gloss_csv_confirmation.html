@@ -16,7 +16,7 @@
       <p>{% blocktrans %}Total number of glosses to be added:{% endblocktrans %} {{glosses_new|length}}</p>
       <table class="table">
           <th>Gloss in English</th>
-          <th>Gloss in Maōri</th>
+          <th>Gloss in Māori</th>
       {% for gloss in glosses_new %}
           <tr>
               <td>{{ gloss.word }}</td>
@@ -37,7 +37,7 @@
         <p>{% blocktrans %}GlossVideos are being created in the background and should be available shortly.{% endblocktrans %}</p>
         <table class="table">
         <th>Gloss in English</th>
-        <th>Gloss in Maōri</th>
+        <th>Gloss in Māori</th>
         {% for gloss in glosses_added %}
             <tr>
                 <td>{{ gloss.idgloss }}</td>
