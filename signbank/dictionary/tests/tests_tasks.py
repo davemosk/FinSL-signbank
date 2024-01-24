@@ -25,9 +25,6 @@ class RetrieveVideoForGloss(TestCase):
 
     @override_settings(MEDIA_ROOT="")
     def test_retrieve_videos_for_glosses(self):
-        dummy_file = SimpleUploadedFile(
-            "testvid.mp4", b'data \x00\x01', content_type="video/mp4")
-
         video_details = [{
             "url": "/kiwifruit-2-6422.png",
             "file_name": (
@@ -38,12 +35,19 @@ class RetrieveVideoForGloss(TestCase):
             "title": "Illustration_1",
             "version": 0
         }]
+        dummy_file = SimpleUploadedFile(
+            video_details[0]["file_name"], b'data \x00\x01', content_type="video/mp4")
 
         with mock.patch("signbank.dictionary.tasks.urlretrieve") as mock_retrieve:
-            mock_retrieve.return_value = (dummy_file, None)
-            retrieve_videos_for_glosses(video_details)
-            mock_retrieve.assert_called_once()
+            with mock.patch("signbank.dictionary.tasks.connection.close") as mock_close_connection:
+                mock_retrieve.return_value = (dummy_file, None)
+                mock_close_connection.return_value = None
+                retrieve_videos_for_glosses(video_details)
+                mock_retrieve.assert_called_once()
+                mock_close_connection.assert_called_once()
 
         videos = GlossVideo.objects.filter(gloss=self.gloss)
         self.assertTrue(videos.exists())
         self.assertEqual(videos.count(), 1)
+        video = videos.get()
+        self.assertEqual(video.title, video_details[0]["title"])

@@ -2,6 +2,7 @@ from typing import TypedDict, List
 from urllib.request import urlretrieve
 
 from django.conf import settings
+from django.db import connection
 
 from .models import FieldChoice, Gloss
 from ..video.models import GlossVideo
@@ -70,3 +71,5 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
             move_glossvideo_to_valid_filepath(gloss_video)
         )
     GlossVideo.objects.bulk_create(videos_to_create)
+
+    connection.close()
