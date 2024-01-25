@@ -81,9 +81,13 @@ one for the original uploader's notes:
 | fieldname | from csv column | notes |
 | ---- | ---- | ---- |
 | content_object |  | generic foreign key pointing to the gloss |
+| object_pk | gloss pk | PK value of the gloss |
 | comment | notes |  |
 | user_name | contributor_username |  |
 | user_email | contributor_email |  |
+| site |  | Required field, current Site object set in Django |
+| is_public |  | set as False, only public comments are visible in Signbank |
+| submit_date |  | Required field, date and time of import used |
 
 #### Sign Comments
 
