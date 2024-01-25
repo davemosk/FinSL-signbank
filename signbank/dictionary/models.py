@@ -813,15 +813,14 @@ class ValidationRecord(models.Model):
         max_length=255, help_text="Identifier of specific survey result in Qualitrics"
     )  # can potentially make this unique
     respondent_first_name = models.CharField(
-        max_length=255, null=True, help_text="Survey respondents first name"
+        max_length=255, default="", help_text="Survey respondents first name"
     )
     respondent_last_name = models.CharField(
-        max_length=255, null=True, help_text="Survey respondents last name"
+        max_length=255, default="", help_text="Survey respondents last name"
     )
-    respondent_email = models.EmailField(null=True, blank=True,
-                                         help_text="Survey respondents email")
+    respondent_email = models.EmailField(default="", help_text="Survey respondents email")
     comment = models.TextField(
-        null=True, help_text="Optional comment the survey respondent can leave about the gloss"
+        default="", help_text="Optional comment the survey respondent can leave about the gloss"
     )
     contact_with_nzsl_requested = models.BooleanField(
         default=False,

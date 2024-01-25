@@ -61,14 +61,31 @@ class ValidationRecord(models.Model):
         YES = "yes", "Yes"
         NO = "no", "No"
         NOT_SURE = "not sure", "Not sure"
-    gloss = models.ForeignKey(to=Gloss)
-    sign_seen = models.CharField(choices=SignSeenChoices.choices)
-    response_id = models.CharField()  # can potentially make this unique
-    respondent_first_name = models.Charfield(null=True)
-    respondent_last_name = models.Charfield(null=True)
-    respondent_email = models.EmailField(null=True)
-    comment = models.TextField(null=True)
-    contact_with_nzsl_requested = models.BooleanField(default=False)
+    gloss = models.ForeignKey(Gloss, related_name="validation_records", on_delete=models.CASCADE)
+    sign_seen = models.CharField(
+        max_length=50, choices=SignSeenChoices.choices,
+        help_text="Result of the survey question 'Have seen it or use it myself'"
+    )
+    response_id = models.CharField(
+        max_length=255, help_text="Identifier of specific survey result in Qualitrics"
+    )  # can potentially make this unique
+    respondent_first_name = models.CharField(
+        max_length=255, default="", help_text="Survey respondents first name"
+    )
+    respondent_last_name = models.CharField(
+        max_length=255, default="", help_text="Survey respondents last name"
+    )
+    respondent_email = models.EmailField(default="", help_text="Survey respondents email")
+    comment = models.TextField(
+        default="", help_text="Optional comment the survey respondent can leave about the gloss"
+    )
+    contact_with_nzsl_requested = models.BooleanField(
+        default=False,
+        help_text=(
+            "Boolean value that indicates if the survey respondent would like to be contacted by "
+            "NZSL to discuss the gloss further"
+        )
+    )
     
 ```
 
