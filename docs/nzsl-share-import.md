@@ -42,8 +42,8 @@ One Gloss object:
 | assigned_user |  | check if we should assign |
 | idgloss | word | {word}:{gloss.pk}<br>may need to set temp value to save & get a pk |
 | idgloss_mi | maori | {maori}:{gloss.pk}<br>may need to set temp value to save & get a pk |
-| notes | notes |  |
-| created_at | created_at | check if we preserve or use the import time |
+| notes | notes, created_at | if NZSL wants to preserve the creation time it might need to be added to the notes |
+| created_at |  | auto field in django |
 | cretaed_by |  | check if we should set to the uploader |
 | updated_by |  | set to the uploader |
 | semantic_fields | topic_names | for each topic name:<br>if we have a semantic field with that name, add it otherwise, add the semantic field "miscellaneous"<br>ignore the topic "all signs" |
