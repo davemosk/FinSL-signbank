@@ -96,8 +96,12 @@ Then from other users - split `sign_comments` on pipe characters:
 | fieldname | from csv column | notes |
 | ---- | ---- | ---- |
 | content_object |  | generic foreign should pointing to the gloss |
+| object_pk | gloss pk | PK value of the gloss |
 | comment | sign_comments | split on `:` and use item 1 |
-| user_name | sign_comments | split on `:` and use item 0 |
+| user_name | sign_comments | split on `:` and use item 0 or `Unknown` |
+| site |  | Required field, current Site object set in Django |
+| is_public |  | set as False, only public comments are visible in Signbank |
+| submit_date |  | Required field, date and time of import used |
 
 ### GlossVideo
 
