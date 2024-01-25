@@ -67,8 +67,8 @@ Two GlossTranslation items:
 | ---- | ---- | ---- |
 | gloss |  | the gloss object from above |
 | language |  | Maori |
-| translations | maori |  |
-| translations_secondary |  |  |
+| translations | maori | first of the maori words  if there are several |
+| translations_secondary | maori | remaining maori words if there are several |
 
 ### Comment
 
