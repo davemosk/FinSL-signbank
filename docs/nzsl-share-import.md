@@ -14,7 +14,6 @@ The following .csv is exported from NZSL-Share:
 | 1 | word | GlossTranslations.translations |  |
 | 2 | maori | GlossTranslations.translations | comma-separated list |
 | 3 | secondary | GlossTranslations.translations_secondary |  |
-| 4 | description |  | not used |
 | 5 | notes | Comment.comment | assign to contributor |
 | 6 | created_at | Gloss.created_at | To confirm if NZSL would like to store the value in the notes, it can't be set as the `created_at` field on the model |
 | 7 | contributor_email | Comment.user_email |  |
