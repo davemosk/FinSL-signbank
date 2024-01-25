@@ -2,7 +2,6 @@
 """Models for the Signbank dictionary/corpus."""
 from __future__ import unicode_literals
 
-import json
 import re
 from collections import OrderedDict
 from itertools import groupby
@@ -14,8 +13,7 @@ from django.db import OperationalError, models
 from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
 from tagging.models import Tag
-from tagging.registry import AlreadyRegistered
-from tagging.registry import register as tagging_register
+from tagging.registry import AlreadyRegistered, register as tagging_register
 
 
 class Dataset(models.Model):
@@ -792,9 +790,46 @@ class ShareValidationAggregation(models.Model):
     """
     Captures how many people on NZSL Share agree or disagree with a gloss
     """
-    gloss = models.ForeignKey(Gloss, related_name="share_validation_aggregations", on_delete=models.CASCADE)
+    gloss = models.ForeignKey(Gloss, related_name="share_validation_aggregations",
+                              on_delete=models.CASCADE)
     agrees = models.PositiveIntegerField()
     disagrees = models.PositiveIntegerField()
+
+
+class ValidationRecord(models.Model):
+    """Record Qualitrics validation result for a gloss """
+
+    class SignSeenChoices(models.TextChoices):
+        YES = "yes", "Yes"
+        NO = "no", "No"
+        NOT_SURE = "not sure", "Not sure"
+
+    gloss = models.ForeignKey(Gloss, related_name="validation_records", on_delete=models.CASCADE)
+    sign_seen = models.CharField(
+        max_length=50, choices=SignSeenChoices.choices,
+        help_text="Result of the survey question 'Have seen it or use it myself'"
+    )
+    response_id = models.CharField(
+        max_length=255, help_text="Identifier of specific survey result in Qualitrics"
+    )  # can potentially make this unique
+    respondent_first_name = models.CharField(
+        max_length=255, null=True, help_text="Survey respondents first name"
+    )
+    respondent_last_name = models.CharField(
+        max_length=255, null=True, help_text="Survey respondents last name"
+    )
+    respondent_email = models.EmailField(null=True, blank=True,
+                                         help_text="Survey respondents email")
+    comment = models.TextField(
+        null=True, help_text="Optional comment the survey respondent can leave about the gloss"
+    )
+    contact_with_nzsl_requested = models.BooleanField(
+        default=False,
+        help_text=(
+            "Boolean value that indicates if the survey respondent would like to be contacted by "
+            "NZSL to discuss the gloss further"
+        )
+    )
 
 
 # Register Models for django-tagging to add wrappers around django-tagging API.
