@@ -16,12 +16,12 @@ The following .csv is exported from NZSL-Share:
 | 3 | secondary | GlossTranslations.translations_secondary |  |
 | 4 | description |  | not used |
 | 5 | notes | Comment.comment | assign to contributor |
-| 6 | created_at | Gloss.created_at |  |
-| 7 | contributor_email | Comment.user_email | add as a user? |
-| 8 | contributor_username | Comment.user_name | add as a user? |
-| 9 | agrees |  | no current field |
-| 10 | disagrees |  | no current field |
-| 11 | topic_names | Gloss.semantic_fields |  |
+| 6 | created_at | Gloss.created_at | To confirm if NZSL would like to store the value in the notes, it can't be set as the `created_at` field on the model |
+| 7 | contributor_email | Comment.user_email |  |
+| 8 | contributor_username | Comment.user_name |  |
+| 9 | agrees |  | no current field - to be added with NZSL-77 |
+| 10 | disagrees |  | no current field - to be added with NZSL-77 |
+| 11 | topic_names | Gloss.semantic_fields | pipe-separated topics  |
 | 12 | videos | GlossVideo.videofile | pipe-separated URLs |
 | 13 | illustrations | GlossVideo.videofile | pipe-separated URLs |
 | 14 | usage_examples | GlossVideo.videofile | pipe-separated URLs |
