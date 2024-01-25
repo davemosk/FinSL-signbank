@@ -12,7 +12,7 @@ The following .csv is exported from NZSL-Share:
 | index | header | signbank field | notes |
 | ---- | ---- | ---- | ---- |
 | 1 | word | GlossTranslations.translations |  |
-| 2 | maori | GlossTranslations.translations |  |
+| 2 | maori | GlossTranslations.translations | comma-separated list |
 | 3 | secondary | GlossTranslations.translations_secondary |  |
 | 4 | description |  | not used |
 | 5 | notes | Comment.comment | assign to contributor |
