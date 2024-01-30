@@ -10,16 +10,16 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.forms import CheckboxSelectMultiple, ModelForm, Textarea
 from django.utils.translation import ugettext as _
-from django.utils.translation import ugettext_lazy as _lazy
 from guardian.admin import GuardedModelAdmin
 from modeltranslation.admin import TranslationAdmin as ModelTranslationAdmin
 from reversion.admin import VersionAdmin
 from tagging.models import Tag, TaggedItem
 
-from ..video.admin import GlossVideoInline
 from .models import (AllowedTags, Dataset, Dialect, FieldChoice, Gloss, Lemma,
                      GlossRelation, GlossTranslations, GlossURL, Language,
+                     ShareValidationAggregation,
                      SignLanguage, Translation)
+from ..video.admin import GlossVideoInline
 
 
 class TagListFilter(admin.SimpleListFilter):
@@ -271,6 +271,11 @@ class SignLanguageAdmin(VersionAdmin, ModelTranslationAdmin):
     inlines = [DialectInline]
 
 
+class ShareValidationAggregationAdmin(VersionAdmin):
+    models = ShareValidationAggregation
+    list_display = ('gloss', 'agrees', 'disagrees')
+
+
 class FieldChoiceAdmin(admin.ModelAdmin):
     model = FieldChoice
     list_display = ('field', 'english_name', 'machine_value',)
@@ -302,6 +307,7 @@ admin.site.register(Dataset, DatasetAdmin)
 admin.site.register(GlossRelation, GlossRelationAdmin)
 admin.site.register(AllowedTags, AllowedTagsAdmin)
 admin.site.register(Lemma)
+admin.site.register(ShareValidationAggregation,ShareValidationAggregationAdmin)
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
