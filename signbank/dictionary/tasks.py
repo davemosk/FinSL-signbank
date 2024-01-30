@@ -48,7 +48,9 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
     - title
     - version
     """
-    video_type = FieldChoice.objects.filter(field="video_type", english_name="validation").first()
+    validation_video_type = FieldChoice.objects.filter(field="video_type",
+                                                       english_name="validation").first()
+    main_video_type = FieldChoice.objects.filter(field="video_type", english_name="main").first()
     videos_to_create = []
 
     for video in video_details:
@@ -58,6 +60,12 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
             video["file_name"]
         )
         gloss = Gloss.objects.get(pk=video["gloss_pk"])
+
+        # change video type to main for illustrations
+        video_type = validation_video_type
+        if video["title"] == "Illustration":
+            video_type = main_video_type
+            video["title"] = ""
 
         gloss_video = GlossVideo(
             title=video["title"],

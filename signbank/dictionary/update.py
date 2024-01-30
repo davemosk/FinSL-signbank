@@ -4,11 +4,13 @@ from __future__ import unicode_literals
 import codecs
 import csv
 import datetime
+import random
 import re
 import threading
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
@@ -34,6 +36,8 @@ from .models import (Dataset, Dialect, FieldChoice, Gloss, Lemma, GlossRelation,
                      build_choice_list)
 from .tasks import retrieve_videos_for_glosses
 from ..video.models import GlossVideo
+
+User = get_user_model()
 
 
 @permission_required('dictionary.change_gloss')
@@ -888,6 +892,8 @@ def confirm_import_nzsl_share_gloss_csv(request):
         bulk_create_gloss = []
         bulk_update_glosses = []
         bulk_semantic_fields = []
+        bulk_tagged_items = []
+        contributors = []
 
         if "glosses_new" and "dataset_id" in request.session:
             dataset = Dataset.objects.get(id=request.session["dataset_id"])
@@ -900,6 +906,18 @@ def confirm_import_nzsl_share_gloss_csv(request):
                 field="semantic_field"
             ).values_list("english_name", "pk")
             semantic_fields_dict = {field[0]: field[1] for field in semantic_fields}
+            signers = FieldChoice.objects.filter(field="signer")
+            signer_dict = {signer.english_name: signer for signer in signers}
+            existing_machine_values = [mv for mv in
+                                       FieldChoice.objects.all().values_list("machine_value",
+                                                                             flat=True)]
+            not_public_tag = Tag.objects.get(name="not public")
+            nzsl_share_tag = Tag.objects.get(name="nzsl-share")
+            import_user = User.objects.get(
+                username="nzsl_share_importer",
+                first_name="Importer",
+                last_name="NZSL Share",
+            )
 
             for row_num, gloss_data in enumerate(request.session["glosses_new"]):
                 # will iterate over these glosses again after bulk creating
@@ -914,11 +932,32 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     idgloss=f"{gloss_data['word']}_row{row_num}",
                     idgloss_mi=gloss_data.get("maori", None),
                     notes=gloss_data.get("notes", ""),
-                    created_by=request.user,
-                    updated_by=request.user
+                    created_by=import_user,
+                    updated_by=import_user,
+                    exclude_from_ecv=True,
                 ))
+                contributors.append(gloss_data["contributor_username"])
 
             bulk_created = Gloss.objects.bulk_create(bulk_create_gloss)
+
+            # Create new signers for contributors that do not exist as signers yet
+            contributors = set(contributors)
+            create_signers = []
+            signers = signer_dict.keys()
+            for contributor in contributors:
+                if contributor not in signers:
+                    new_machine_value = random.randint(0, 99999999)
+                    while new_machine_value in existing_machine_values:
+                        new_machine_value = random.randint(0, 99999999)
+                    existing_machine_values.append(new_machine_value)
+                    create_signers.append(FieldChoice(
+                        field="signer",
+                        english_name=contributor,
+                        machine_value=new_machine_value
+                    ))
+            new_signers = FieldChoice.objects.bulk_create(create_signers)
+            for signer in new_signers:
+                signer_dict[signer.english_name] = signer
 
             for gloss in bulk_created:
                 word_en, row_num = gloss.idgloss.split("_row")
@@ -977,8 +1016,9 @@ def confirm_import_nzsl_share_gloss_csv(request):
 
                     translations.append(translation)
 
-                # Prepare new idgloss fields for bulk update
+                # Prepare new idgloss and signer fields for bulk update
                 gloss.idgloss = f"{word_en}:{gloss.pk}"
+                gloss.signer = signer_dict[gloss_data["contributor_username"]]
                 bulk_update_glosses.append(gloss)
 
                 # Create comment for gloss_data notes
@@ -986,7 +1026,6 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     content_type=gloss_content_type,
                     object_pk=gloss.pk,
                     user_name=gloss_data.get("contributor_username", ""),
-                    user_email=gloss_data.get("contributor_email", ""),
                     comment=gloss_data.get("notes", ""),
                     site=site,
                     is_public=False,
@@ -1014,25 +1053,21 @@ def confirm_import_nzsl_share_gloss_csv(request):
 
                 # prep videos, illustrations and usage example for video retrieval
                 if gloss_data.get("videos", None):
-                    for i, video_url in enumerate(gloss_data["videos"].split("|")):
-                        extension = video_url[-3:]
-                        file_name = (
-                            f"{settings.MEDIA_ROOT}/glossvideo/"
-                            f"{gloss.pk}-{gloss.idgloss}_video_{i + 1}.{extension}"
-                        )
-                        if i == 0:
-                            title = "Main"
-                        else:
-                            title = f"Video_{i + 1}"
+                    video_url = gloss_data["videos"]
+                    extension = video_url[-3:]
+                    file_name = (
+                        f"{settings.MEDIA_ROOT}/glossvideo/"
+                        f"{gloss.pk}-{gloss.idgloss}_video.{extension}"
+                    )
 
-                        glossvideo = {
-                            "url": video_url,
-                            "file_name": file_name,
-                            "gloss_pk": gloss.pk,
-                            "title": title,
-                            "version": i
-                        }
-                        videos.append(glossvideo)
+                    glossvideo = {
+                        "url": video_url,
+                        "file_name": file_name,
+                        "gloss_pk": gloss.pk,
+                        "title": "Main",
+                        "version": 0
+                    }
+                    videos.append(glossvideo)
 
                 if gloss_data.get("illustrations", None):
                     for i, video_url in enumerate(gloss_data["illustrations"].split("|")):
@@ -1046,7 +1081,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                             "url": video_url,
                             "file_name": file_name,
                             "gloss_pk": gloss.pk,
-                            "title": f"Illustration_{i + 1}",
+                            "title": "Illustration",
                             "version": i
                         }
                         videos.append(glossvideo)
@@ -1058,27 +1093,37 @@ def confirm_import_nzsl_share_gloss_csv(request):
                             f"{settings.MEDIA_ROOT}/glossvideo/"
                             f"{gloss.pk}-{gloss.idgloss}_usageexample_{i + 1}.{extension}"
                         )
-                        if i <= 1:
-                            title = f"finalexample{i + 1}",
-                        else:
-                            title = f"UsageExample_{i + 1}",
 
                         glossvideo = {
                             "url": video_url,
                             "file_name": file_name,
                             "gloss_pk": gloss.pk,
-                            "title": title,
+                            "title": f"finalexample{i + 1}",
                             "version": i
                         }
                         videos.append(glossvideo)
 
                 glosses_added.append(gloss)
 
+                bulk_tagged_items.append(TaggedItem(
+                    content_type=gloss_content_type,
+                    object_id=gloss.pk,
+                    tag=nzsl_share_tag
+
+                ))
+                bulk_tagged_items.append(TaggedItem(
+                    content_type=gloss_content_type,
+                    object_id=gloss.pk,
+                    tag=not_public_tag
+
+                ))
+
             # Bulk create entities related to the gloss, and bulk update the glosses' idgloss
             Comment.objects.bulk_create(comments)
             GlossTranslations.objects.bulk_create(translations)
-            Gloss.objects.bulk_update(bulk_update_glosses, ["idgloss", "idgloss_mi"])
+            Gloss.objects.bulk_update(bulk_update_glosses, ["idgloss", "idgloss_mi", "signer"])
             Gloss.semantic_field.through.objects.bulk_create(bulk_semantic_fields)
+            TaggedItem.objects.bulk_create(bulk_tagged_items)
 
             # start Thread to process gloss video retrieval in the background
             t = threading.Thread(

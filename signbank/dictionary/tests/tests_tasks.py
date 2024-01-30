@@ -32,9 +32,10 @@ class RetrieveVideoForGloss(TestCase):
                 f"{self.gloss.pk}-{self.gloss.idgloss}_illustration_0.png"
             ),
             "gloss_pk": self.gloss.pk,
-            "title": "Illustration_1",
+            "title": "Illustration",
             "version": 0
         }]
+        title_before_task_run = video_details[0]["title"]
         dummy_file = SimpleUploadedFile(
             video_details[0]["file_name"], b'data \x00\x01', content_type="video/mp4")
 
@@ -50,4 +51,5 @@ class RetrieveVideoForGloss(TestCase):
         self.assertTrue(videos.exists())
         self.assertEqual(videos.count(), 1)
         video = videos.get()
-        self.assertEqual(video.title, video_details[0]["title"])
+        self.assertNotEqual(video.title, title_before_task_run)
+        self.assertEqual(video.title, "")

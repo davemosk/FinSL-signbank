@@ -13,6 +13,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django_comments import get_model as comments_get_model
 from guardian.shortcuts import assign_perm
+from tagging.models import Tag, TaggedItem
 
 from signbank.dictionary.models import SignLanguage, Dataset, FieldChoice, Gloss, Language
 from signbank.video.models import GlossVideo
@@ -323,6 +324,14 @@ class ShareCSVImportTestCase(TestCase):
         Test that the confirm NZSLShare import csv view can successfully create a gloss and
         related entities (except videos)
         """
+        share_importer = User.objects.get(
+            username="nzsl_share_importer",
+            first_name="Importer",
+            last_name="NZSL Share",
+        )
+        share_tag = Tag.objects.get(name="nzsl-share")
+        not_public_tag = Tag.objects.create(name="not public")
+
         csv_content = self._csv_content
         glosses = [csv_content]
         s = self.client.session
@@ -350,8 +359,11 @@ class ShareCSVImportTestCase(TestCase):
         self.assertEqual(f"{csv_content['word']}:{gloss.pk}", gloss.idgloss)
         self.assertEqual(f"{maori_words[0]}:{gloss.pk}", gloss.idgloss_mi)
         self.assertEqual(csv_content["notes"], gloss.notes)
-        self.assertEqual(self.user, gloss.created_by)
-        self.assertEqual(self.user, gloss.updated_by)
+        self.assertEqual(share_importer, gloss.created_by)
+        self.assertEqual(share_importer, gloss.updated_by)
+        self.assertEqual(csv_content["contributor_username"], gloss.signer.english_name)
+        self.assertTrue(gloss.exclude_from_ecv)
+        self.assertIsNone(gloss.assigned_user)
 
         # check the semantic fields for the gloss
         # Test Topic does not exists, so instead one topic should be miscellaneous
@@ -375,7 +387,6 @@ class ShareCSVImportTestCase(TestCase):
         self.assertEqual(comments.count(), 3)
         self.assertTrue(comments.filter(
             user_name=csv_content["contributor_username"],
-            user_email=csv_content["contributor_email"],
             comment=csv_content["notes"]
         ).exists())
         self.assertTrue(comments.filter(
@@ -386,6 +397,10 @@ class ShareCSVImportTestCase(TestCase):
             user_name="Unknown",
             comment="Comment 33"
         ).exists())
+
+        tagged_glosses = TaggedItem.objects.get_intersection_by_model(gloss_qs,
+                                                                      [not_public_tag, share_tag])
+        self.assertQuerysetEqual(tagged_glosses, gloss_qs)
 
         # There should be no gloss videos at this point because we have mocked the task to
         # create them
