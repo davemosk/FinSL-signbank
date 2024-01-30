@@ -398,8 +398,15 @@ class ShareCSVImportTestCase(TestCase):
             comment="Comment 33"
         ).exists())
 
-        tagged_glosses = TaggedItem.objects.get_intersection_by_model(gloss_qs,
-                                                                      [not_public_tag, share_tag])
+        share_validation_aggregations = gloss.share_validation_aggregations.all()
+        self.assertEqual(share_validation_aggregations.count(), 1)
+        share_validation_aggregation = share_validation_aggregations.get()
+        self.assertEqual(share_validation_aggregation.agrees, 0)
+        self.assertEqual(share_validation_aggregation.disagrees, 1)
+
+        tagged_glosses = TaggedItem.objects.get_intersection_by_model(
+            gloss_qs, [not_public_tag, share_tag]
+        )
         self.assertQuerysetEqual(tagged_glosses, gloss_qs)
 
         # There should be no gloss videos at this point because we have mocked the task to

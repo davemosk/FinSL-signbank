@@ -33,6 +33,7 @@ from .forms import (CSVUploadForm, GlossRelationForm, MorphologyForm,
 from .models import (Dataset, Dialect, FieldChoice, Gloss, Lemma, GlossRelation,
                      GlossTranslations, GlossURL, Language,
                      MorphologyDefinition, Relation, RelationToForeignSign,
+                     ShareValidationAggregation,
                      build_choice_list)
 from .tasks import retrieve_videos_for_glosses
 from ..video.models import GlossVideo
@@ -894,6 +895,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
         bulk_semantic_fields = []
         bulk_tagged_items = []
         contributors = []
+        bulk_share_validation_aggregations = []
 
         if "glosses_new" and "dataset_id" in request.session:
             dataset = Dataset.objects.get(id=request.session["dataset_id"])
@@ -1051,6 +1053,13 @@ def confirm_import_nzsl_share_gloss_csv(request):
                             submit_date=comment_submit_date
                         ))
 
+                # Add ShareValidationAggregation
+                bulk_share_validation_aggregations.append(ShareValidationAggregation(
+                    gloss=gloss,
+                    agrees=int(gloss_data["agrees"]),
+                    disagrees=int(gloss_data["disagrees"])
+                ))
+
                 # prep videos, illustrations and usage example for video retrieval
                 if gloss_data.get("videos", None):
                     video_url = gloss_data["videos"]
@@ -1124,6 +1133,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
             Gloss.objects.bulk_update(bulk_update_glosses, ["idgloss", "idgloss_mi", "signer"])
             Gloss.semantic_field.through.objects.bulk_create(bulk_semantic_fields)
             TaggedItem.objects.bulk_create(bulk_tagged_items)
+            ShareValidationAggregation.objects.bulk_create(bulk_share_validation_aggregations)
 
             # start Thread to process gloss video retrieval in the background
             t = threading.Thread(
