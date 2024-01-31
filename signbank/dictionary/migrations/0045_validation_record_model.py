@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name='ValidationRecord',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('sign_seen', models.CharField(choices=[('yes', 'Yes'), ('no', 'No'), ('not sure', 'Not sure')], help_text="Result of the survey question 'Have seen it or use it myself'", max_length=50)),
+                ('sign_seen', models.CharField(choices=[('yes', 'Yes'), ('no', 'No'), ('not_sure', 'Not sure')], help_text="Result of the survey question 'Have seen it or use it myself'", max_length=50)),
                 ('response_id', models.CharField(help_text='Identifier of specific survey result in Qualitrics', max_length=255)),
                 ('respondent_first_name', models.CharField(default='', help_text='Survey respondents first name', max_length=255)),
                 ('respondent_last_name', models.CharField(default='', help_text='Survey respondents last name', max_length=255)),

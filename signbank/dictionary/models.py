@@ -802,7 +802,7 @@ class ValidationRecord(models.Model):
     class SignSeenChoices(models.TextChoices):
         YES = "yes", "Yes"
         NO = "no", "No"
-        NOT_SURE = "not sure", "Not sure"
+        NOT_SURE = "not_sure", "Not sure"
 
     gloss = models.ForeignKey(Gloss, related_name="validation_records", on_delete=models.CASCADE)
     sign_seen = models.CharField(
