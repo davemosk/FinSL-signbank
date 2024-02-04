@@ -18,7 +18,7 @@ from tagging.models import Tag, TaggedItem
 from .models import (AllowedTags, Dataset, Dialect, FieldChoice, Gloss, Lemma,
                      GlossRelation, GlossTranslations, GlossURL, Language,
                      ShareValidationAggregation,
-                     SignLanguage, Translation)
+                     SignLanguage, Translation, ValidationRecord)
 from ..video.admin import GlossVideoInline
 
 
@@ -281,7 +281,6 @@ class FieldChoiceAdmin(admin.ModelAdmin):
     list_display = ('field', 'english_name', 'machine_value',)
 
 
-
 class AssignedGlossInline(admin.StackedInline):
     model = Gloss
     fk_name = 'assigned_user'
@@ -293,6 +292,44 @@ class AssignedGlossInline(admin.StackedInline):
 
     def has_add_permission(self, request, obj=None):
         return False
+
+
+class InputFilter(admin.SimpleListFilter):
+    template = 'admin/input_filter.html'
+
+    def lookups(self, request, model_admin):
+        # Dummy, required to show the filter.
+        return ((),)
+
+    def choices(self, changelist):
+        # Grab only the "all" option.
+        all_choice = next(super().choices(changelist))
+        all_choice['query_parts'] = (
+            (k, v)
+            for k, v in changelist.get_filters_params().items()
+            if k != self.parameter_name
+        )
+        yield all_choice
+
+
+class GlossFilter(InputFilter):
+    parameter_name = 'gloss'
+    title = _('Gloss')
+
+    def queryset(self, request, queryset):
+        if self.value() is not None:
+            gloss = self.value()
+
+            return queryset.filter(
+                models.Q(gloss__idgloss__contains=gloss)
+            )
+
+
+class ValidationRecordAdmin(admin.ModelAdmin):
+    model = ValidationRecord
+    list_display = ("gloss", "response_id", "sign_seen")
+    search_fields = ["response_id"]
+    list_filter = [GlossFilter, "sign_seen"]
 
 
 class UserAdmin(AuthUserAdmin):
@@ -307,7 +344,8 @@ admin.site.register(Dataset, DatasetAdmin)
 admin.site.register(GlossRelation, GlossRelationAdmin)
 admin.site.register(AllowedTags, AllowedTagsAdmin)
 admin.site.register(Lemma)
-admin.site.register(ShareValidationAggregation,ShareValidationAggregationAdmin)
+admin.site.register(ShareValidationAggregation, ShareValidationAggregationAdmin)
+admin.site.register(ValidationRecord, ValidationRecordAdmin)
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
