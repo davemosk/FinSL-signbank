@@ -788,6 +788,15 @@ class MorphologyDefinition(models.Model):
         return str(self.morpheme.idgloss) + ' is ' + str(self.role) + ' of ' + str(self.parent_gloss.idgloss)
 
 
+class ShareValidationAggregation(models.Model):
+    """
+    Captures how many people on NZSL Share agree or disagree with a gloss
+    """
+    gloss = models.ForeignKey(Gloss, related_name="share_validation_aggregations", on_delete=models.CASCADE)
+    agrees = models.PositiveIntegerField()
+    disagrees = models.PositiveIntegerField()
+
+
 # Register Models for django-tagging to add wrappers around django-tagging API.
 models_to_register_for_tagging = (Gloss, GlossRelation,)
 for model in models_to_register_for_tagging:

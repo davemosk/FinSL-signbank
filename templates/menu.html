@@ -48,6 +48,7 @@
                     <li role="separator" class="divider"></li>
                     {% if perms.dictionary.import_csv %}
                     <li><a href="{% url 'dictionary:import_gloss_csv' %}">{% blocktrans %}CSV import{% endblocktrans %}</a></li>
+                    <li><a href="{% url 'dictionary:import_nzsl_share_gloss_csv' %}">{% blocktrans %}NZSL Share CSV import{% endblocktrans %}</a></li>
                     {% endif %}
                     <li><a href="{% url 'infopage' %}">{% blocktrans %}Links and statistics{% endblocktrans %}</a></li>
                     <li role="separator" class="divider"></li>
