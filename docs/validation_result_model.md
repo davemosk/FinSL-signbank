@@ -1,6 +1,6 @@
-# Qualitrics exported CSV data and ValidationResult model
+# Qualtrics exported CSV data and ValidationResult model
 
-Qualitrics gives the ability to export survey data in several formats, 
+Qualtrics gives the ability to export survey data in several formats, 
 the one relevant for NZSL Signbank is CSV.
 
 ## Example CSV snippet
@@ -13,7 +13,7 @@ the one relevant for NZSL Signbank is CSV.
 | 10/11/2022 18:23                                       | 11/11/2022 8:57                                      | 0                     |                          | 100                     | 52428                   | 1                       | 11/11/2022 8:57                                           | R_3qqXgb2jvWPRPbR        | Name                             | Random                            |                               |                                      |                                 |                                  | email                              | EN-GB                       |                                    | Not sure                                                                                         | Write a comment,I want to talk about this sign in NZSL - contact me                             | video not showing?                                                                           |
 | 10/11/2022 21:53                                       | 11/11/2022 20:49                                     | 0                     |                          | 100                     | 82586                   | 1                       | 11/11/2022 20:49                                          | R_3MrPivulGQ6TJmk        | Someone                          | Else                              |                               |                                      |                                 |                                  | email                              | EN-GB                       |                                    | Yes                                                                                              | Write a comment	                                                                                | I think only one sign for abbreviation - ticked yes but can't see video                      |
 
-## [Qualitrics][qualitrics-data] documentation
+## [Qualtrics][qualtrics-data] documentation
 ### [Format basics][format-basics]
 
 CSV and TSV files come with 3 rows of headers. The first header is the internal Qualtrics ID of 
