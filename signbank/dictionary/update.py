@@ -933,7 +933,6 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     # idgloss will be updated to word:pk in second step
                     idgloss=f"{gloss_data['word']}_row{row_num}",
                     idgloss_mi=gloss_data.get("maori", None),
-                    notes=gloss_data.get("notes", ""),
                     created_by=import_user,
                     updated_by=import_user,
                     exclude_from_ecv=True,
