@@ -2,14 +2,18 @@
 from __future__ import unicode_literals
 
 import csv
+import datetime
 import io
 
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth.models import AnonymousUser, Permission, User
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.sites.models import Site
 from django.test import Client, TestCase
 from django.urls import reverse
-
+from django.utils.timezone import get_current_timezone
+from django_comments.models import Comment
 from guardian.shortcuts import assign_perm
 from tagging.models import Tag
 
@@ -19,7 +23,7 @@ from signbank.dictionary.models import (
     Gloss,
     GlossTranslations,
     Language,
-    SignLanguage
+    SignLanguage, ShareValidationAggregation, ValidationRecord
 )
 from signbank.video.models import GlossVideo
 
@@ -156,3 +160,50 @@ class GlossListViewTestCase(TestCase):
         response = self.client.delete(reverse('dictionary:admin_gloss_list'))
         # 405 Method Not Allowed
         self.assertTrue(response.status_code == 405)
+
+
+class TestValidationResultsView(TestCase):
+    def setUp(self):
+        # Create user and add permissions
+        self.user = User.objects.create_user(username="test", email=None, password="test",
+                                             is_staff=True)
+        permission = Permission.objects.get(codename='search_gloss')
+        self.user.user_permissions.add(permission)
+
+        self.client = Client()
+        self.client.force_login(self.user)
+
+        # Create a gloss
+        # Migrations have id=1 already
+        self.signlanguage = SignLanguage.objects.create(pk=2, name="testsignlanguage",
+                                                        language_code_3char="tst")
+        self.dataset = Dataset.objects.create(name="testdataset", signlanguage=self.signlanguage)
+        self.gloss = Gloss.objects.create(idgloss="testgloss", dataset=self.dataset)
+
+        self.share_validation_aggregation_1 = ShareValidationAggregation.objects.create(
+            gloss=self.gloss, agrees=2, disagrees=5)
+        self.share_validation_aggregation_2 = ShareValidationAggregation.objects.create(
+            gloss=self.gloss, agrees=5, disagrees=2)
+        self.validation_record = ValidationRecord.objects.create(gloss=self.gloss,
+            response_id="R_bogus", sign_seen=ValidationRecord.SignSeenChoices.YES,
+            comment="A comment")
+        gloss_content_type = ContentType.objects.get_for_model(Gloss)
+        site = Site.objects.get_current()
+        self.share_comment = Comment.objects.create(content_type=gloss_content_type,
+            object_pk=self.gloss.pk, user_name="test_user", comment="Another comment", site=site,
+            is_public=False, submit_date=datetime.datetime.now(tz=get_current_timezone()))
+        # Assign view permissions to dataset for user
+        assign_perm('view_dataset', self.user, self.dataset)
+
+    def test_validation_results_in_context(self):
+        response = self.client.get(
+            reverse("dictionary:admin_gloss_view", kwargs={"pk": self.gloss.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(list(response.context["share_comments"]), [self.share_comment])
+        self.assertListEqual(list(response.context["validation_records"]),
+                             [self.validation_record])
+        self.assertDictEqual(response.context["share_validation_aggregation"],
+                             {"agrees": 7, "disagrees": 7})
+        self.assertEqual(response.context["sign_seen_yes"], 1)
+        self.assertEqual(response.context["sign_seen_no"], 0)
+        self.assertEqual(response.context["sign_seen_maybe"], 0)

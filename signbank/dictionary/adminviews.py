@@ -22,6 +22,7 @@ from django.utils.translation import get_language
 from django.utils.translation import ugettext as _
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
+from django_comments.models import Comment
 from guardian.shortcuts import (get_objects_for_user, get_perms,
                                 get_users_with_perms)
 from reversion.models import Version
@@ -34,7 +35,8 @@ from .forms import (GlossRelationForm, GlossRelationSearchForm,
                     GlossSearchForm, MorphologyForm, RelationForm, TagsAddForm)
 from .models import (Dataset, FieldChoice, Gloss, GlossRelation,
                      GlossTranslations, GlossURL, Lemma, MorphologyDefinition,
-                     Relation, RelationToForeignSign, Translation)
+                     Relation, RelationToForeignSign, ShareValidationAggregation, Translation,
+                     ValidationRecord)
 
 
 class GlossListView(ListView):
@@ -774,6 +776,28 @@ class GlossDetailView(DetailView):
                                       'Translations', translations_old_str, translations_new_str))
 
             context['revisions'] = revisions
+
+            gloss_content_type = ContentType.objects.get_for_model(Gloss)
+            share_comments = Comment.objects.filter(content_type=gloss_content_type, object_pk=self.object.pk, is_public=False)
+            validation_records = ValidationRecord.objects.filter(gloss=self.object)
+            try:
+                share_validation_aggregation = ShareValidationAggregation.objects.get(gloss=self.object)
+            except ShareValidationAggregation.DoesNotExist:
+                share_validation_aggregation = None
+            except ShareValidationAggregation.MultipleObjectsReturned:
+                share_validation_aggregations = ShareValidationAggregation.objects.filter(
+                    gloss=self.object)
+                share_validation_aggregation = {"agrees": 0, "disagrees": 0}
+                for share_validation in share_validation_aggregations:
+                    share_validation_aggregation["agrees"] += share_validation.agrees
+                    share_validation_aggregation["disagrees"] += share_validation.disagrees
+
+            context['share_comments'] = share_comments
+            context['validation_records'] = validation_records
+            context['share_validation_aggregation'] = share_validation_aggregation
+            context['sign_seen_yes'] = validation_records.filter(sign_seen=ValidationRecord.SignSeenChoices.YES).count()
+            context['sign_seen_no'] = validation_records.filter(sign_seen=ValidationRecord.SignSeenChoices.NO).count()
+            context['sign_seen_maybe'] = validation_records.filter(sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE).count()
 
         # Pass info about which fields we want to see
         gl = context['gloss']
