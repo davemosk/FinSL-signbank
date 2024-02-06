@@ -64,7 +64,7 @@ The previous version of the CSV showed the values 5 and 7. This meant that 5 ref
 the `I wans to talk to NZSL about this comment` tickbox.  
 Column 3 represents the comment itself.
 
-![screenshot][qualitrics-screenshot]
+![screenshot][qualtrics-screenshot]
 
 # Proposed model
 
@@ -86,7 +86,7 @@ class ValidationRecord(models.Model):
         help_text="Result of the survey question 'Have seen it or use it myself'"
     )
     response_id = models.CharField(
-        max_length=255, help_text="Identifier of specific survey result in Qualitrics"
+        max_length=255, help_text="Identifier of specific survey result in Qualtrics"
     )  # can potentially make this unique
     respondent_first_name = models.CharField(
         max_length=255, default="", help_text="Survey respondents first name"
@@ -113,7 +113,7 @@ class ValidationRecord(models.Model):
 As part of NZSL-74 a model has been introduced to capture the amount of people agreeing and 
 disagreeing with a gloss from Share. This model is populated during the CSV import of glosses 
 from Share. These aggregated results will be displayed along the aggregated results of the 
-ValidationRecords imported from Qualitrics, part of NZSL-78.
+ValidationRecords imported from Qualtrics, part of NZSL-78.
 
 ```python
 from django.db import models
@@ -130,7 +130,7 @@ class ShareValidationAggregation(models.Model):
 ```
 
 <!-- Links and resources -->
-[qualitrics-data]: https://www.qualtrics.com/support/survey-platform/data-and-analysis-module/data/download-data/export-data-overview/#UnderstandingDataSet
+[qualtrics-data]: https://www.qualtrics.com/support/survey-platform/data-and-analysis-module/data/download-data/export-data-overview/#UnderstandingDataSet
 [format-basics]: https://www.qualtrics.com/support/survey-platform/data-and-analysis-module/data/download-data/understanding-your-dataset/#Basics
 [respondent-information]: https://www.qualtrics.com/support/survey-platform/data-and-analysis-module/data/download-data/understanding-your-dataset/#RespondentInformation
-[qualitrics-screenshot]: ./qualitrics-screenshot.png
+[qualtrics-screenshot]: ./qualtrics-screenshot.png

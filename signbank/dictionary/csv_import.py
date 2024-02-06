@@ -535,9 +535,9 @@ def confirm_import_nzsl_share_gloss_csv(request):
 
 @login_required
 @permission_required("dictionary.import_csv")
-def import_qualitrics_csv(request):
+def import_qualtrics_csv(request):
     """
-    Import ValidationRecords from a CSV export from Qualitrics
+    Import ValidationRecords from a CSV export from Qualtrics
     """
     # Make sure that the session variables are flushed before using this view.
     request.session.pop("validation_records", None)
@@ -547,7 +547,7 @@ def import_qualitrics_csv(request):
     if not request.method == "POST":
         # If request type is not POST, return to the original form.
         csv_form = CSVFileOnlyUpload()
-        return render(request, "dictionary/import_qualitrics_csv.html",
+        return render(request, "dictionary/import_qualtrics_csv.html",
                       {"import_csv_form": csv_form}, )
 
     form = CSVFileOnlyUpload(request.POST, request.FILES)
@@ -557,7 +557,7 @@ def import_qualitrics_csv(request):
         messages.add_message(request, messages.ERROR,
                              _("The provided CSV-file does not meet the requirements "
                                "or there is some other problem."))
-        return render(request, "dictionary/import_qualitrics_csv.html",
+        return render(request, "dictionary/import_qualtrics_csv.html",
                       {"import_csv_form": form}, )
 
     validation_records = []
@@ -579,7 +579,7 @@ def import_qualitrics_csv(request):
                 question_numbers.append(question_number)
 
         for row in validation_record_reader:
-            # Qualitrics validation record csv has 3 rows before actual records start
+            # Qualtrics validation record csv has 3 rows before actual records start
             # skipping row 1 and 3, row 2 contains the gloss video url
             if validation_record_reader.line_num in (1, 3):
                 continue
@@ -603,12 +603,12 @@ def import_qualitrics_csv(request):
         request.session.pop("question_gloss_map", None)
         # Set a message to be shown so that the user knows what is going on.
         messages.add_message(request, messages.ERROR, _("Cannot open the file:" + str(e)))
-        return render(request, "dictionary/import_qualitrics_csv.html",
+        return render(request, "dictionary/import_qualtrics_csv.html",
                       {"import_csv_form": CSVFileOnlyUpload()}, )
     except UnicodeDecodeError as e:
         # File is not UTF-8 encoded.
         messages.add_message(request, messages.ERROR, _("File must be UTF-8 encoded!"))
-        return render(request, "dictionary/import_qualitrics_csv.html",
+        return render(request, "dictionary/import_qualtrics_csv.html",
                       {"import_csv_form": CSVFileOnlyUpload()}, )
 
     # Store dataset's id and the list of glosses to be added in session.
@@ -616,18 +616,18 @@ def import_qualitrics_csv(request):
     request.session["question_numbers"] = question_numbers
     request.session["question_gloss_map"] = question_to_gloss_map
 
-    return render(request, "dictionary/import_qualitrics_csv_confirmation.html",
+    return render(request, "dictionary/import_qualtrics_csv_confirmation.html",
                   {"validation_records": validation_records, "skipped_rows": skipped_rows})
 
 
 @login_required
 @permission_required("dictionary.import_csv")
 @transaction.atomic()
-def confirm_import_qualitrics_csv(request):
+def confirm_import_qualtrics_csv(request):
     """This view adds the data to database if the user confirms the action"""
     if not request.method == "POST":
         # If request method is not POST, redirect to the import form
-        return HttpResponseRedirect(reverse("dictionary:import_qualitrics_csv"))
+        return HttpResponseRedirect(reverse("dictionary:import_qualtrics_csv"))
 
     if "cancel" in request.POST:
         # If user cancels adding data, flush session variables
@@ -636,7 +636,7 @@ def confirm_import_qualitrics_csv(request):
         request.session.pop("question_gloss_map", None)
         # Set a message to be shown so that the user knows what is going on.
         messages.add_message(request, messages.WARNING, _("Cancelled adding CSV data."))
-        return HttpResponseRedirect(reverse("dictionary:import_qualitrics_csv"))
+        return HttpResponseRedirect(reverse("dictionary:import_qualtrics_csv"))
 
     elif "confirm" in request.POST:
         validation_records_added = []
@@ -693,7 +693,7 @@ def confirm_import_qualitrics_csv(request):
             messages.add_message(request, messages.SUCCESS,
                                  _("ValidationRecords were added succesfully."))
         return render(
-            request, "dictionary/import_qualitrics_csv_confirmation.html",
+            request, "dictionary/import_qualtrics_csv_confirmation.html",
             {
                 "validation_records_added": validation_records_added,
                 "validation_record_count": len(validation_records_added),
@@ -702,4 +702,4 @@ def confirm_import_qualitrics_csv(request):
             }
         )
     else:
-        return HttpResponseRedirect(reverse("dictionary:import_qualitrics_csv"))
+        return HttpResponseRedirect(reverse("dictionary:import_qualtrics_csv"))

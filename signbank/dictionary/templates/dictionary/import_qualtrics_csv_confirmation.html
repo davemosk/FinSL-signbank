@@ -2,7 +2,7 @@
 {% load stylesheet %}
 {% load bootstrap3 %}
 {% load i18n %}
-{% block bootstrap3_title %}{% blocktrans %}Confirm Import Qualitrics CSV{% endblocktrans %} | {% endblock %}
+{% block bootstrap3_title %}{% blocktrans %}Confirm Import Qualtrics CSV{% endblocktrans %} | {% endblock %}
 
 {% block content %}
 {% if perms.dictionary.import_csv %}
@@ -20,7 +20,7 @@
           {% endfor %}
         </table>
       {% endif %}
-      <form action='{% url "dictionary:confirm_import_qualitrics_csv" %}' method='post'>
+      <form action='{% url "dictionary:confirm_import_qualtrics_csv" %}' method='post'>
         {% csrf_token %}
         <input class='btn btn-primary' name='confirm' type='submit' value='{% blocktrans %}Confirm{% endblocktrans %}'>
         <input class='btn btn-primary' name='cancel' type='submit' value='{% blocktrans %}Cancel{% endblocktrans %}'>
@@ -32,7 +32,7 @@
         <p>{% blocktrans %}Added {{ responses_count }} responses for {{ gloss_count }} glosses each.{% endblocktrans %}</p>
         <p>{% blocktrans %}Total of {{ validation_record_count }} validation records added.{% endblocktrans %}</p>
 
-      <p><a href="{% url "dictionary:import_qualitrics_csv" %}">{% blocktrans %}Return to the form{% endblocktrans %}
+      <p><a href="{% url "dictionary:import_qualtrics_csv" %}">{% blocktrans %}Return to the form{% endblocktrans %}
                 </a></p>
     {% endif %}
 {% endif %}

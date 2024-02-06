@@ -239,7 +239,7 @@ class ShareCSVImportTestCase(TestCase):
         self.assertRedirects(response, reverse("dictionary:import_nzsl_share_gloss_csv"))
 
 
-class QualitricsCSVImportTestCase(TestCase):
+class QualtricsCSVImportTestCase(TestCase):
     def setUp(self):
         # Create user and add permissions
         self.user = User.objects.create_user(username="test", email=None, password="test")
@@ -348,7 +348,7 @@ class QualitricsCSVImportTestCase(TestCase):
 
     def test_import_view_post_with_no_permission(self):
         """Test that you get 302 Found or 403 Forbidden if you try without csv import permission."""
-        response = self.client_noperm.post(reverse('dictionary:import_qualitrics_csv'))
+        response = self.client_noperm.post(reverse('dictionary:import_qualtrics_csv'))
         # Make sure user does not have change_gloss permission.
         self.assertFalse(response.wsgi_request.user.has_perm('dictionary.import_csv'))
         # Should return 302 Found, or 403 Forbidden
@@ -356,21 +356,21 @@ class QualitricsCSVImportTestCase(TestCase):
 
     def test_import_view_post_nologin(self):
         """Testing POST with anonymous user."""
-        response = self.client_nologin.post(reverse('dictionary:import_qualitrics_csv'))
+        response = self.client_nologin.post(reverse('dictionary:import_qualtrics_csv'))
         # Should return 302 Found, or 403 Forbidden
         self.assertIn(response.status_code, [302, 403])
 
     def test_import_view_no_post_method(self):
         """Test that using GET re-renders import view"""
-        response = self.client.get(reverse('dictionary:import_qualitrics_csv'))
+        response = self.client.get(reverse('dictionary:import_qualtrics_csv'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.request["PATH_INFO"],
-            reverse('dictionary:import_qualitrics_csv')
+            reverse('dictionary:import_qualtrics_csv')
         )
 
     def test_import_view_successful_file_upload(self):
-        """Test a csv file can successfully be read by the Qualitrics csv import view"""
+        """Test a csv file can successfully be read by the Qualtrics csv import view"""
         file_name = "test.csv"
         csv_content = self._csv_content
         with open(file_name, "w") as file:
@@ -385,7 +385,7 @@ class QualitricsCSVImportTestCase(TestCase):
         expected_validation_records = csv_content[2:5]
 
         response = self.client.post(
-            reverse('dictionary:import_qualitrics_csv'),
+            reverse('dictionary:import_qualtrics_csv'),
             {"file": file},
             format="multipart"
         )
@@ -397,7 +397,7 @@ class QualitricsCSVImportTestCase(TestCase):
 
     def test_confirmation_view_confirm_gloss_creation(self):
         """
-        Test that the confirm Qualitrics import csv view can successfully create validation records
+        Test that the confirm Qualtrics import csv view can successfully create validation records
         for a gloss.
         """
         csv_content = self._csv_content
@@ -410,7 +410,7 @@ class QualitricsCSVImportTestCase(TestCase):
         s.save()
 
         response = self.client.post(
-            reverse("dictionary:confirm_import_qualitrics_csv"),
+            reverse("dictionary:confirm_import_qualtrics_csv"),
             {"confirm": True}
         )
         self.assertEqual(response.status_code, 200)
@@ -457,11 +457,11 @@ class QualitricsCSVImportTestCase(TestCase):
         s.save()
 
         response = self.client.post(
-            reverse("dictionary:confirm_import_qualitrics_csv"),
+            reverse("dictionary:confirm_import_qualtrics_csv"),
             {"cancel": True}
         )
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, reverse("dictionary:import_qualitrics_csv"))
+        self.assertRedirects(response, reverse("dictionary:import_qualtrics_csv"))
         new_session = self.client.session
         self.assertNotIn("validation_records", new_session.keys())
         self.assertNotIn("question_numbers", new_session.keys())
@@ -469,6 +469,6 @@ class QualitricsCSVImportTestCase(TestCase):
 
     def test_confirmation_view_no_post_method(self):
         """Test that using GET redirects to import view"""
-        response = self.client.get(reverse('dictionary:confirm_import_qualitrics_csv'))
+        response = self.client.get(reverse('dictionary:confirm_import_qualtrics_csv'))
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, reverse("dictionary:import_qualitrics_csv"))
+        self.assertRedirects(response, reverse("dictionary:import_qualtrics_csv"))
