@@ -658,16 +658,8 @@ def confirm_import_qualtrics_csv(request):
                 response_id = record.get("ResponseId", "")
                 respondent_first_name = record.get("RecipientFirstName", "")
                 respondent_last_name = record.get("RecipientLastName", "")
-                respondent_email = record.get("RecipientEmail", "")
 
                 for question_number in questions_numbers:
-                    contact_nzsl = False
-                    comment_written = record.get(f"{question_number}_Q2", None)
-                    if comment_written:
-                        comment_written = comment_written.split(",")
-                        if len(comment_written) > 1:
-                            contact_nzsl = True
-
                     sign_seen = (record[f"{question_number}_Q1_1"]).lower()
                     if sign_seen == "not sure ":
                         sign_seen = "not_sure"
@@ -678,9 +670,7 @@ def confirm_import_qualtrics_csv(request):
                         response_id=response_id,
                         respondent_first_name=respondent_first_name,
                         respondent_last_name=respondent_last_name,
-                        respondent_email=respondent_email,
                         comment=record.get(f"{question_number}_Q2_5_TEXT", ""),
-                        contact_with_nzsl_requested=contact_nzsl
                     ))
 
             ValidationRecord.objects.bulk_create(validation_records_added)

@@ -274,7 +274,6 @@ class QualtricsCSVImportTestCase(TestCase):
         "ResponseId",
         "RecipientLastName",
         "RecipientFirstName",
-        "RecipientEmail",
         "1_Q1_1",
         "1_Q2",
         "1_Q2_5_TEXT",
@@ -286,7 +285,6 @@ class QualtricsCSVImportTestCase(TestCase):
             "ResponseId": "R_4PuIGsoEF7g76aE",
             "RecipientLastName": "Doe",
             "RecipientFirstName": "John",
-            "RecipientEmail": "test@email.com",
             "1_Q1_1": "unimportant_text/glossvideo/1/gloss_name.1.more_unimportant_text",
             "1_Q2": "",
             "1_Q2_5_TEXT": "",
@@ -297,7 +295,6 @@ class QualtricsCSVImportTestCase(TestCase):
             "ResponseId": "R_4PuIGsoEF7g76aE",
             "RecipientLastName": "Doe",
             "RecipientFirstName": "John",
-            "RecipientEmail": "test@email.com",
             "1_Q1_1": "Yes",
             "1_Q2": "",
             "1_Q2_5_TEXT": "",
@@ -308,7 +305,6 @@ class QualtricsCSVImportTestCase(TestCase):
             "ResponseId": "R_4PuIGsoEF7g76aE",
             "RecipientLastName": "Doe",
             "RecipientFirstName": "John",
-            "RecipientEmail": "test@email.com",
             "1_Q1_1": "Yes",
             "1_Q2": "",
             "1_Q2_5_TEXT": "",
@@ -318,7 +314,6 @@ class QualtricsCSVImportTestCase(TestCase):
             "ResponseId": "R_4nejxM9PFHp9JBL",
             "RecipientLastName": "Doe",
             "RecipientFirstName": "Jane",
-            "RecipientEmail": "",
             "1_Q1_1": "No",
             "1_Q2": "Write a comment",
             "1_Q2_5_TEXT": "Test Comment",
@@ -328,7 +323,6 @@ class QualtricsCSVImportTestCase(TestCase):
             "ResponseId": "R_4wMijsb0UrE6SQy",
             "RecipientLastName": "Last",
             "RecipientFirstName": "First",
-            "RecipientEmail": "",
             "1_Q1_1": "Not sure ",
             "1_Q2": "Write a comment,I want to talk about this sign in NZSL - contact me",
             "1_Q2_5_TEXT": "Test Comment",
@@ -339,7 +333,6 @@ class QualtricsCSVImportTestCase(TestCase):
             "ResponseId": "R_4wMijsb0UrE6SQy",
             "RecipientLastName": "Last",
             "RecipientFirstName": "First",
-            "RecipientEmail": "",
             "1_Q1_1": "Not sure ",
             "1_Q2": "Write a comment,I want to talk about this sign in NZSL - contact me",
             "1_Q2_5_TEXT": "Test Comment",
@@ -422,28 +415,22 @@ class QualtricsCSVImportTestCase(TestCase):
             response_id="R_4PuIGsoEF7g76aE",
             respondent_last_name="Doe",
             respondent_first_name="John",
-            respondent_email="test@email.com",
             sign_seen=ValidationRecord.SignSeenChoices.YES.value,
             comment="",
-            contact_with_nzsl_requested=False
         ).exists())
         self.assertTrue(validation_qs.filter(
             response_id="R_4nejxM9PFHp9JBL",
             respondent_last_name="Doe",
             respondent_first_name="Jane",
-            respondent_email="",
             sign_seen=ValidationRecord.SignSeenChoices.NO.value,
             comment="Test Comment",
-            contact_with_nzsl_requested=False
         ).exists())
         self.assertTrue(validation_qs.filter(
             response_id="R_4wMijsb0UrE6SQy",
             respondent_last_name="Last",
             respondent_first_name="First",
-            respondent_email="",
             sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE.value,
-            comment="Test Comment",
-            contact_with_nzsl_requested=True
+            comment="Test Comment"
         ).exists())
 
     def test_confirmation_view_cancel_gloss_creation(self):

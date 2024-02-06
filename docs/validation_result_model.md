@@ -40,7 +40,7 @@ Their values can be:
 Based on these values it might be worth ignoring anything but 0 and 4
 
 Furthermore, we should take note of the `ResponseId`, `RecipientLastName` and `RecipientFirstName` columns to 
-store the name of the validator. Potentially even the `RecipientEmail` column.
+store the name of the validator. 
 
 For each gloss there are three column headers. In the example provided their names are of the 
 format 
@@ -63,6 +63,8 @@ A newer version of the CSV file shows which tick boxes have been selected, eg.
 The previous version of the CSV showed the values 5 and 7. This meant that 5 refers to the `write a comment` tickbox, and 7 refers to 
 the `I wans to talk to NZSL about this comment` tickbox.  
 Column 3 represents the comment itself.
+
+however, question column 2 can be ignored, as we don't need to store if the respondent wants to be contacted, we only need to retrieve the comment from the third column.
 
 ![screenshot][qualtrics-screenshot]
 
@@ -94,16 +96,8 @@ class ValidationRecord(models.Model):
     respondent_last_name = models.CharField(
         max_length=255, default="", help_text="Survey respondents last name"
     )
-    respondent_email = models.EmailField(default="", help_text="Survey respondents email")
     comment = models.TextField(
         default="", help_text="Optional comment the survey respondent can leave about the gloss"
-    )
-    contact_with_nzsl_requested = models.BooleanField(
-        default=False,
-        help_text=(
-            "Boolean value that indicates if the survey respondent would like to be contacted by "
-            "NZSL to discuss the gloss further"
-        )
     )
     
 ```
