@@ -275,12 +275,16 @@ class GlossListView(ListView):
             settings.TAG_READY_FOR_VALIDATION
         )
 
+        # three types of GlossVideos are imported for validation: illustrations, usage examples
+        # and videos.
+        # Only the videos have title Main and validation video-type
         gloss_video_qs = GlossVideo.objects.select_related("video_type").filter(
             video_type__isnull=False,
             video_type__field="video_type",
             video_type__english_name="validation",
             videofile__isnull=False,
             is_public=True,
+            title="Main",
         )
 
         csv_queryset = (
@@ -313,10 +317,16 @@ class GlossListView(ListView):
 
         for gloss_record in csv_queryset:
             row = [gloss_record.idgloss, gloss_record.gloss_main_aggregate]
-            try:
-                validation_video = gloss_record.validation_videos[0]
-                row.append(validation_video.videofile.storage.public_url(validation_video.videofile.name))
-            except IndexError:
+            # In theory there should only be one video matching the above query, or none.
+            found_video = True
+            for video in gloss_record.validation_videos:
+                if video.is_video:
+                    row.append(video.videofile.storage.public_url(video.videofile.name))
+                    found_video = True
+                    break
+                else:
+                    continue
+            if not found_video:
                 row.append("")
             writer.writerow(row)
 
