@@ -573,6 +573,10 @@ def import_qualtrics_csv(request):
         question_to_gloss_map = {}
 
         for header in validation_record_reader.fieldnames:
+            # The format of the three question headers pertaining to each gloss is described in
+            # under docs/validation_result_model
+            # We are using the first question column {question_number}_Q1_1 to identify the
+            # question number
             question_match = re.search("(\d+\_Q1\_1)", header)
             if question_match:
                 question_number = question_match[0].split("_Q1_1")[0]
@@ -585,8 +589,10 @@ def import_qualtrics_csv(request):
                 continue
             elif validation_record_reader.line_num == 2:
                 # Extract gloss pks from urls for each question number from the second line
-                # each url is build as bellow:
+                # The second line is build something like {number}_Q1 - {video_url} - Have seen it or use it myself
+                # and each url is build as bellow, making glossvideo/ the stable part of the url:
                 # {host}/glossvideo/{gloss pk}/{gloss word}.{gloss pk}.{rest of video name}.{extension}
+                # See docs/validation_result_model for more info
                 for question in question_numbers:
                     gloss_pk = row[f"{question}_Q1_1"].split("glossvideo/")[1].split("/")[0]
                     question_to_gloss_map[question] = int(gloss_pk)
@@ -638,58 +644,66 @@ def confirm_import_qualtrics_csv(request):
         messages.add_message(request, messages.WARNING, _("Cancelled adding CSV data."))
         return HttpResponseRedirect(reverse("dictionary:import_qualtrics_csv"))
 
-    elif "confirm" in request.POST:
-        validation_records_added = []
-        gloss_pk_list = []
-        validation_records = []
+    if not "confirm" in request.POST:
+        return HttpResponseRedirect(reverse("dictionary:import_qualtrics_csv"))
 
-        if "validation_records" and "question_numbers" and "question_gloss_map" in request.session:
-            # Retrieve glosses
-            gloss_pk_list = request.session["question_gloss_map"].values()
-            glosses = Gloss.objects.filter(pk__in=gloss_pk_list)
-            gloss_dict = {gloss.pk: gloss for gloss in glosses}
+    validation_records_added = []
+    validation_records = []
+    missing_gloss_pk_question_pairs = {}
 
-            questions_numbers = request.session["question_numbers"]
-            question_gloss_map = request.session["question_gloss_map"]
-            validation_records = request.session["validation_records"]
+    if "validation_records" and "question_numbers" and "question_gloss_map" in request.session:
+        # Retrieve glosses
+        gloss_pk_list = request.session["question_gloss_map"].values()
+        gloss_dict = Gloss.objects.in_bulk(gloss_pk_list)
 
-            # Go through csv data
-            for record in validation_records:
-                response_id = record.get("ResponseId", "")
-                respondent_first_name = record.get("RecipientFirstName", "")
-                respondent_last_name = record.get("RecipientLastName", "")
+        questions_numbers = request.session["question_numbers"]
+        question_gloss_map = request.session["question_gloss_map"]
+        validation_records = request.session["validation_records"]
 
-                for question_number in questions_numbers:
-                    sign_seen = (record[f"{question_number}_Q1_1"]).lower()
-                    if sign_seen == "not sure ":
-                        sign_seen = "not_sure"
+        # Go through csv data
+        for record in validation_records:
+            response_id = record.get("ResponseId", "")
+            respondent_first_name = record.get("RecipientFirstName", "")
+            respondent_last_name = record.get("RecipientLastName", "")
 
+            for question_number in questions_numbers:
+                sign_seen = (record[f"{question_number}_Q1_1"]).lower()
+                # the not sure response has spaces, so we're replacing with the value of the
+                # SignSeenChoice on the model
+                if sign_seen == "not sure ":
+                    sign_seen = ValidationRecord.SignSeenChoices.NOT_SURE.value
+
+                try:
+                    gloss = gloss_dict[question_gloss_map[question_number]]
                     validation_records_added.append(ValidationRecord(
-                        gloss=gloss_dict[question_gloss_map[question_number]],
+                        gloss=gloss,
                         sign_seen=ValidationRecord.SignSeenChoices(sign_seen),
                         response_id=response_id,
                         respondent_first_name=respondent_first_name,
                         respondent_last_name=respondent_last_name,
                         comment=record.get(f"{question_number}_Q2_5_TEXT", ""),
                     ))
+                except KeyError:
+                    missing_gloss_pk_question_pairs[question_number] = question_gloss_map[
+                        question_number]
+                    continue
 
-            ValidationRecord.objects.bulk_create(validation_records_added)
+        ValidationRecord.objects.bulk_create(validation_records_added)
 
-            del request.session["validation_records"]
-            del request.session["question_numbers"]
-            del request.session["question_gloss_map"]
+        del request.session["validation_records"]
+        del request.session["question_numbers"]
+        del request.session["question_gloss_map"]
 
-            # Set a message to be shown so that the user knows what is going on.
-            messages.add_message(request, messages.SUCCESS,
-                                 _("ValidationRecords were added succesfully."))
-        return render(
-            request, "dictionary/import_qualtrics_csv_confirmation.html",
-            {
-                "validation_records_added": validation_records_added,
-                "validation_record_count": len(validation_records_added),
-                "responses_count": len(validation_records),
-                "gloss_count": len(gloss_pk_list)
-            }
-        )
-    else:
-        return HttpResponseRedirect(reverse("dictionary:import_qualtrics_csv"))
+        # Set a message to be shown so that the user knows what is going on.
+        messages.add_message(request, messages.SUCCESS,
+                             _("ValidationRecords were added succesfully."))
+    return render(
+        request, "dictionary/import_qualtrics_csv_confirmation.html",
+        {
+            "validation_records_added": validation_records_added,
+            "validation_record_count": len(validation_records_added),
+            "responses_count": len(validation_records),
+            "gloss_count": len(gloss_dict),
+            "missing_gloss_question_pairs": missing_gloss_pk_question_pairs
+        }
+    )

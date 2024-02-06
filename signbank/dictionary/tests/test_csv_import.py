@@ -264,7 +264,8 @@ class QualtricsCSVImportTestCase(TestCase):
         self.signlanguage = SignLanguage.objects.create(pk=2, name="testsignlanguage",
                                                         language_code_3char="tst")
         self.dataset = Dataset.objects.create(name="testdataset", signlanguage=self.signlanguage)
-        self.gloss = Gloss.objects.create(idgloss="testgloss", dataset=self.dataset, )
+        self.gloss_1 = Gloss.objects.create(idgloss="testgloss:1", dataset=self.dataset)
+        self.gloss_2 = Gloss.objects.create(idgloss="testgloss:2", dataset=self.dataset)
         # Assign view permissions to dataset for user
         assign_perm('view_dataset', self.user, self.dataset)
 
@@ -277,6 +278,12 @@ class QualtricsCSVImportTestCase(TestCase):
         "1_Q1_1",
         "1_Q2",
         "1_Q2_5_TEXT",
+        "2_Q1_1",
+        "2_Q2",
+        "2_Q2_5_TEXT",
+        "3_Q1_1",
+        "3_Q2",
+        "3_Q2_5_TEXT"
     ]
     _csv_content = [
         # row 2 of file, contains urls with gloss pks
@@ -288,6 +295,12 @@ class QualtricsCSVImportTestCase(TestCase):
             "1_Q1_1": "unimportant_text/glossvideo/1/gloss_name.1.more_unimportant_text",
             "1_Q2": "",
             "1_Q2_5_TEXT": "",
+            "2_Q1_1": "unimportant_text/glossvideo/2/gloss_name.2.more_unimportant_text",
+            "2_Q2": "",
+            "2_Q2_5_TEXT": "comment",
+            "3_Q1_1": "unimportant_text/glossvideo/222/gloss_name.222.more_unimportant_text",
+            "3_Q2": "",
+            "3_Q2_5_TEXT": ""
         },
         # row 3, will be ignored
         {
@@ -298,6 +311,12 @@ class QualtricsCSVImportTestCase(TestCase):
             "1_Q1_1": "Yes",
             "1_Q2": "",
             "1_Q2_5_TEXT": "",
+            "2_Q1_1": "",
+            "2_Q2": "",
+            "2_Q2_5_TEXT": "",
+            "3_Q1_1": "",
+            "3_Q2": "",
+            "3_Q2_5_TEXT": ""
         },
         # responses start here
         {
@@ -308,6 +327,12 @@ class QualtricsCSVImportTestCase(TestCase):
             "1_Q1_1": "Yes",
             "1_Q2": "",
             "1_Q2_5_TEXT": "",
+            "2_Q1_1": "No",
+            "2_Q2": "",
+            "2_Q2_5_TEXT": "comment",
+            "3_Q1_1": "not sure ",
+            "3_Q2": "",
+            "3_Q2_5_TEXT": ""
         },
         {
             "Status": "Imported",
@@ -317,6 +342,12 @@ class QualtricsCSVImportTestCase(TestCase):
             "1_Q1_1": "No",
             "1_Q2": "Write a comment",
             "1_Q2_5_TEXT": "Test Comment",
+            "2_Q1_1": "No",
+            "2_Q2": "",
+            "2_Q2_5_TEXT": "comment",
+            "3_Q1_1": "not sure ",
+            "3_Q2": "",
+            "3_Q2_5_TEXT": ""
         },
         {
             "Status": "IP Address",
@@ -326,6 +357,12 @@ class QualtricsCSVImportTestCase(TestCase):
             "1_Q1_1": "Not sure ",
             "1_Q2": "Write a comment,I want to talk about this sign in NZSL - contact me",
             "1_Q2_5_TEXT": "Test Comment",
+            "2_Q1_1": "No",
+            "2_Q2": "",
+            "2_Q2_5_TEXT": "comment",
+            "3_Q1_1": "not sure ",
+            "3_Q2": "",
+            "3_Q2_5_TEXT": ""
         },
         # response will be skipped / status mismatch
         {
@@ -336,6 +373,12 @@ class QualtricsCSVImportTestCase(TestCase):
             "1_Q1_1": "Not sure ",
             "1_Q2": "Write a comment,I want to talk about this sign in NZSL - contact me",
             "1_Q2_5_TEXT": "Test Comment",
+            "2_Q1_1": "No",
+            "2_Q2": "",
+            "2_Q2_5_TEXT": "comment",
+            "3_Q1_1": "not sure ",
+            "3_Q2": "",
+            "3_Q2_5_TEXT": ""
         },
     ]
 
@@ -385,8 +428,8 @@ class QualtricsCSVImportTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         session = self.client.session
         self.assertListEqual(expected_validation_records, session["validation_records"])
-        self.assertListEqual(["1"], session["question_numbers"])
-        self.assertDictEqual({"1": 1}, session["question_gloss_map"])
+        self.assertListEqual(["1", "2", "3"], session["question_numbers"])
+        self.assertDictEqual({"1": 1, "2": 2, "3": 222}, session["question_gloss_map"])
 
     def test_confirmation_view_confirm_gloss_creation(self):
         """
@@ -397,8 +440,8 @@ class QualtricsCSVImportTestCase(TestCase):
         s = self.client.session
         s.update({
             "validation_records": csv_content[2:5],
-            "question_numbers": ["1"],
-            "question_gloss_map": {"1": self.gloss.pk}
+            "question_numbers": ["1", "2", "3"],
+            "question_gloss_map": {"1": self.gloss_1.pk, "2": self.gloss_2.pk, "3": 222}
         })
         s.save()
 
@@ -408,29 +451,55 @@ class QualtricsCSVImportTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+        self.assertDictEqual(response.context["missing_gloss_question_pairs"], {"3": 222})
+
         # check the details of the validation records
-        validation_qs = ValidationRecord.objects.filter(gloss=self.gloss)
-        self.assertTrue(validation_qs.count(), 3)
-        self.assertTrue(validation_qs.filter(
+        validation_qs_gloss_1 = ValidationRecord.objects.filter(gloss=self.gloss_1)
+        self.assertTrue(validation_qs_gloss_1.count(), 3)
+        self.assertTrue(validation_qs_gloss_1.filter(
             response_id="R_4PuIGsoEF7g76aE",
             respondent_last_name="Doe",
             respondent_first_name="John",
             sign_seen=ValidationRecord.SignSeenChoices.YES.value,
             comment="",
         ).exists())
-        self.assertTrue(validation_qs.filter(
+        self.assertTrue(validation_qs_gloss_1.filter(
             response_id="R_4nejxM9PFHp9JBL",
             respondent_last_name="Doe",
             respondent_first_name="Jane",
             sign_seen=ValidationRecord.SignSeenChoices.NO.value,
             comment="Test Comment",
         ).exists())
-        self.assertTrue(validation_qs.filter(
+        self.assertTrue(validation_qs_gloss_1.filter(
             response_id="R_4wMijsb0UrE6SQy",
             respondent_last_name="Last",
             respondent_first_name="First",
             sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE.value,
             comment="Test Comment"
+        ).exists())
+
+        validation_qs_gloss_2 = ValidationRecord.objects.filter(gloss=self.gloss_2)
+        self.assertTrue(validation_qs_gloss_2.count(), 3)
+        self.assertTrue(validation_qs_gloss_2.filter(
+            response_id="R_4PuIGsoEF7g76aE",
+            respondent_last_name="Doe",
+            respondent_first_name="John",
+            sign_seen=ValidationRecord.SignSeenChoices.NO.value,
+            comment="comment",
+        ).exists())
+        self.assertTrue(validation_qs_gloss_2.filter(
+            response_id="R_4nejxM9PFHp9JBL",
+            respondent_last_name="Doe",
+            respondent_first_name="Jane",
+            sign_seen=ValidationRecord.SignSeenChoices.NO.value,
+            comment="comment",
+        ).exists())
+        self.assertTrue(validation_qs_gloss_2.filter(
+            response_id="R_4wMijsb0UrE6SQy",
+            respondent_last_name="Last",
+            respondent_first_name="First",
+            sign_seen=ValidationRecord.SignSeenChoices.NO.value,
+            comment="comment",
         ).exists())
 
     def test_confirmation_view_cancel_gloss_creation(self):

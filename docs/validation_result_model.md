@@ -49,7 +49,10 @@ format
 3. (`{number}_Q2_5_TEXT`,`Comment - {video_url} - Write a comment - Text`, `ImportId {number}_QID7_5_TEXT`) 
 
 It seems tricky to put the idgloss into the column headers instead of the question number for the 
-export, so the idgloss will have to be extracted form the url instead.
+export, so the idgloss will have to be extracted form the url instead.  
+Each url is the url to the GlossVideo that was used for the gloss, so it follows the signbank url convention:
+`{host}/glossvideo/{gloss pk}/{gloss word}.{gloss pk}.{rest of video name}.{extension}` and the 
+gloss pk can be extracted if the url is splitt at `glossvideo/` and `/` after the gloss pk.
 
 The first column corresponds to the question `Have seen it or use it myself` with possible answers 
 `Yes`, `No`, `Not sure`. 
