@@ -8,7 +8,6 @@
 <ul class="nav nav-tabs" role="tablist" xmlns="http://www.w3.org/1999/html">
     <li class="active"><a href="#revision_history_history_tab" role="tab" data-toggle="tab">Changes</a></li>
     <li><a href="#revision_history_comments_tab" role="tab" data-toggle="tab">Comments</a></li>
-    <li><a href="#revision_history_validation_results_tab" role="tab" data-toggle="tab">Validation Results</a></li>
 </ul>
 
 {# Tabs wrapper #}
@@ -86,104 +85,5 @@
         </div>
     </div>
     {# Tab: Comments #}
-
-  {# Tab: Validation Results #}
-    <div class="tab-pane" id="revision_history_validation_results_tab">
-      <div class="panel panel-info top-margin">
-        <!-- Default panel contents -->
-        <div class="panel-heading">Aggregated validation results from NZSL Share and Qualtrics</div>
-        <div class="panel-body">
-          <!-- Table -->
-          <table class="table">
-          <thead>
-            <td></td>
-            <td><span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span></td>
-            <td><span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span></td>
-            <td><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></td>
-          </thead>
-          <tbody>
-            {% if share_validation_aggregation %}
-              <tr>
-                <td>{% blocktrans %}NZSL Share{% endblocktrans %}</td>
-                <td>{{ share_validation_aggregation.agrees }}</td>
-                <td>{{ share_validation_aggregation.disagrees }}</td>
-                <td>-</td>
-              </tr>
-            {% endif %}
-            <tr>
-              <td>{% blocktrans %}Qualtrics{% endblocktrans %}</td>
-              <td>{{ sign_seen_yes }}</td>
-              <td>{{ sign_seen_no }}</td>
-              <td>{{ sign_seen_maybe }}</td>
-            </tr>
-            {% if share_validation_aggregation %}
-              <tr>
-                <td>{% blocktrans %}Total{% endblocktrans %}</td>
-                <td>{{ sign_seen_yes|add:share_validation_aggregation.agrees }}</td>
-                <td>{{ sign_seen_no|add:share_validation_aggregation.disagrees }}</td>
-                <td>{{ sign_seen_maybe }}</td>
-              </tr>
-            {% endif %}
-          </tbody>
-        </table>
-        </div>
-      </div>
-        {#    Qualtrics validation records#}
-        <div>
-          <h4>
-            {% blocktrans %}Validation records{% endblocktrans %} ({{validation_records|length}})
-            {% if validation_records|length > 0 %}
-              <span class="glyphicon glyphicon-chevron-down" aria-hidden="true" data-toggle="collapse" data-target="#validation-records" aria-expanded="false" aria-controls="validation-records"></span>
-            {% endif %}
-          </h4>
-          <div class="collapse" id="validation-records">
-            <dl class="well well-md">
-              {% for record in validation_records %}
-                <dt {% if not forloop.first %}class="top-margin"{% endif %} id="vr_{{ record.id }}">
-                  {% if record.sign_seen == "yes" %}
-                  <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
-                {% elif record.sign_seen == "no" %}
-                  <span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
-                {% else %}
-                  <span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span>
-                {% endif %}
-                  &nbsp;{{ record.respondent_first_name }} {{ record.respondent_last_name }}
-                  <span class="normal-font">(ResponseId: {{ record.response_id }})</span>
-                </dt>
-                <dd>
-                  {% if record.comment %}
-                    <div>
-                      <span class="glyphicon glyphicon-comment" aria-hidden="true"></span>&nbsp;{{ record.comment }}
-                    </div>
-                  {% endif %}
-                </dd>
-              {% endfor %}
-            </dl>
-          </div>
-        </div>
-        {#    NZSL Share comments#}
-        <div>
-            <h4>
-              {% blocktrans %}NZSL Share Comments{% endblocktrans %} ({{share_comments|length}})
-              {% if share_comments|length > 0 %}
-                &nbsp;<span class="glyphicon glyphicon-chevron-down" data-toggle="collapse" data-target="#share-comments" aria-expanded="false" aria-controls="share-comments" aria-hidden="true"></span>
-              {% endif %}
-            </h4>
-            <div id="share-comments" class="collapse">
-              {# snippet copied from the django-comments list template #}
-              <dl class="well well-md">
-                {% for comment in share_comments %}
-                  <dt {% if not forloop.first %}class="top-margin"{% endif %} id="c{{ comment.id }}">
-                    <span class="glyphicon glyphicon-user" aria-hidden="true"></span>
-                    &nbsp;{{ comment.user_name }}
-                  </dt>
-                  <dd>
-                    <p>{{ comment.comment }}</p>
-                  </dd>
-                {% endfor %}
-              </dl>
-            </div>
-        </div>
-    </div> {# Tab: Comments #}
 
 </div> {# Tabs wrapper #}

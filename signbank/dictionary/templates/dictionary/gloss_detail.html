@@ -186,6 +186,7 @@ $('#id_comment').atwho({
     <li class="active"><a href="#gloss_main_edit_tab" role="tab" data-toggle="tab">Edit</a></li>
     <li><a href="#gloss_public_dictionary_tab" role="tab" data-toggle="tab">Public View</a></li>
     <li><a href="#gloss_revision_history_tab" role="tab" data-toggle="tab">Revision History</a></li>
+    <li><a href="#gloss_validation_results_tab" role="tab" data-toggle="tab">Validation Results</a></li>
 </ul>
 
 {# Tabs wrapper #}
@@ -503,6 +504,11 @@ $('#id_comment').atwho({
 {# Tab: gloss editing Revision History pane #}
 <div class="tab-pane" id="gloss_revision_history_tab">
     {% include "dictionary/gloss_revision_history_tab.html" %}
+</div>
+
+{# Tab: gloss validation results pane #}
+<div class="tab-pane" id="gloss_validation_results_tab">
+  {% include "dictionary/gloss_validation_results_tab.html" %}
 </div>
 
 </div>
