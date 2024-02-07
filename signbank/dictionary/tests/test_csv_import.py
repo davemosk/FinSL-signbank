@@ -5,6 +5,7 @@ import csv
 import random
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth.models import User, Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
@@ -265,7 +266,10 @@ class QualtricsCSVImportTestCase(TestCase):
                                                         language_code_3char="tst")
         self.dataset = Dataset.objects.create(name="testdataset", signlanguage=self.signlanguage)
         self.gloss_1 = Gloss.objects.create(idgloss="testgloss:1", dataset=self.dataset)
+        Tag.objects.add_tag(self.gloss_1, settings.TAG_READY_FOR_VALIDATION)
         self.gloss_2 = Gloss.objects.create(idgloss="testgloss:2", dataset=self.dataset)
+        Tag.objects.add_tag(self.gloss_2, settings.TAG_READY_FOR_VALIDATION)
+
         # Assign view permissions to dataset for user
         assign_perm('view_dataset', self.user, self.dataset)
 
@@ -445,6 +449,9 @@ class QualtricsCSVImportTestCase(TestCase):
         })
         s.save()
 
+        check_results_tag = Tag.objects.get(name=settings.TAG_VALIDATION_CHECK_RESULTS)
+        ready_for_validation_tag = Tag.objects.get(name=settings.TAG_READY_FOR_VALIDATION)
+
         response = self.client.post(
             reverse("dictionary:confirm_import_qualtrics_csv"),
             {"confirm": True}
@@ -501,6 +508,14 @@ class QualtricsCSVImportTestCase(TestCase):
             sign_seen=ValidationRecord.SignSeenChoices.NO.value,
             comment="comment",
         ).exists())
+
+        check_results_tagged_glosses = TaggedItem.objects.get_by_model(Gloss, [check_results_tag])
+        self.assertIn(self.gloss_1, check_results_tagged_glosses)
+        self.assertIn(self.gloss_2, check_results_tagged_glosses)
+        ready_for_validation_tagged_glosses = TaggedItem.objects.get_by_model(
+            Gloss, [ready_for_validation_tag]
+        )
+        self.assertEqual(ready_for_validation_tagged_glosses.count(), 0)
 
     def test_confirmation_view_cancel_gloss_creation(self):
         csv_content = self._csv_content

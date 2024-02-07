@@ -650,11 +650,15 @@ def confirm_import_qualtrics_csv(request):
     validation_records_added = []
     validation_records = []
     missing_gloss_pk_question_pairs = {}
+    bulk_tagged_items = []
 
     if "validation_records" and "question_numbers" and "question_gloss_map" in request.session:
         # Retrieve glosses
         gloss_pk_list = request.session["question_gloss_map"].values()
         gloss_dict = Gloss.objects.in_bulk(gloss_pk_list)
+        gloss_content_type = ContentType.objects.get_for_model(Gloss)
+        check_result_tag = Tag.objects.get(name=settings.TAG_VALIDATION_CHECK_RESULTS)
+        ready_for_validation_tag = Tag.objects.get(name=settings.TAG_READY_FOR_VALIDATION)
 
         questions_numbers = request.session["question_numbers"]
         question_gloss_map = request.session["question_gloss_map"]
@@ -686,9 +690,22 @@ def confirm_import_qualtrics_csv(request):
                 except KeyError:
                     missing_gloss_pk_question_pairs[question_number] = question_gloss_map[
                         question_number]
-                    continue
+
+        for gloss_pk in gloss_dict.keys():
+            bulk_tagged_items.append(TaggedItem(
+                content_type=gloss_content_type,
+                object_id=gloss_pk,
+                tag=check_result_tag
+
+            ))
 
         ValidationRecord.objects.bulk_create(validation_records_added)
+        TaggedItem.objects.bulk_create(bulk_tagged_items)
+        TaggedItem.objects.filter(
+            content_type=gloss_content_type,
+            object_id__in=gloss_dict.keys(),
+            tag=ready_for_validation_tag
+        ).delete()
 
         del request.session["validation_records"]
         del request.session["question_numbers"]
