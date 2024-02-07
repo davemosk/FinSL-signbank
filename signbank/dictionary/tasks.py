@@ -1,3 +1,5 @@
+import os
+from tempfile import TemporaryDirectory
 from typing import TypedDict, List
 from urllib.request import urlretrieve
 
@@ -27,7 +29,7 @@ def move_glossvideo_to_valid_filepath(glossvideo):
     """
     old_file = glossvideo.videofile
     full_new_path = glossvideo.videofile.storage.get_valid_name(
-        glossvideo.videofile.name.split("/")[-1]
+        glossvideo.videofile.name.split("/")[-1].split("glossvideo.")[-1]
     )
     if not glossvideo.videofile.storage.exists(full_new_path):
         # Save the file into the new path.
@@ -53,11 +55,14 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
     main_video_type = FieldChoice.objects.filter(field="video_type", english_name="main").first()
     videos_to_create = []
 
+    temp_dir = TemporaryDirectory(dir=settings.MEDIA_ROOT)
+
     for video in video_details:
         retrieval_url = f"{settings.NZSL_SHARE_HOSTNAME}{video['url']}"
+        file_name = f"{temp_dir.name}/{video['file_name']}"
         file, _ = urlretrieve(
             retrieval_url,
-            video["file_name"]
+            file_name
         )
         gloss = Gloss.objects.get(pk=video["gloss_pk"])
 
@@ -81,4 +86,5 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
         )
     GlossVideo.objects.bulk_create(videos_to_create)
 
+    temp_dir.cleanup()
     connection.close()

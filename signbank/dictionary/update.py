@@ -8,7 +8,6 @@ import random
 import re
 import threading
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
@@ -1065,7 +1064,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     video_url = gloss_data["videos"]
                     extension = video_url[-3:]
                     file_name = (
-                        f"{settings.MEDIA_ROOT}/glossvideo/"
+                        f"glossvideo."
                         f"{gloss.pk}-{gloss.idgloss}_video.{extension}"
                     )
 
@@ -1082,7 +1081,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     for i, video_url in enumerate(gloss_data["illustrations"].split("|")):
                         extension = video_url[-3:]
                         file_name = (
-                            f"{settings.MEDIA_ROOT}/glossvideo/"
+                            f"glossvideo."
                             f"{gloss.pk}-{gloss.idgloss}_illustration_{i + 1}.{extension}"
                         )
 
@@ -1099,7 +1098,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     for i, video_url in enumerate(gloss_data["usage_examples"].split("|")):
                         extension = video_url[-3:]
                         file_name = (
-                            f"{settings.MEDIA_ROOT}/glossvideo/"
+                            f"glossvideo."
                             f"{gloss.pk}-{gloss.idgloss}_usageexample_{i + 1}.{extension}"
                         )
 
