@@ -109,7 +109,8 @@ class GlossListViewTestCase(TestCase):
             is_public=True,
             dataset=testgloss.dataset,
             videofile=testfile,
-            video_type=validation_video_type
+            video_type=validation_video_type,
+            title="Main"
         )
 
         tag_id = Tag.objects.filter(name=settings.TAG_READY_FOR_VALIDATION).values_list("pk", flat=True)[0]
