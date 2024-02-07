@@ -24,12 +24,22 @@ def move_glossvideo_to_valid_filepath(glossvideo):
     include the video_type (would cause issues with uniqueness), but still adds the pk-folder into
     the name.
 
+    rename_file gives the file a new name of the format {glosspk}-{idgloss}_{videotype}_{pk}{ext}.
+    get_valid_name method on the storage class splits the name between gloss_pk and idgloss,
+    then joins it back together as {gloss_pk}/{glosspk}-{idgloss}_{videotype}_{pk}{ext}, and
+    then joins that with glossvideo. So the required end result is
+    glossvideo/{gloss_pk}/{glosspk}-{idgloss}_{videotype}_{pk}{ext}
+
+    In our case we need to give get_valid_name our filename, which at this point looks like
+    /app/media/temp_dir/{glosspk}-{idgloss}_{unique_name}_{pk}{ext}, so we split at / and give
+    get_valid_name only the last bit.
+
     This step is necessary because we create the videos in bulk, and usually the filename and path
     are updated in the save() step.
     """
     old_file = glossvideo.videofile
     full_new_path = glossvideo.videofile.storage.get_valid_name(
-        glossvideo.videofile.name.split("/")[-1].split("glossvideo.")[-1]
+        glossvideo.videofile.name.split("/")[-1]
     )
     if not glossvideo.videofile.storage.exists(full_new_path):
         # Save the file into the new path.
