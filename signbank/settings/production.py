@@ -24,7 +24,8 @@ CACHES = {
 }
 
 #: Absolute filesystem path to the directory that will hold user-uploaded files.
-MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')
+# This is expected to be in a S3 bucket.
+MEDIA_ROOT = '/media'
 # URL that handles the media served from MEDIA_ROOT, used for managing stored files.
 # It must end in a slash if set to a non-empty value.
 MEDIA_URL = '/media/'
