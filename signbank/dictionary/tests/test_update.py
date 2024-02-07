@@ -358,7 +358,7 @@ class ShareCSVImportTestCase(TestCase):
         gloss = gloss_qs.first()
         self.assertEqual(f"{csv_content['word']}:{gloss.pk}", gloss.idgloss)
         self.assertEqual(f"{maori_words[0]}:{gloss.pk}", gloss.idgloss_mi)
-        # self.assertEqual("", gloss.notes)
+        self.assertEqual("", gloss.notes)
         self.assertEqual(share_importer, gloss.created_by)
         self.assertEqual(share_importer, gloss.updated_by)
         self.assertEqual(csv_content["contributor_username"], gloss.signer.english_name)
