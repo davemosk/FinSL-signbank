@@ -1,0 +1,39 @@
+{% extends 'baselayout.html' %}
+{% load stylesheet %}
+{% load bootstrap3 %}
+{% load i18n %}
+{% block bootstrap3_title %}{% blocktrans %}Confirm Import Qualitrics CSV{% endblocktrans %} | {% endblock %}
+
+{% block content %}
+{% if perms.dictionary.import_csv %}
+    {% if validation_records %}
+      <h3>{% blocktrans %}ValidationRecords to be added{% endblocktrans %}</h3>
+      <p>{% blocktrans %}Total number of validation records to be added:{% endblocktrans %} {{validation_records|length}}</p>
+      {% if skipped_rows %}
+        <p>{% blocktrans %}The following rows have been skipped because their status indicates they are not normal or imported responses:{% endblocktrans %}</p>
+        <table class="table">
+          <th>ResponseID</th>
+          {% for row in skipped_rows %}
+              <tr>
+                  <td>{{ row.ResponseId }}</td>
+              </tr>
+          {% endfor %}
+        </table>
+      {% endif %}
+      <form action='{% url "dictionary:confirm_import_qualitrics_csv" %}' method='post'>
+        {% csrf_token %}
+        <input class='btn btn-primary' name='confirm' type='submit' value='{% blocktrans %}Confirm{% endblocktrans %}'>
+        <input class='btn btn-primary' name='cancel' type='submit' value='{% blocktrans %}Cancel{% endblocktrans %}'>
+      </form>
+    {% endif %}
+
+    {% if validation_records_added %}
+        <h3>{% blocktrans %}Validation records were successfully added{% endblocktrans %}</h3>
+        <p>{% blocktrans %}Added {{ responses_count }} responses for {{ gloss_count }} glosses each.{% endblocktrans %}</p>
+        <p>{% blocktrans %}Total of {{ validation_record_count }} validation records added.{% endblocktrans %}</p>
+
+      <p><a href="{% url "dictionary:import_qualitrics_csv" %}">{% blocktrans %}Return to the form{% endblocktrans %}
+                </a></p>
+    {% endif %}
+{% endif %}
+{% endblock %}

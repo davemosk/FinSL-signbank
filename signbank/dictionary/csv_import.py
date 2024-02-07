@@ -5,6 +5,7 @@ import codecs
 import csv
 import datetime
 import random
+import re
 import threading
 
 from django.conf import settings
@@ -23,10 +24,9 @@ from django_comments.models import Comment
 from guardian.shortcuts import get_objects_for_user, get_perms
 from tagging.models import Tag, TaggedItem
 
-from .forms import CSVUploadForm
-from .models import (Dataset, FieldChoice, Gloss,
-                     GlossTranslations, Language,
-                     ShareValidationAggregation)
+from .forms import CSVFileOnlyUpload, CSVUploadForm
+from .models import (Dataset, FieldChoice, Gloss, GlossTranslations, Language,
+                     ShareValidationAggregation, ValidationRecord)
 from .tasks import retrieve_videos_for_glosses
 
 User = get_user_model()
@@ -310,6 +310,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     # idgloss will be updated to word:pk in second step
                     idgloss=f"{gloss_data['word']}_row{row_num}",
                     idgloss_mi=gloss_data.get("maori", None),
+                    notes=gloss_data.get("notes", ""),
                     created_by=import_user,
                     updated_by=import_user,
                     exclude_from_ecv=True,
@@ -441,6 +442,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     video_url = gloss_data["videos"]
                     extension = video_url[-3:]
                     file_name = (
+                        f"{settings.MEDIA_ROOT}/glossvideo/"
                         f"{gloss.pk}-{gloss.idgloss}_video.{extension}"
                     )
 
@@ -457,6 +459,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     for i, video_url in enumerate(gloss_data["illustrations"].split("|")):
                         extension = video_url[-3:]
                         file_name = (
+                            f"{settings.MEDIA_ROOT}/glossvideo/"
                             f"{gloss.pk}-{gloss.idgloss}_illustration_{i + 1}.{extension}"
                         )
 
@@ -473,6 +476,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     for i, video_url in enumerate(gloss_data["usage_examples"].split("|")):
                         extension = video_url[-3:]
                         file_name = (
+                            f"{settings.MEDIA_ROOT}/glossvideo/"
                             f"{gloss.pk}-{gloss.idgloss}_usageexample_{i + 1}.{extension}"
                         )
 
@@ -529,3 +533,173 @@ def confirm_import_nzsl_share_gloss_csv(request):
         return HttpResponseRedirect(reverse("dictionary:import_nzsl_share_gloss_csv"))
 
 
+@login_required
+@permission_required("dictionary.import_csv")
+def import_qualitrics_csv(request):
+    """
+    Import ValidationRecords from a CSV export from Qualitrics
+    """
+    # Make sure that the session variables are flushed before using this view.
+    request.session.pop("validation_records", None)
+    request.session.pop("question_numbers", None)
+    request.session.pop("question_gloss_map", None)
+
+    if not request.method == "POST":
+        # If request type is not POST, return to the original form.
+        csv_form = CSVFileOnlyUpload()
+        return render(request, "dictionary/import_qualitrics_csv.html",
+                      {"import_csv_form": csv_form}, )
+
+    form = CSVFileOnlyUpload(request.POST, request.FILES)
+
+    if not form.is_valid():
+        # If form is not valid, set a error message and return to the original form.
+        messages.add_message(request, messages.ERROR,
+                             _("The provided CSV-file does not meet the requirements "
+                               "or there is some other problem."))
+        return render(request, "dictionary/import_qualitrics_csv.html",
+                      {"import_csv_form": form}, )
+
+    validation_records = []
+    skipped_rows = []
+    try:
+        validation_record_reader = csv.DictReader(
+            codecs.iterdecode(form.cleaned_data["file"], "utf-8"),
+            delimiter=",",
+            quotechar='"'
+        )
+
+        question_numbers = []
+        question_to_gloss_map = {}
+
+        for header in validation_record_reader.fieldnames:
+            question_match = re.search("(\d+\_Q1\_1)", header)
+            if question_match:
+                question_number = question_match[0].split("_Q1_1")[0]
+                question_numbers.append(question_number)
+
+        for row in validation_record_reader:
+            # Qualitrics validation record csv has 3 rows before actual records start
+            # skipping row 1 and 3, row 2 contains the gloss video url
+            if validation_record_reader.line_num in (1, 3):
+                continue
+            elif validation_record_reader.line_num == 2:
+                # Extract gloss pks from urls for each question number from the second line
+                # each url is build as bellow:
+                # {host}/glossvideo/{gloss pk}/{gloss word}.{gloss pk}.{rest of video name}.{extension}
+                for question in question_numbers:
+                    gloss_pk = row[f"{question}_Q1_1"].split("glossvideo/")[1].split("/")[0]
+                    question_to_gloss_map[question] = int(gloss_pk)
+
+            elif row["Status"] not in ("IP Address", "Imported"):
+                skipped_rows.append(row)
+            else:
+                validation_records.append(row)
+
+    except csv.Error as e:
+        # Can't open file, remove session variables
+        request.session.pop("validation_records", None)
+        request.session.pop("question_numbers", None)
+        request.session.pop("question_gloss_map", None)
+        # Set a message to be shown so that the user knows what is going on.
+        messages.add_message(request, messages.ERROR, _("Cannot open the file:" + str(e)))
+        return render(request, "dictionary/import_qualitrics_csv.html",
+                      {"import_csv_form": CSVFileOnlyUpload()}, )
+    except UnicodeDecodeError as e:
+        # File is not UTF-8 encoded.
+        messages.add_message(request, messages.ERROR, _("File must be UTF-8 encoded!"))
+        return render(request, "dictionary/import_qualitrics_csv.html",
+                      {"import_csv_form": CSVFileOnlyUpload()}, )
+
+    # Store dataset's id and the list of glosses to be added in session.
+    request.session["validation_records"] = validation_records
+    request.session["question_numbers"] = question_numbers
+    request.session["question_gloss_map"] = question_to_gloss_map
+
+    return render(request, "dictionary/import_qualitrics_csv_confirmation.html",
+                  {"validation_records": validation_records, "skipped_rows": skipped_rows})
+
+
+@login_required
+@permission_required("dictionary.import_csv")
+@transaction.atomic()
+def confirm_import_qualitrics_csv(request):
+    """This view adds the data to database if the user confirms the action"""
+    if not request.method == "POST":
+        # If request method is not POST, redirect to the import form
+        return HttpResponseRedirect(reverse("dictionary:import_qualitrics_csv"))
+
+    if "cancel" in request.POST:
+        # If user cancels adding data, flush session variables
+        request.session.pop("validation_records", None)
+        request.session.pop("question_numbers", None)
+        request.session.pop("question_gloss_map", None)
+        # Set a message to be shown so that the user knows what is going on.
+        messages.add_message(request, messages.WARNING, _("Cancelled adding CSV data."))
+        return HttpResponseRedirect(reverse("dictionary:import_qualitrics_csv"))
+
+    elif "confirm" in request.POST:
+        validation_records_added = []
+        gloss_pk_list = []
+        validation_records = []
+
+        if "validation_records" and "question_numbers" and "question_gloss_map" in request.session:
+            # Retrieve glosses
+            gloss_pk_list = request.session["question_gloss_map"].values()
+            glosses = Gloss.objects.filter(pk__in=gloss_pk_list)
+            gloss_dict = {gloss.pk: gloss for gloss in glosses}
+
+            questions_numbers = request.session["question_numbers"]
+            question_gloss_map = request.session["question_gloss_map"]
+            validation_records = request.session["validation_records"]
+
+            # Go through csv data
+            for record in validation_records:
+                response_id = record.get("ResponseId", "")
+                respondent_first_name = record.get("RecipientFirstName", "")
+                respondent_last_name = record.get("RecipientLastName", "")
+                respondent_email = record.get("RecipientEmail", "")
+
+                for question_number in questions_numbers:
+                    contact_nzsl = False
+                    comment_written = record.get(f"{question_number}_Q2", None)
+                    if comment_written:
+                        comment_written = comment_written.split(",")
+                        if len(comment_written) > 1:
+                            contact_nzsl = True
+
+                    sign_seen = (record[f"{question_number}_Q1_1"]).lower()
+                    if sign_seen == "not sure ":
+                        sign_seen = "not_sure"
+
+                    validation_records_added.append(ValidationRecord(
+                        gloss=gloss_dict[question_gloss_map[question_number]],
+                        sign_seen=ValidationRecord.SignSeenChoices(sign_seen),
+                        response_id=response_id,
+                        respondent_first_name=respondent_first_name,
+                        respondent_last_name=respondent_last_name,
+                        respondent_email=respondent_email,
+                        comment=record.get(f"{question_number}_Q2_5_TEXT", ""),
+                        contact_with_nzsl_requested=contact_nzsl
+                    ))
+
+            ValidationRecord.objects.bulk_create(validation_records_added)
+
+            del request.session["validation_records"]
+            del request.session["question_numbers"]
+            del request.session["question_gloss_map"]
+
+            # Set a message to be shown so that the user knows what is going on.
+            messages.add_message(request, messages.SUCCESS,
+                                 _("ValidationRecords were added succesfully."))
+        return render(
+            request, "dictionary/import_qualitrics_csv_confirmation.html",
+            {
+                "validation_records_added": validation_records_added,
+                "validation_record_count": len(validation_records_added),
+                "responses_count": len(validation_records),
+                "gloss_count": len(gloss_pk_list)
+            }
+        )
+    else:
+        return HttpResponseRedirect(reverse("dictionary:import_qualitrics_csv"))

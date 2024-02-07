@@ -79,6 +79,10 @@ urlpatterns = [
          csv_import.import_nzsl_share_gloss_csv, name='import_nzsl_share_gloss_csv'),
     path('advanced/import/csv/nzsl-share/confirm/',
          csv_import.confirm_import_nzsl_share_gloss_csv, name='confirm_import_nzsl_share_gloss_csv'),
+    path('advanced/import/csv/qualitrics/',
+         csv_import.import_qualitrics_csv, name='import_qualitrics_csv'),
+    path('advanced/import/csv/qualitrics/confirm/',
+         csv_import.confirm_import_qualitrics_csv, name='confirm_import_qualitrics_csv'),
 
     # AJAX urls
     path('ajax/keyword/<str:prefix>',

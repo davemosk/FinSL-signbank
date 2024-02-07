@@ -13,7 +13,8 @@ from django_comments import get_model as comments_get_model
 from guardian.shortcuts import assign_perm
 from tagging.models import Tag, TaggedItem
 
-from signbank.dictionary.models import SignLanguage, Dataset, FieldChoice, Gloss, Language
+from signbank.dictionary.models import SignLanguage, Dataset, FieldChoice, Gloss, Language, \
+    ValidationRecord
 
 
 class ShareCSVImportTestCase(TestCase):
@@ -236,3 +237,238 @@ class ShareCSVImportTestCase(TestCase):
         response = self.client.get(reverse('dictionary:confirm_import_nzsl_share_gloss_csv'))
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("dictionary:import_nzsl_share_gloss_csv"))
+
+
+class QualitricsCSVImportTestCase(TestCase):
+    def setUp(self):
+        # Create user and add permissions
+        self.user = User.objects.create_user(username="test", email=None, password="test")
+        csv_permission = Permission.objects.get(codename='import_csv')
+        self.user.user_permissions.add(csv_permission)
+
+        # Create client with change_gloss permission.
+        self.client = Client()
+        self.client.force_login(self.user)
+
+        # Create user with no permissions
+        self.user_noperm = User.objects.create_user(username="noperm", email=None,
+                                                    password="noperm")
+        self.client_noperm = Client()
+        self.client_noperm.force_login(self.user_noperm)
+
+        # Create client not logged in
+        self.client_nologin = Client()
+
+        # Create a gloss
+        # Migrations have id=1 already
+        self.signlanguage = SignLanguage.objects.create(pk=2, name="testsignlanguage",
+                                                        language_code_3char="tst")
+        self.dataset = Dataset.objects.create(name="testdataset", signlanguage=self.signlanguage)
+        self.gloss = Gloss.objects.create(idgloss="testgloss", dataset=self.dataset, )
+        # Assign view permissions to dataset for user
+        assign_perm('view_dataset', self.user, self.dataset)
+
+    # Unimportant columns are excluded from csv
+    _csv_headers = [
+        "Status",
+        "ResponseId",
+        "RecipientLastName",
+        "RecipientFirstName",
+        "RecipientEmail",
+        "1_Q1_1",
+        "1_Q2",
+        "1_Q2_5_TEXT",
+    ]
+    _csv_content = [
+        # row 2 of file, contains urls with gloss pks
+        {
+            "Status": "IP Address",
+            "ResponseId": "R_4PuIGsoEF7g76aE",
+            "RecipientLastName": "Doe",
+            "RecipientFirstName": "John",
+            "RecipientEmail": "test@email.com",
+            "1_Q1_1": "unimportant_text/glossvideo/1/gloss_name.1.more_unimportant_text",
+            "1_Q2": "",
+            "1_Q2_5_TEXT": "",
+        },
+        # row 3, will be ignored
+        {
+            "Status": "IP Address",
+            "ResponseId": "R_4PuIGsoEF7g76aE",
+            "RecipientLastName": "Doe",
+            "RecipientFirstName": "John",
+            "RecipientEmail": "test@email.com",
+            "1_Q1_1": "Yes",
+            "1_Q2": "",
+            "1_Q2_5_TEXT": "",
+        },
+        # responses start here
+        {
+            "Status": "IP Address",
+            "ResponseId": "R_4PuIGsoEF7g76aE",
+            "RecipientLastName": "Doe",
+            "RecipientFirstName": "John",
+            "RecipientEmail": "test@email.com",
+            "1_Q1_1": "Yes",
+            "1_Q2": "",
+            "1_Q2_5_TEXT": "",
+        },
+        {
+            "Status": "Imported",
+            "ResponseId": "R_4nejxM9PFHp9JBL",
+            "RecipientLastName": "Doe",
+            "RecipientFirstName": "Jane",
+            "RecipientEmail": "",
+            "1_Q1_1": "No",
+            "1_Q2": "Write a comment",
+            "1_Q2_5_TEXT": "Test Comment",
+        },
+        {
+            "Status": "IP Address",
+            "ResponseId": "R_4wMijsb0UrE6SQy",
+            "RecipientLastName": "Last",
+            "RecipientFirstName": "First",
+            "RecipientEmail": "",
+            "1_Q1_1": "Not sure ",
+            "1_Q2": "Write a comment,I want to talk about this sign in NZSL - contact me",
+            "1_Q2_5_TEXT": "Test Comment",
+        },
+        # response will be skipped / status mismatch
+        {
+            "Status": "Spam",
+            "ResponseId": "R_4wMijsb0UrE6SQy",
+            "RecipientLastName": "Last",
+            "RecipientFirstName": "First",
+            "RecipientEmail": "",
+            "1_Q1_1": "Not sure ",
+            "1_Q2": "Write a comment,I want to talk about this sign in NZSL - contact me",
+            "1_Q2_5_TEXT": "Test Comment",
+        },
+    ]
+
+    def test_import_view_post_with_no_permission(self):
+        """Test that you get 302 Found or 403 Forbidden if you try without csv import permission."""
+        response = self.client_noperm.post(reverse('dictionary:import_qualitrics_csv'))
+        # Make sure user does not have change_gloss permission.
+        self.assertFalse(response.wsgi_request.user.has_perm('dictionary.import_csv'))
+        # Should return 302 Found, or 403 Forbidden
+        self.assertIn(response.status_code, [403, 302])
+
+    def test_import_view_post_nologin(self):
+        """Testing POST with anonymous user."""
+        response = self.client_nologin.post(reverse('dictionary:import_qualitrics_csv'))
+        # Should return 302 Found, or 403 Forbidden
+        self.assertIn(response.status_code, [302, 403])
+
+    def test_import_view_no_post_method(self):
+        """Test that using GET re-renders import view"""
+        response = self.client.get(reverse('dictionary:import_qualitrics_csv'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.request["PATH_INFO"],
+            reverse('dictionary:import_qualitrics_csv')
+        )
+
+    def test_import_view_successful_file_upload(self):
+        """Test a csv file can successfully be read by the Qualitrics csv import view"""
+        file_name = "test.csv"
+        csv_content = self._csv_content
+        with open(file_name, "w") as file:
+            writer = csv.writer(file)
+            writer.writerow(self._csv_headers)
+            for response in csv_content:
+                writer.writerow(response.values())
+        data = open(file_name, "rb")
+        file = SimpleUploadedFile(
+            content=data.read(), name=data.name, content_type="content/multipart"
+        )
+        expected_validation_records = csv_content[2:5]
+
+        response = self.client.post(
+            reverse('dictionary:import_qualitrics_csv'),
+            {"file": file},
+            format="multipart"
+        )
+        self.assertEqual(response.status_code, 200)
+        session = self.client.session
+        self.assertListEqual(expected_validation_records, session["validation_records"])
+        self.assertListEqual(["1"], session["question_numbers"])
+        self.assertDictEqual({"1": 1}, session["question_gloss_map"])
+
+    def test_confirmation_view_confirm_gloss_creation(self):
+        """
+        Test that the confirm Qualitrics import csv view can successfully create validation records
+        for a gloss.
+        """
+        csv_content = self._csv_content
+        s = self.client.session
+        s.update({
+            "validation_records": csv_content[2:5],
+            "question_numbers": ["1"],
+            "question_gloss_map": {"1": self.gloss.pk}
+        })
+        s.save()
+
+        response = self.client.post(
+            reverse("dictionary:confirm_import_qualitrics_csv"),
+            {"confirm": True}
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # check the details of the validation records
+        validation_qs = ValidationRecord.objects.filter(gloss=self.gloss)
+        self.assertTrue(validation_qs.count(), 3)
+        self.assertTrue(validation_qs.filter(
+            response_id="R_4PuIGsoEF7g76aE",
+            respondent_last_name="Doe",
+            respondent_first_name="John",
+            respondent_email="test@email.com",
+            sign_seen=ValidationRecord.SignSeenChoices.YES.value,
+            comment="",
+            contact_with_nzsl_requested=False
+        ).exists())
+        self.assertTrue(validation_qs.filter(
+            response_id="R_4nejxM9PFHp9JBL",
+            respondent_last_name="Doe",
+            respondent_first_name="Jane",
+            respondent_email="",
+            sign_seen=ValidationRecord.SignSeenChoices.NO.value,
+            comment="Test Comment",
+            contact_with_nzsl_requested=False
+        ).exists())
+        self.assertTrue(validation_qs.filter(
+            response_id="R_4wMijsb0UrE6SQy",
+            respondent_last_name="Last",
+            respondent_first_name="First",
+            respondent_email="",
+            sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE.value,
+            comment="Test Comment",
+            contact_with_nzsl_requested=True
+        ).exists())
+
+    def test_confirmation_view_cancel_gloss_creation(self):
+        csv_content = self._csv_content
+        s = self.client.session
+        s.update({
+            "validation_records": csv_content[2:5],
+            "question_numbers": ["1"],
+            "question_gloss_map": {"1": 1}
+        })
+        s.save()
+
+        response = self.client.post(
+            reverse("dictionary:confirm_import_qualitrics_csv"),
+            {"cancel": True}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("dictionary:import_qualitrics_csv"))
+        new_session = self.client.session
+        self.assertNotIn("validation_records", new_session.keys())
+        self.assertNotIn("question_numbers", new_session.keys())
+        self.assertNotIn("question_gloss_map", new_session.keys())
+
+    def test_confirmation_view_no_post_method(self):
+        """Test that using GET redirects to import view"""
+        response = self.client.get(reverse('dictionary:confirm_import_qualitrics_csv'))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("dictionary:import_qualitrics_csv"))
