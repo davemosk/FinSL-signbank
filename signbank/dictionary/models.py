@@ -797,7 +797,7 @@ class ShareValidationAggregation(models.Model):
 
 
 class ValidationRecord(models.Model):
-    """Record Qualitrics validation result for a gloss """
+    """Record Qualtrics validation result for a gloss """
 
     class SignSeenChoices(models.TextChoices):
         YES = "yes", "Yes"
@@ -810,7 +810,7 @@ class ValidationRecord(models.Model):
         help_text="Result of the survey question 'Have seen it or use it myself'"
     )
     response_id = models.CharField(
-        max_length=255, help_text="Identifier of specific survey result in Qualitrics"
+        max_length=255, help_text="Identifier of specific survey result in Qualtrics"
     )  # can potentially make this unique
     respondent_first_name = models.CharField(
         max_length=255, default="", help_text="Survey respondents first name"
@@ -818,16 +818,8 @@ class ValidationRecord(models.Model):
     respondent_last_name = models.CharField(
         max_length=255, default="", help_text="Survey respondents last name"
     )
-    respondent_email = models.EmailField(default="", help_text="Survey respondents email")
     comment = models.TextField(
         default="", help_text="Optional comment the survey respondent can leave about the gloss"
-    )
-    contact_with_nzsl_requested = models.BooleanField(
-        default=False,
-        help_text=(
-            "Boolean value that indicates if the survey respondent would like to be contacted by "
-            "NZSL to discuss the gloss further"
-        )
     )
 
 

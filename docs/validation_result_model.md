@@ -40,7 +40,7 @@ Their values can be:
 Based on these values it might be worth ignoring anything but 0 and 4
 
 Furthermore, we should take note of the `ResponseId`, `RecipientLastName` and `RecipientFirstName` columns to 
-store the name of the validator. Potentially even the `RecipientEmail` column.
+store the name of the validator. 
 
 For each gloss there are three column headers. In the example provided their names are of the 
 format 
@@ -49,7 +49,10 @@ format
 3. (`{number}_Q2_5_TEXT`,`Comment - {video_url} - Write a comment - Text`, `ImportId {number}_QID7_5_TEXT`) 
 
 It seems tricky to put the idgloss into the column headers instead of the question number for the 
-export, so the idgloss will have to be extracted form the url instead.
+export, so the idgloss will have to be extracted form the url instead.  
+Each url is the url to the GlossVideo that was used for the gloss, so it follows the signbank url convention:
+`{host}/glossvideo/{gloss pk}/{gloss word}.{gloss pk}.{rest of video name}.{extension}` and the 
+gloss pk can be extracted if the url is splitt at `glossvideo/` and `/` after the gloss pk.
 
 The first column corresponds to the question `Have seen it or use it myself` with possible answers 
 `Yes`, `No`, `Not sure`. 
@@ -64,7 +67,9 @@ The previous version of the CSV showed the values 5 and 7. This meant that 5 ref
 the `I wans to talk to NZSL about this comment` tickbox.  
 Column 3 represents the comment itself.
 
-![screenshot][qualitrics-screenshot]
+however, question column 2 can be ignored, as we don't need to store if the respondent wants to be contacted, we only need to retrieve the comment from the third column.
+
+![screenshot][qualtrics-screenshot]
 
 # Proposed model
 
@@ -86,7 +91,7 @@ class ValidationRecord(models.Model):
         help_text="Result of the survey question 'Have seen it or use it myself'"
     )
     response_id = models.CharField(
-        max_length=255, help_text="Identifier of specific survey result in Qualitrics"
+        max_length=255, help_text="Identifier of specific survey result in Qualtrics"
     )  # can potentially make this unique
     respondent_first_name = models.CharField(
         max_length=255, default="", help_text="Survey respondents first name"
@@ -94,16 +99,8 @@ class ValidationRecord(models.Model):
     respondent_last_name = models.CharField(
         max_length=255, default="", help_text="Survey respondents last name"
     )
-    respondent_email = models.EmailField(default="", help_text="Survey respondents email")
     comment = models.TextField(
         default="", help_text="Optional comment the survey respondent can leave about the gloss"
-    )
-    contact_with_nzsl_requested = models.BooleanField(
-        default=False,
-        help_text=(
-            "Boolean value that indicates if the survey respondent would like to be contacted by "
-            "NZSL to discuss the gloss further"
-        )
     )
     
 ```
@@ -113,7 +110,7 @@ class ValidationRecord(models.Model):
 As part of NZSL-74 a model has been introduced to capture the amount of people agreeing and 
 disagreeing with a gloss from Share. This model is populated during the CSV import of glosses 
 from Share. These aggregated results will be displayed along the aggregated results of the 
-ValidationRecords imported from Qualitrics, part of NZSL-78.
+ValidationRecords imported from Qualtrics, part of NZSL-78.
 
 ```python
 from django.db import models
@@ -130,7 +127,7 @@ class ShareValidationAggregation(models.Model):
 ```
 
 <!-- Links and resources -->
-[qualitrics-data]: https://www.qualtrics.com/support/survey-platform/data-and-analysis-module/data/download-data/export-data-overview/#UnderstandingDataSet
+[qualtrics-data]: https://www.qualtrics.com/support/survey-platform/data-and-analysis-module/data/download-data/export-data-overview/#UnderstandingDataSet
 [format-basics]: https://www.qualtrics.com/support/survey-platform/data-and-analysis-module/data/download-data/understanding-your-dataset/#Basics
 [respondent-information]: https://www.qualtrics.com/support/survey-platform/data-and-analysis-module/data/download-data/understanding-your-dataset/#RespondentInformation
-[qualitrics-screenshot]: ./qualitrics-screenshot.png
+[qualtrics-screenshot]: ./qualtrics-screenshot.png

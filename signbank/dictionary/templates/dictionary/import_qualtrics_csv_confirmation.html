@@ -1,0 +1,50 @@
+{% extends 'baselayout.html' %}
+{% load stylesheet %}
+{% load bootstrap3 %}
+{% load i18n %}
+{% block bootstrap3_title %}{% blocktrans %}Confirm Import Qualtrics CSV{% endblocktrans %} | {% endblock %}
+
+{% block content %}
+{% if perms.dictionary.import_csv %}
+    <div>
+      {% if validation_records %}
+        <h3>{% blocktrans %}ValidationRecords to be added{% endblocktrans %}</h3>
+        <p>{% blocktrans %}Total number of validation records to be added:{% endblocktrans %} {{validation_records|length}}</p>
+        {% if skipped_rows %}
+          <p>{% blocktrans %}The following rows have been skipped because their status indicates they are not normal or imported responses:{% endblocktrans %}</p>
+          <table class="table">
+            <th>ResponseID</th>
+            {% for row in skipped_rows %}
+                <tr>
+                    <td>{{ row.ResponseId }}</td>
+                </tr>
+            {% endfor %}
+          </table>
+        {% endif %}
+        <form action='{% url "dictionary:confirm_import_qualtrics_csv" %}' method='post'>
+          {% csrf_token %}
+          <input class='btn btn-primary' name='confirm' type='submit' value='{% blocktrans %}Confirm{% endblocktrans %}'>
+          <input class='btn btn-primary' name='cancel' type='submit' value='{% blocktrans %}Cancel{% endblocktrans %}'>
+        </form>
+      {% endif %}
+    </div>
+    <div>
+      {% if validation_records_added %}
+        <div>
+          <h3>{% blocktrans %}Validation records were successfully added{% endblocktrans %}</h3>
+          <p>{% blocktrans %}Added {{ responses_count }} responses for {{ gloss_count }} glosses each.{% endblocktrans %}</p>
+          <p>{% blocktrans %}Total of <strong>{{ validation_record_count }}</strong> validation records added.{% endblocktrans %}</p>
+        </div>
+        {% if missing_gloss_question_pairs %}
+          <div>
+            <h4>{% blocktrans %}Could not find glosses for some questions{% endblocktrans %}</h4>
+            {% for question, gloss_pk in missing_gloss_question_pairs.items %}
+            <p>{% blocktrans %}Question number:{% endblocktrans %} {{ question }}{% blocktrans %} - Gloss PK:{% endblocktrans %} {{ gloss_pk }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <p><a href="{% url "dictionary:import_qualtrics_csv" %}">{% blocktrans %}Return to the form{% endblocktrans %}</a></p>
+      {% endif %}
+    </div>
+{% endif %}
+{% endblock %}
