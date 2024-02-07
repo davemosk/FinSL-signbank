@@ -1,4 +1,3 @@
-import os
 from tempfile import TemporaryDirectory
 from typing import TypedDict, List
 from urllib.request import urlretrieve
@@ -66,6 +65,8 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
     videos_to_create = []
 
     temp_dir = TemporaryDirectory(dir=settings.MEDIA_ROOT)
+    if settings.GLOSS_VIDEO_FILE_STORAGE == "storages.backends.s3boto3.S3Boto3Storage":
+        temp_dir = TemporaryDirectory()
 
     for video in video_details:
         retrieval_url = f"{settings.NZSL_SHARE_HOSTNAME}{video['url']}"
@@ -91,9 +92,10 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
             is_public=False,
             video_type=video_type
         )
-        videos_to_create.append(
-            move_glossvideo_to_valid_filepath(gloss_video)
-        )
+        if settings.GLOSS_VIDEO_FILE_STORAGE != "storages.backends.s3boto3.S3Boto3Storage":
+            gloss_video = move_glossvideo_to_valid_filepath(gloss_video)
+        videos_to_create.append(gloss_video)
+
     GlossVideo.objects.bulk_create(videos_to_create)
 
     temp_dir.cleanup()
