@@ -318,15 +318,10 @@ class GlossListView(ListView):
         for gloss_record in csv_queryset:
             row = [gloss_record.idgloss, gloss_record.gloss_main_aggregate]
             # In theory there should only be one video matching the above query, or none.
-            found_video = True
-            for video in gloss_record.validation_videos:
-                if video.is_video:
-                    row.append(video.videofile.storage.public_url(video.videofile.name))
-                    found_video = True
-                    break
-                else:
-                    continue
-            if not found_video:
+            if video := next((v for v in gloss_record.validation_videos if v.is_video), None):
+                row.append(video.videofile.storage.public_url(video.videofile.name))
+            else:
+                row.append("")
                 row.append("")
             writer.writerow(row)
 
