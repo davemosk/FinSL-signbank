@@ -6,7 +6,7 @@ from django.urls import path
 from django.views.generic.base import RedirectView
 
 # Views
-from . import adminviews, delete, publicviews, update, views
+from . import adminviews, csv_import, delete, publicviews, update, views
 
 # Application namespace
 app_name = 'dictionary'
@@ -72,13 +72,13 @@ urlpatterns = [
 
     # CSV import urls
     path('advanced/import/csv/',
-         update.import_gloss_csv, name='import_gloss_csv'),
+         csv_import.import_gloss_csv, name='import_gloss_csv'),
     path('advanced/import/csv/confirm/',
-         update.confirm_import_gloss_csv, name='confirm_import_gloss_csv'),
+         csv_import.confirm_import_gloss_csv, name='confirm_import_gloss_csv'),
     path('advanced/import/csv/nzsl-share/',
-         update.import_nzsl_share_gloss_csv, name='import_nzsl_share_gloss_csv'),
+         csv_import.import_nzsl_share_gloss_csv, name='import_nzsl_share_gloss_csv'),
     path('advanced/import/csv/nzsl-share/confirm/',
-         update.confirm_import_nzsl_share_gloss_csv, name='confirm_import_nzsl_share_gloss_csv'),
+         csv_import.confirm_import_nzsl_share_gloss_csv, name='confirm_import_nzsl_share_gloss_csv'),
 
     # AJAX urls
     path('ajax/keyword/<str:prefix>',
