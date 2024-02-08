@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.aggregates import StringAgg
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, F, OuterRef, Prefetch, Q, Value
+from django.db.models import Count, F, OuterRef, Prefetch, Q, Sum, Value
 from django.db.models.fields import CharField, NullBooleanField
 from django.db.models.functions import Concat
 from django.http import HttpResponse, JsonResponse
@@ -79,6 +79,8 @@ class GlossListView(ListView):
             return self.subquery_render_to_csv_response(context)
         elif self.request.GET.get("format") == "CSV-ready-for-validation":
             return self.ready_for_validation_render_to_csv_response(context)
+        elif self.request.GET.get("format") == "CSV-validation-results":
+            return self.validation_results_render_to_csv_response(context)
         else:
             return super(GlossListView, self).render_to_response(context)
 
@@ -325,6 +327,102 @@ class GlossListView(ListView):
             else:
                 row.append("")
                 row.append("")
+            writer.writerow(row)
+
+        return response
+
+    def validation_results_render_to_csv_response(self, context):
+        if not self.request.user.has_perm("dictionary.export_csv"):
+            msg = _("You do not have permissions to export to CSV.")
+            messages.error(self.request, msg)
+            raise PermissionDenied(msg)
+
+        # Create the HttpResponse object with the appropriate CSV header.
+        # It is a Python file-like object.
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response[
+            "Content-Disposition"
+        ] = 'attachment; filename="validation-results-export.csv"'
+
+        # Set up for outputting CSV.
+        writer = csv.writer(response)
+
+        # The queryset may or may not already be filtered for the validation:check-results tag.
+        # We have to make sure it is filtered by the tag, so we are filtering again
+        check_results_qs = TaggedItem.objects.get_by_model(
+            self.get_queryset(),
+            settings.TAG_VALIDATION_CHECK_RESULTS
+        )
+
+        sign_seen_yes_validation_records = ValidationRecord.objects.filter(
+            sign_seen=ValidationRecord.SignSeenChoices.YES
+        )
+        sign_seen_no_validation_records = ValidationRecord.objects.filter(
+            sign_seen=ValidationRecord.SignSeenChoices.NO
+        )
+        sign_seen_not_sure_validation_records = ValidationRecord.objects.filter(
+            sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE
+        )
+
+        csv_queryset = (
+            check_results_qs
+            .prefetch_related(
+                Prefetch(
+                    "validation_records", queryset=sign_seen_yes_validation_records,
+                    to_attr="yes_vrs"
+                ),
+                Prefetch(
+                    "validation_records", queryset=sign_seen_no_validation_records,
+                    to_attr="no_vrs"
+                ), Prefetch(
+                    "validation_records", queryset=sign_seen_not_sure_validation_records,
+                    to_attr="not_sure_vrs"
+                ),
+                Prefetch("share_validation_aggregations", to_attr="share_vas")
+            )
+        )
+        gloss_pks = csv_queryset.values_list("pk", flat=True)
+        gloss_share_comment_map = {pk: [] for pk in gloss_pks}
+        share_comments = Comment.objects.filter(
+            content_type=ContentType.objects.get_for_model(Gloss),
+            object_pk__in=[str(pk) for pk in gloss_pks],
+            is_public=False
+        )
+        for comment in share_comments:
+            gloss_share_comment_map[int(comment.object_pk)].append(comment)
+
+        headers = [
+            "idgloss",
+            "have seen sign - yes",
+            "have seen sign - no",
+            "have seen sign - not sure",
+            "total",
+            "comments"
+        ]
+        writer.writerow(headers)
+
+        for gloss_record in csv_queryset:
+            sign_seen_yes = len(gloss_record.yes_vrs) + sum(
+                [share_va.agrees for share_va in gloss_record.share_vas])
+            sign_seen_no = len(gloss_record.no_vrs) + sum(
+                [share_va.disagrees for share_va in gloss_record.share_vas])
+            sign_seen_not_sure = len(gloss_record.not_sure_vrs)
+            total = sum([sign_seen_yes, sign_seen_no, sign_seen_not_sure])
+            records_with_comments = gloss_record.yes_vrs + gloss_record.no_vrs + gloss_record.not_sure_vrs
+            records_with_comments = [x for x in records_with_comments if x.comment != ""]
+            comment = ""
+            for record in records_with_comments:
+                comment += f"{record.respondent_first_name} {record.respondent_last_name}: {record.comment} | "
+            for share_comment in gloss_share_comment_map[gloss_record.pk]:
+                comment += f"{share_comment.user_name}: {share_comment.comment} | "
+            row = [
+                gloss_record.idgloss,
+                sign_seen_yes,
+                sign_seen_no,
+                sign_seen_not_sure,
+                total,
+                comment
+            ]
             writer.writerow(row)
 
         return response
