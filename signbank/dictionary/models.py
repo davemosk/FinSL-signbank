@@ -822,6 +822,10 @@ class ValidationRecord(models.Model):
         default="", help_text="Optional comment the survey respondent can leave about the gloss"
     )
 
+    class Meta:
+        unique_together=(("gloss", "response_id"),)
+
+
 
 # Register Models for django-tagging to add wrappers around django-tagging API.
 models_to_register_for_tagging = (Gloss, GlossRelation,)

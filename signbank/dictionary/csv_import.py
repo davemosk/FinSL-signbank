@@ -695,8 +695,9 @@ def confirm_import_qualtrics_csv(request):
 
             ))
 
-        ValidationRecord.objects.bulk_create(validation_records_added)
-        TaggedItem.objects.bulk_create(bulk_tagged_items)
+        # ignoring conflicts so the unique together on the model filters out potential duplicates
+        ValidationRecord.objects.bulk_create(validation_records_added, ignore_conflicts=True)
+        TaggedItem.objects.bulk_create(bulk_tagged_items, ignore_conflicts=True)
         TaggedItem.objects.filter(
             content_type=gloss_content_type,
             object_id__in=gloss_dict.keys(),
