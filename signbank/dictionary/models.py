@@ -823,7 +823,12 @@ class ValidationRecord(models.Model):
     )
 
     class Meta:
-        unique_together=(("gloss", "response_id"),)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['gloss', 'response_id'],
+                name='unique_gloss_response_pair'
+            )
+        ]
 
 
 
