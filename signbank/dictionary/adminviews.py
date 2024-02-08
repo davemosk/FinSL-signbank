@@ -780,17 +780,12 @@ class GlossDetailView(DetailView):
             gloss_content_type = ContentType.objects.get_for_model(Gloss)
             share_comments = Comment.objects.filter(content_type=gloss_content_type, object_pk=self.object.pk, is_public=False)
             validation_records = ValidationRecord.objects.filter(gloss=self.object)
-            try:
-                share_validation_aggregation = ShareValidationAggregation.objects.get(gloss=self.object)
-            except ShareValidationAggregation.DoesNotExist:
-                share_validation_aggregation = None
-            except ShareValidationAggregation.MultipleObjectsReturned:
-                share_validation_aggregations = ShareValidationAggregation.objects.filter(
-                    gloss=self.object)
-                share_validation_aggregation = {"agrees": 0, "disagrees": 0}
-                for share_validation in share_validation_aggregations:
-                    share_validation_aggregation["agrees"] += share_validation.agrees
-                    share_validation_aggregation["disagrees"] += share_validation.disagrees
+            share_validation_aggregations = ShareValidationAggregation.objects.filter(
+                gloss=self.object)
+            share_validation_aggregation = {"agrees": 0, "disagrees": 0}
+            for share_validation in share_validation_aggregations:
+                share_validation_aggregation["agrees"] += share_validation.agrees
+                share_validation_aggregation["disagrees"] += share_validation.disagrees
 
             context['share_comments'] = share_comments
             context['validation_records'] = validation_records
