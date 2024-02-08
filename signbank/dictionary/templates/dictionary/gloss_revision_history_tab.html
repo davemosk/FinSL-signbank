@@ -5,7 +5,7 @@
 {% load comments %}
 
 {# Tabs nav bar #}
-<ul class="nav nav-tabs" role="tablist">
+<ul class="nav nav-tabs" role="tablist" xmlns="http://www.w3.org/1999/html">
     <li class="active"><a href="#revision_history_history_tab" role="tab" data-toggle="tab">Changes</a></li>
     <li><a href="#revision_history_comments_tab" role="tab" data-toggle="tab">Comments</a></li>
 </ul>
@@ -71,7 +71,8 @@
                 </td>
             </tr>
         </table>
-    </div> {# Tab: Revision History #}
+    </div>
+    {# Tab: Revision History #}
 
     {# Tab: Comments #}
     <div class="tab-pane" id="revision_history_comments_tab">
@@ -82,6 +83,7 @@
             {% render_comment_list for gloss %}
             </div>
         </div>
-    </div> {# Tab: Comments #}
+    </div>
+    {# Tab: Comments #}
 
 </div> {# Tabs wrapper #}
