@@ -517,6 +517,27 @@ class QualtricsCSVImportTestCase(TestCase):
         )
         self.assertEqual(ready_for_validation_tagged_glosses.count(), 0)
 
+        # re-upload csv file to test duplicate responses are ignored
+        s.update({
+            "validation_records": [csv_content[5]],
+            "question_numbers": ["1", "2", "3"],
+            "question_gloss_map": {"1": self.gloss_1.pk, "2": self.gloss_2.pk, "3": 222}
+        })
+        s.save()
+
+        response = self.client.post(
+            reverse("dictionary:confirm_import_qualtrics_csv"),
+            {"confirm": True}
+        )
+        self.assertEqual(response.status_code, 200)
+        new_validation_qs_gloss_1 = ValidationRecord.objects.filter(gloss=self.gloss_1)
+        self.assertTrue(new_validation_qs_gloss_1.count(), 3)
+        self.assertListEqual(list(validation_qs_gloss_1), list(new_validation_qs_gloss_1))
+
+        new_validation_qs_gloss_2 = ValidationRecord.objects.filter(gloss=self.gloss_2)
+        self.assertTrue(new_validation_qs_gloss_2.count(), 3)
+        self.assertListEqual(list(validation_qs_gloss_2), list(new_validation_qs_gloss_2))
+
     def test_confirmation_view_cancel_gloss_creation(self):
         csv_content = self._csv_content
         s = self.client.session
