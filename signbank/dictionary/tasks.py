@@ -42,24 +42,21 @@ def move_glossvideo_to_valid_filepath(glossvideo):
     are updated in the save() step.
     """
     old_file = glossvideo.videofile
-    if settings.GLOSS_VIDEO_FILE_STORAGE != "storages.backends.s3boto3.S3Boto3Storage":
-        full_new_path = glossvideo.videofile.storage.get_valid_name(
-            glossvideo.videofile.name.split("/")[-1]
-        )
-        if not glossvideo.videofile.storage.exists(full_new_path):
-            # Save the file into the new path.
-            saved_file_path = glossvideo.videofile.storage.save(full_new_path, old_file)
-            # Set the actual file path to videofile.
-            glossvideo.videofile = saved_file_path
-
+    full_new_path = ""
     if settings.GLOSS_VIDEO_FILE_STORAGE == "storages.backends.s3boto3.S3Boto3Storage":
         # move from temp folder to root
         full_new_path = os.path.join(glossvideo.videofile.name.split("/")[-1])
-        if not glossvideo.videofile.storage.exists(full_new_path):
-            # Save the file into the new path.
-            saved_file_path = glossvideo.videofile.storage.save(full_new_path, old_file)
-            # Set the actual file path to videofile.
-            glossvideo.videofile = saved_file_path
+    if settings.GLOSS_VIDEO_FILE_STORAGE != "storages.backends.s3boto3.S3Boto3Storage":
+        # move from temp folder to media root
+        full_new_path = glossvideo.videofile.storage.get_valid_name(
+            glossvideo.videofile.name.split("/")[-1]
+        )
+
+    if not glossvideo.videofile.storage.exists(full_new_path):
+        # Save the file into the new path.
+        saved_file_path = glossvideo.videofile.storage.save(full_new_path, old_file)
+        # Set the actual file path to videofile.
+        glossvideo.videofile = saved_file_path
     return glossvideo
 
 
