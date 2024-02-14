@@ -143,6 +143,198 @@ class GlossListViewTestCase(TestCase):
         # video url changes between environments, so only checking it's not empty
         self.assertNotEqual("", body[2])
 
+    def test_get_validation_results_csv(self):
+        """
+        Tests that a CSV file can be successfully downloaded containing glosses that are
+        tagged validation:check-results and their validation results
+        """
+        csv_permission = Permission.objects.get(codename="export_csv")
+        self.user.user_permissions.add(csv_permission)
+
+        gloss_content_type = ContentType.objects.get_for_model(Gloss)
+        site = Site.objects.get_current()
+        submit_date = datetime.datetime.now(tz=get_current_timezone())
+        signlanguage = SignLanguage.objects.create(
+            pk=2, name="testsignlanguage", language_code_3char="tst"
+        )
+        dataset = Dataset.objects.create(
+            name="testdataset", signlanguage=signlanguage
+        )
+        assign_perm("dictionary.view_dataset", self.user, dataset)
+
+        testgloss_1 = Gloss.objects.create(
+            idgloss="testgloss:1", dataset=dataset, created_by=self.user, updated_by=self.user
+        )
+        Tag.objects.add_tag(testgloss_1, settings.TAG_VALIDATION_CHECK_RESULTS)
+        vr1_g1 = ValidationRecord.objects.create(
+            gloss=testgloss_1,
+            sign_seen=ValidationRecord.SignSeenChoices.YES.value,
+            response_id="Response_1",
+            respondent_first_name="John",
+            respondent_last_name="Doe",
+            comment=""
+        )
+        vr2_g1 = ValidationRecord.objects.create(
+            gloss=testgloss_1,
+            sign_seen=ValidationRecord.SignSeenChoices.NO.value,
+            response_id="Response_2",
+            respondent_first_name="Jane",
+            respondent_last_name="Doe",
+            comment="Cool use"
+        )
+        vr3_g1 = ValidationRecord.objects.create(
+            gloss=testgloss_1,
+            sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE.value,
+            response_id="Response_3",
+            respondent_first_name="First",
+            respondent_last_name="Last",
+            comment="Similar to test gloss"
+        )
+        ShareValidationAggregation.objects.create(
+            gloss=testgloss_1,
+            agrees=3,
+            disagrees=7
+        )
+        c1_g1 = Comment.objects.create(
+            content_type=gloss_content_type,
+            object_pk=str(testgloss_1.pk),
+            is_public=False,
+            site=site,
+            submit_date=submit_date,
+            user_name="Anonymous",
+            comment="Disagree with this",
+        )
+        c2_g1 = Comment.objects.create(
+            content_type=gloss_content_type,
+            object_pk=str(testgloss_1.pk),
+            is_public=False,
+            site=site,
+            submit_date=submit_date,
+            user_name="Sallymil",
+            comment="Too complicated"
+        )
+
+        testgloss_2 = Gloss.objects.create(
+            idgloss="testgloss:2", dataset=dataset, created_by=self.user, updated_by=self.user
+        )
+        Tag.objects.add_tag(testgloss_2, settings.TAG_VALIDATION_CHECK_RESULTS)
+        vr1_g2 = ValidationRecord.objects.create(
+            gloss=testgloss_2,
+            sign_seen=ValidationRecord.SignSeenChoices.YES.value,
+            response_id="Response_1",
+            respondent_first_name="John",
+            respondent_last_name="Doe",
+            comment=""
+        )
+        vr2_g2 = ValidationRecord.objects.create(
+            gloss=testgloss_2,
+            sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE.value,
+            response_id="Response_2",
+            respondent_first_name="Jane",
+            respondent_last_name="Doe",
+            comment="Don't like hand movement"
+        )
+        vr3_g2 = ValidationRecord.objects.create(
+            gloss=testgloss_2,
+            sign_seen=ValidationRecord.SignSeenChoices.NO.value,
+            response_id="Response_3",
+            respondent_first_name="First",
+            respondent_last_name="Last",
+            comment=""
+        )
+        ShareValidationAggregation.objects.create(
+            gloss=testgloss_2,
+            agrees=7,
+            disagrees=3
+        )
+        c1_g2 = Comment.objects.create(
+            content_type=gloss_content_type,
+            object_pk=str(testgloss_2.pk),
+            is_public=False,
+            site=site,
+            submit_date=submit_date,
+            user_name="Anonymous",
+            comment="Duplicate to gloss test"
+        )
+        c2_g2 = Comment.objects.create(
+            content_type=gloss_content_type,
+            object_pk=str(testgloss_2.pk),
+            is_public=False,
+            site=site,
+            submit_date=submit_date,
+            user_name="Sallymil",
+            comment="Funny word"
+        )
+
+        tag_id = \
+            Tag.objects.filter(name=settings.TAG_VALIDATION_CHECK_RESULTS).values_list("pk",
+                                                                                       flat=True)[
+                0]
+
+        response = self.client.get(
+            reverse("dictionary:admin_gloss_list"),
+            {"format": "CSV-validation-results", "tags": tag_id},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["Content-Type"], "text/csv; charset=utf-8")
+        self.assertEqual(
+            response.headers["Content-Disposition"],
+            'attachment; filename="validation-results-export.csv"',
+        )
+
+        content = response.content.decode('utf-8')
+        cvs_reader = csv.reader(io.StringIO(content))
+        body = list(cvs_reader)
+        self.assertEqual(len(body), 3)
+
+        headers = body[0]
+        self.assertEqual(
+            ["idgloss",
+             "have seen sign - yes",
+             "have seen sign - no",
+             "have seen sign - not sure",
+             "total",
+             "comments"],
+            headers
+        )
+        gloss_1_response = body[1]
+        gloss_2_response = body[2]
+        self.assertEqual(testgloss_1.idgloss, gloss_1_response[0])
+        self.assertEqual("4", gloss_1_response[1])  # have seen sign - yes
+        self.assertEqual("8", gloss_1_response[2])  # have seen sign - no
+        self.assertEqual("1", gloss_1_response[3])  # have seen sign - not sure
+        self.assertEqual("13", gloss_1_response[4])  # total
+        # comments
+        self.assertNotIn(
+            f"{vr1_g1.respondent_first_name} {vr1_g1.respondent_last_name}: {vr1_g1.comment}",
+            gloss_1_response[5])
+        self.assertIn(
+            f"{vr2_g1.respondent_first_name} {vr2_g1.respondent_last_name}: {vr2_g1.comment}",
+            gloss_1_response[5])
+        self.assertIn(
+            f"{vr3_g1.respondent_first_name} {vr3_g1.respondent_last_name}: {vr3_g1.comment}",
+            gloss_1_response[5])
+        self.assertIn(f"{c1_g1.user_name}: {c1_g1.comment}", gloss_1_response[5])
+        self.assertIn(f"{c2_g1.user_name}: {c2_g1.comment}", gloss_1_response[5])
+
+        self.assertEqual(testgloss_2.idgloss, gloss_2_response[0])
+        self.assertEqual("8", gloss_2_response[1])  # have seen sign - yes
+        self.assertEqual("4", gloss_2_response[2])  # have seen sign - no
+        self.assertEqual("1", gloss_2_response[3])  # have seen sign - not sure
+        self.assertEqual("13", gloss_2_response[4])  # total
+        # comments
+        self.assertNotIn(
+            f"{vr1_g2.respondent_first_name} {vr1_g2.respondent_last_name}: {vr1_g2.comment}",
+            gloss_2_response[5])
+        self.assertIn(
+            f"{vr2_g2.respondent_first_name} {vr2_g2.respondent_last_name}: {vr2_g2.comment}",
+            gloss_2_response[5])
+        self.assertNotIn(
+            f"{vr3_g2.respondent_first_name} {vr3_g2.respondent_last_name}: {vr3_g2.comment}",
+            gloss_2_response[5])
+        self.assertIn(f"{c1_g2.user_name}: {c1_g2.comment}", gloss_2_response[5])
+        self.assertIn(f"{c2_g2.user_name}: {c2_g2.comment}", gloss_2_response[5])
+
     def test_post(self):
         """Testing that the search page can't be accessed with POST."""
         response = self.client.post(reverse('dictionary:admin_gloss_list'))
