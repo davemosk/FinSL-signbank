@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.contrib.auth.models import Permission, User
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -6,7 +8,7 @@ from django.urls import reverse
 from guardian.shortcuts import assign_perm
 from signbank.dictionary.models import (Dataset, FieldChoice, Gloss, Language,
                                         SignLanguage)
-from signbank.video.models import GlossVideo
+from signbank.video.models import GlossVideo, GlossVideoToken
 import csv
 
 
@@ -268,3 +270,67 @@ class ExportGlossvideoCsvTestCase(TestCase):
         csv_rows = list(reader)
 
         self.assertEqual(len(csv_rows), 1) # Header only
+
+
+class GlossVideoTokenSignedUrlTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="test", email=None, password="test")
+        self.signlanguage = SignLanguage.objects.create(
+            pk=2, name="testsignlanguage", language_code_3char="tst"
+        )
+        self.dataset = Dataset.objects.create(
+            name="testdataset", signlanguage=self.signlanguage
+        )
+        self.testgloss = Gloss.objects.create(
+            idgloss="testgloss", dataset=self.dataset, created_by=self.user, updated_by=self.user
+        )
+        validation_video_type = FieldChoice.objects.get(
+            field="video_type", english_name="validation"
+        )
+        testfile = SimpleUploadedFile(
+            "testvid.mp4", b'data \x00\x01', content_type="video/mp4")
+        self.glossvid = GlossVideo.objects.create(
+            gloss=self.testgloss,
+            is_public=True,
+            dataset=self.testgloss.dataset,
+            videofile=testfile,
+            video_type=validation_video_type,
+            title="Main"
+        )
+        self.video_token = GlossVideoToken.objects.create(
+            token=uuid4(), video=self.glossvid
+        )
+
+    def test_no_login_required(self):
+        client = Client()
+        response = client.get(reverse("video:get_signed_glossvideo_url",
+                                      kwargs={"token": self.video_token.token,
+                                              "videoid": self.glossvid.pk}))
+        self.assertEqual(response.status_code, 302)
+
+    def test_only_get_works(self):
+        client = Client()
+        response = client.post(reverse("video:get_signed_glossvideo_url",
+                                       kwargs={"token": self.video_token.token,
+                                               "videoid": self.glossvid.pk}))
+        self.assertEqual(response.status_code, 405)
+
+    def test_404_on_missing_token(self):
+        client = Client()
+        response = client.get(reverse("video:get_signed_glossvideo_url",
+                                      kwargs={"token": uuid4(),
+                                              "videoid": self.glossvid.pk}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_get_successful(self):
+        client = Client()
+        response = client.get(reverse("video:get_signed_glossvideo_url",
+                                      kwargs={"token": self.video_token.token,
+                                              "videoid": self.glossvid.pk}))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            self.glossvid.videofile.storage.url(self.glossvid.videofile.name)
+        )
+        video_tokens = GlossVideoToken.objects.all()
+        self.assertEqual(video_tokens.count(), 0)

@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
-from django.http import HttpResponse, HttpResponseNotAllowed
+from django.http import HttpResponse, HttpResponseNotAllowed, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.translation import ugettext as _
@@ -16,12 +16,27 @@ from django.views.generic.edit import FormView
 from django.views.generic.list import ListView
 from djqscsv import render_to_csv_response
 from guardian.shortcuts import get_objects_for_user, get_perms
+from storages.backends.s3boto3 import S3Boto3Storage
 
 from ..dictionary.models import Dataset, FieldChoice, Gloss
 from .forms import (GlossVideoForGlossForm, GlossVideoForm,
                     GlossVideoPosterForm, GlossVideoUpdateForm,
                     MultipleVideoUploadForm)
-from .models import GlossVideo, GlossVideoDynamicStorage
+from .models import GlossVideo, GlossVideoDynamicStorage, GlossVideoToken
+
+
+def get_signed_video_url_from_glossvideotoken(request, token, videoid):
+    if not request.method == "GET":
+        return HttpResponseNotAllowed(["GET"])
+    try:
+        video_token = GlossVideoToken.objects.get(token=token, video__pk=videoid)
+    except GlossVideoToken.DoesNotExist:
+        return HttpResponseNotFound()
+
+    video = video_token.video
+    url = video.videofile.storage.url(video.videofile.name)
+    video_token.delete()
+    return redirect(url)
 
 
 def upload_glossvideo(request):
