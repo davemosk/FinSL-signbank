@@ -17,7 +17,7 @@ from tagging.models import Tag, TaggedItem
 
 from .models import (AllowedTags, Dataset, Dialect, FieldChoice, Gloss, Lemma,
                      GlossRelation, GlossTranslations, GlossURL, Language,
-                     ShareValidationAggregation,
+                     ManualValidationAggregation, ShareValidationAggregation,
                      SignLanguage, Translation, ValidationRecord)
 from ..video.admin import GlossVideoInline
 
@@ -325,6 +325,13 @@ class GlossFilter(InputFilter):
             )
 
 
+class ManualValidationAggregationAdmin(admin.ModelAdmin):
+    model = ManualValidationAggregation
+    list_display = ("gloss", "group", "sign_seen_yes", "sign_seen_no", "sign_seen_not_sure")
+    search_fields = ["group"]
+    list_filter = [GlossFilter, "group"]
+
+
 class ValidationRecordAdmin(admin.ModelAdmin):
     model = ValidationRecord
     list_display = ("gloss", "response_id", "sign_seen")
@@ -345,6 +352,7 @@ admin.site.register(GlossRelation, GlossRelationAdmin)
 admin.site.register(AllowedTags, AllowedTagsAdmin)
 admin.site.register(Lemma)
 admin.site.register(ShareValidationAggregation, ShareValidationAggregationAdmin)
+admin.site.register(ManualValidationAggregation, ManualValidationAggregationAdmin)
 admin.site.register(ValidationRecord, ValidationRecordAdmin)
 
 admin.site.unregister(User)

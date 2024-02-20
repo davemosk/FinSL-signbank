@@ -796,6 +796,26 @@ class ShareValidationAggregation(models.Model):
     disagrees = models.PositiveIntegerField()
 
 
+class ManualValidationAggregation(models.Model):
+    """
+    Captures aggregated validation of manual records
+    """
+    gloss = models.ForeignKey(Gloss, related_name="manual_validation_aggregation",
+                              on_delete=models.CASCADE)
+    group = models.CharField(
+        default="",
+        max_length=255,
+        help_text="The group the manual validation round was conducted for",
+    )
+    sign_seen_yes = models.PositiveIntegerField()
+    sign_seen_no = models.PositiveIntegerField()
+    sign_seen_not_sure = models.PositiveIntegerField()
+    comments = models.TextField(
+        default="", blank=True,
+        help_text="Optional comments made about the gloss during manual validation"
+    )
+
+
 class ValidationRecord(models.Model):
     """Record Qualtrics validation result for a gloss """
 
