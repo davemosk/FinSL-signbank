@@ -441,7 +441,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     video_url = gloss_data["videos"]
                     extension = video_url[-3:]
                     file_name = (
-                        f"{gloss.pk}-{gloss.idgloss}_video.{extension}"
+                        f"{gloss.pk}-{word_en}.{gloss.pk}_video.{extension}"
                     )
 
                     glossvideo = {
@@ -457,7 +457,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     for i, video_url in enumerate(gloss_data["illustrations"].split("|")):
                         extension = video_url[-3:]
                         file_name = (
-                            f"{gloss.pk}-{gloss.idgloss}_illustration_{i + 1}.{extension}"
+                            f"{gloss.pk}-{word_en}.{gloss.pk}_illustration_{i + 1}.{extension}"
                         )
 
                         glossvideo = {
@@ -473,7 +473,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                     for i, video_url in enumerate(gloss_data["usage_examples"].split("|")):
                         extension = video_url[-3:]
                         file_name = (
-                            f"{gloss.pk}-{gloss.idgloss}_usageexample_{i + 1}.{extension}"
+                            f"{gloss.pk}-{word_en}.{gloss.pk}_usageexample_{i + 1}.{extension}"
                         )
 
                         glossvideo = {

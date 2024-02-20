@@ -1,3 +1,4 @@
+import boto3
 import os
 from tempfile import TemporaryDirectory
 from typing import TypedDict, List
@@ -35,23 +36,13 @@ def move_glossvideo_to_valid_filepath(glossvideo):
     /app/media/temp_dir/{glosspk}-{idgloss}_{unique_name}_{pk}{ext}, so we split at / and give
     get_valid_name only the last bit.
 
-    For S3Boto3Storage it should be sufficient to move the file out of the temp folder into the
-    root folder as /{glosspk}-{idgloss}_{unique_name}_{pk}{ext}
-
     This step is necessary because we create the videos in bulk, and usually the filename and path
     are updated in the save() step.
     """
     old_file = glossvideo.videofile
-    full_new_path = ""
-    if settings.GLOSS_VIDEO_FILE_STORAGE == "storages.backends.s3boto3.S3Boto3Storage":
-        # move from temp folder to root
-        full_new_path = os.path.join(glossvideo.videofile.name.split("/")[-1])
-    if settings.GLOSS_VIDEO_FILE_STORAGE != "storages.backends.s3boto3.S3Boto3Storage":
-        # move from temp folder to media root
-        full_new_path = glossvideo.videofile.storage.get_valid_name(
-            glossvideo.videofile.name.split("/")[-1]
-        )
-
+    full_new_path = glossvideo.videofile.storage.get_valid_name(
+        glossvideo.videofile.name.split("/")[-1]
+    )
     if not glossvideo.videofile.storage.exists(full_new_path):
         # Save the file into the new path.
         saved_file_path = glossvideo.videofile.storage.save(full_new_path, old_file)
@@ -77,16 +68,28 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
     videos_to_create = []
 
     temp_dir = TemporaryDirectory(dir=settings.MEDIA_ROOT)
-    if settings.GLOSS_VIDEO_FILE_STORAGE == "storages.backends.s3boto3.S3Boto3Storage":
-        temp_dir = TemporaryDirectory()
+
+    s3 = boto3.client("s3")
+    s3_storage_used = settings.GLOSS_VIDEO_FILE_STORAGE == "storages.backends.s3boto3.S3Boto3Storage"
 
     for video in video_details:
         retrieval_url = f"{settings.NZSL_SHARE_HOSTNAME}{video['url']}"
-        file_name = f"{temp_dir.name}/{video['file_name']}"
-        file, _ = urlretrieve(
-            retrieval_url,
-            file_name
-        )
+
+        if s3_storage_used:
+            file, _ = urlretrieve(
+                retrieval_url,
+                video["file_name"]
+            )
+            s3.upload_file(
+                file, settings.AWS_STORAGE_BUCKET_NAME, video["file_name"]
+            )
+        else:
+            file_name = f"{temp_dir.name}/{video['file_name']}"
+            file, _ = urlretrieve(
+                retrieval_url,
+                file_name
+            )
+
         gloss = Gloss.objects.get(pk=video["gloss_pk"])
 
         # change video type to main for illustrations
@@ -105,7 +108,9 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
             video_type=video_type
         )
 
-        videos_to_create.append(move_glossvideo_to_valid_filepath(gloss_video))
+        if not s3_storage_used:
+            gloss_video = move_glossvideo_to_valid_filepath(gloss_video)
+        videos_to_create.append(gloss_video)
 
     GlossVideo.objects.bulk_create(videos_to_create)
 
