@@ -70,11 +70,12 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
     temp_dir = TemporaryDirectory(dir=settings.MEDIA_ROOT)
 
     s3 = boto3.client("s3")
+    s3_storage_used = settings.GLOSS_VIDEO_FILE_STORAGE == "storages.backends.s3boto3.S3Boto3Storage"
 
     for video in video_details:
         retrieval_url = f"{settings.NZSL_SHARE_HOSTNAME}{video['url']}"
 
-        if settings.GLOSS_VIDEO_FILE_STORAGE == "storages.backends.s3boto3.S3Boto3Storage":
+        if s3_storage_used:
             file, _ = urlretrieve(
                 retrieval_url,
                 video["file_name"]
@@ -107,7 +108,7 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
             video_type=video_type
         )
 
-        if settings.GLOSS_VIDEO_FILE_STORAGE != "storages.backends.s3boto3.S3Boto3Storage":
+        if not s3_storage_used:
             gloss_video = move_glossvideo_to_valid_filepath(gloss_video)
         videos_to_create.append(gloss_video)
 
