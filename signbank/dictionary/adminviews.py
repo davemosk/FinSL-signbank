@@ -36,7 +36,7 @@ from ..video.models import GlossVideo, GlossVideoToken
 from .forms import (GlossRelationForm, GlossRelationSearchForm,
                     GlossSearchForm, MorphologyForm, RelationForm, TagsAddForm)
 from .models import (Dataset, FieldChoice, Gloss, GlossRelation,
-                     GlossTranslations, GlossURL, Lemma, MorphologyDefinition,
+                     GlossTranslations, GlossURL, Lemma, ManualValidationAggregation, MorphologyDefinition,
                      Relation, RelationToForeignSign, ShareValidationAggregation, Translation,
                      ValidationRecord)
 
@@ -896,12 +896,29 @@ class GlossDetailView(DetailView):
                 share_validation_aggregation["agrees"] += share_validation.agrees
                 share_validation_aggregation["disagrees"] += share_validation.disagrees
 
+            manual_validation_aggregations = ManualValidationAggregation.objects.filter(
+                gloss=self.object
+            )
+            manual_validations_total = {
+                "sign_seen_yes": 0, "sign_seen_no": 0, "sign_seen_not_sure": 0
+            }
+            for manual_validation in manual_validation_aggregations:
+                manual_validations_total["sign_seen_yes"] += manual_validation.sign_seen_yes
+                manual_validations_total["sign_seen_no"] += manual_validation.sign_seen_no
+                manual_validations_total["sign_seen_not_sure"] += manual_validation.sign_seen_not_sure
+
             context['share_comments'] = share_comments
             context['validation_records'] = validation_records
             context['share_validation_aggregation'] = share_validation_aggregation
-            context['sign_seen_yes'] = validation_records.filter(sign_seen=ValidationRecord.SignSeenChoices.YES).count()
-            context['sign_seen_no'] = validation_records.filter(sign_seen=ValidationRecord.SignSeenChoices.NO).count()
-            context['sign_seen_maybe'] = validation_records.filter(sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE).count()
+            context['share_validations'] = share_validation_aggregations
+            context['manual_validations'] = manual_validation_aggregations
+            context['manual_validations_total'] = manual_validations_total
+            context['sign_seen_yes'] = validation_records.filter(
+                sign_seen=ValidationRecord.SignSeenChoices.YES).count()
+            context['sign_seen_no'] = validation_records.filter(
+                sign_seen=ValidationRecord.SignSeenChoices.NO).count()
+            context['sign_seen_maybe'] = validation_records.filter(
+                sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE).count()
 
         # Pass info about which fields we want to see
         gl = context['gloss']

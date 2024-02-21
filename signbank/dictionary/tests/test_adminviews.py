@@ -23,6 +23,7 @@ from signbank.dictionary.models import (
     Gloss,
     GlossTranslations,
     Language,
+    ManualValidationAggregation,
     SignLanguage, ShareValidationAggregation, ValidationRecord
 )
 from signbank.video.models import GlossVideo, GlossVideoToken
@@ -381,18 +382,30 @@ class TestValidationResultsView(TestCase):
             gloss=self.gloss, agrees=2, disagrees=5)
         self.share_validation_aggregation_2 = ShareValidationAggregation.objects.create(
             gloss=self.gloss, agrees=5, disagrees=2)
+        self.manual_validation_1 = ManualValidationAggregation.objects.create(
+            gloss=self.gloss, sign_seen_yes=1, sign_seen_no=1, sign_seen_not_sure=0, group="Test",
+            comments=""
+        )
+        self.manual_validation_2 = ManualValidationAggregation.objects.create(
+            gloss=self.gloss, sign_seen_yes=0, sign_seen_no=0, sign_seen_not_sure=3, group="Test",
+            comments="This sign does not make sense"
+        )
         self.validation_record = ValidationRecord.objects.create(gloss=self.gloss,
-            response_id="R_bogus", sign_seen=ValidationRecord.SignSeenChoices.YES,
-            comment="A comment")
+                                                                 response_id="R_bogus",
+                                                                 sign_seen=ValidationRecord.SignSeenChoices.YES,
+                                                                 comment="A comment")
         gloss_content_type = ContentType.objects.get_for_model(Gloss)
         site = Site.objects.get_current()
         self.share_comment = Comment.objects.create(content_type=gloss_content_type,
-            object_pk=self.gloss.pk, user_name="test_user", comment="Another comment", site=site,
-            is_public=False, submit_date=datetime.datetime.now(tz=get_current_timezone()))
+                                                    object_pk=self.gloss.pk, user_name="test_user",
+                                                    comment="Another comment", site=site,
+                                                    is_public=False,
+                                                    submit_date=datetime.datetime.now(
+                                                        tz=get_current_timezone()))
         # Assign view permissions to dataset for user
         assign_perm('view_dataset', self.user, self.dataset)
 
-    def test_validation_results_in_context_multiple_share_results(self):
+    def test_validation_results_in_context_multiple_share_and_manual_results(self):
         response = self.client.get(
             reverse("dictionary:admin_gloss_view", kwargs={"pk": self.gloss.pk}))
         self.assertEqual(response.status_code, 200)
@@ -401,12 +414,20 @@ class TestValidationResultsView(TestCase):
                              [self.validation_record])
         self.assertDictEqual(response.context["share_validation_aggregation"],
                              {"agrees": 7, "disagrees": 7})
+        self.assertIn(self.share_validation_aggregation_1, response.context["share_validations"])
+        self.assertIn(self.share_validation_aggregation_2, response.context["share_validations"])
+        self.assertIn(self.manual_validation_1, response.context["manual_validations"])
+        self.assertIn(self.manual_validation_2, response.context["manual_validations"])
+        self.assertDictEqual(response.context["manual_validations_total"],
+                             {"sign_seen_yes": 1, "sign_seen_no": 1, "sign_seen_not_sure": 3})
         self.assertEqual(response.context["sign_seen_yes"], 1)
         self.assertEqual(response.context["sign_seen_no"], 0)
         self.assertEqual(response.context["sign_seen_maybe"], 0)
 
-    def test_validation_results_in_context_single_share_results(self):
+    def test_validation_results_in_context_single_share_and_manual_results(self):
         ShareValidationAggregation.objects.filter(gloss=self.gloss).last().delete()
+        ManualValidationAggregation.objects.filter(gloss=self.gloss).last().delete()
+
         response = self.client.get(
             reverse("dictionary:admin_gloss_view", kwargs={"pk": self.gloss.pk}))
         self.assertEqual(response.status_code, 200)
@@ -415,12 +436,19 @@ class TestValidationResultsView(TestCase):
                              [self.validation_record])
         self.assertDictEqual(response.context["share_validation_aggregation"],
                              {"agrees": 2, "disagrees": 5})
+        self.assertIn(self.share_validation_aggregation_1, response.context["share_validations"])
+        self.assertIn(self.manual_validation_1, response.context["manual_validations"])
+        self.assertNotIn(self.manual_validation_2, response.context["manual_validations"])
+        self.assertDictEqual(response.context["manual_validations_total"],
+                             {"sign_seen_yes": 1, "sign_seen_no": 1, "sign_seen_not_sure": 0})
         self.assertEqual(response.context["sign_seen_yes"], 1)
         self.assertEqual(response.context["sign_seen_no"], 0)
         self.assertEqual(response.context["sign_seen_maybe"], 0)
 
-    def test_validation_results_in_context_no_share_results(self):
+    def test_validation_results_in_context_no_share_and_manual_results(self):
         ShareValidationAggregation.objects.filter(gloss=self.gloss).delete()
+        ManualValidationAggregation.objects.filter(gloss=self.gloss).delete()
+
         response = self.client.get(
             reverse("dictionary:admin_gloss_view", kwargs={"pk": self.gloss.pk}))
         self.assertEqual(response.status_code, 200)
@@ -429,6 +457,12 @@ class TestValidationResultsView(TestCase):
                              [self.validation_record])
         self.assertDictEqual(response.context["share_validation_aggregation"],
                              {"agrees": 0, "disagrees": 0})
+        empty_share_qs = ShareValidationAggregation.objects.none()
+        self.assertQuerysetEqual(response.context["share_validations"], empty_share_qs)
+        empty_manual_qs = ManualValidationAggregation.objects.none()
+        self.assertQuerysetEqual(response.context["manual_validations"], empty_manual_qs)
+        self.assertDictEqual(response.context["manual_validations_total"],
+                             {"sign_seen_yes": 0, "sign_seen_no": 0, "sign_seen_not_sure": 0})
         self.assertEqual(response.context["sign_seen_yes"], 1)
         self.assertEqual(response.context["sign_seen_no"], 0)
         self.assertEqual(response.context["sign_seen_maybe"], 0)

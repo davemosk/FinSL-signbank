@@ -6,7 +6,7 @@
 
 
 {# Tabs wrapper #}
-{% if validation_records or share_validation_aggregation %}
+{% if validation_records or share_validations or manual_validations %}
   <div class="panel panel-info top-margin">
     <!-- Default panel contents -->
     <div class="panel-heading">Aggregated validation results from NZSL Share and Validation Survey</div>
@@ -21,7 +21,7 @@
         <td class="info">{% blocktrans %}Total{% endblocktrans %}</td>
       </thead>
       <tbody>
-        {% if share_validation_aggregation %}
+        {% if share_validations %}
           <tr>
             <td>{% blocktrans %}NZSL Share{% endblocktrans %}</td>
             <td>{{ share_validation_aggregation.agrees }}</td>
@@ -39,7 +39,27 @@
             <td class="info">{{ sign_seen_yes|add:sign_seen_no|add:sign_seen_maybe }}</td>
           </tr>
         {% endif %}
-        {% if validation_records and share_validation_aggregation %}
+        {% if manual_validations %}
+          <tr>
+            <td>{% blocktrans %}Face to Face Survey{% endblocktrans %}</td>
+            <td>{{ manual_validations_total.sign_seen_yes }}</td>
+            <td>{{ manual_validations_total.sign_seen_no }}</td>
+            <td>{{ manual_validations_total.sign_seen_not_sure }}</td>
+            <td class="info">
+              {{ manual_validations_total.sign_seen_yes|add:manual_validations_total.sign_seen_no|add:manual_validations_total.sign_seen_not_sure }}</td>
+          </tr>
+        {% endif %}
+        {% if validation_records and share_validations and manual_validations %}
+          <tr class="info">
+            <td>{% blocktrans %}Total{% endblocktrans %}</td>
+            <td>{{ sign_seen_yes|add:share_validation_aggregation.agrees|add:manual_validations_total.sign_seen_yes }}</td>
+            <td>{{ sign_seen_no|add:share_validation_aggregation.disagrees|add:manual_validations_total.sign_seen_no }}</td>
+            <td>{{ sign_seen_maybe|add:manual_validations_total.sign_seen_not_sure }}</td>
+            <td><strong>
+              {{ sign_seen_yes|add:sign_seen_no|add:sign_seen_maybe|add:share_validation_aggregation.agrees|add:share_validation_aggregation.disagrees|add:manual_validations_total.sign_seen_yes|add:manual_validations_total.sign_seen_no|add:manual_validations_total.sign_seen_not_sure }}
+            </strong></td>
+           </tr>
+        {% elif validation_records and share_validations %}
           <tr class="info">
             <td>{% blocktrans %}Total{% endblocktrans %}</td>
             <td>{{ sign_seen_yes|add:share_validation_aggregation.agrees }}</td>
@@ -49,6 +69,28 @@
               {{ sign_seen_yes|add:sign_seen_no|add:sign_seen_maybe|add:share_validation_aggregation.agrees|add:share_validation_aggregation.disagrees }}
             </strong></td>
           </tr>
+        {% elif validation_records and manual_validations %}
+          <tr class="info">
+            <td>{% blocktrans %}Total{% endblocktrans %}</td>
+            <td>{{ sign_seen_yes|add:manual_validations_total.sign_seen_yes }}</td>
+            <td>{{ sign_seen_no|add:manual_validations_total.sign_seen_no }}</td>
+            <td>{{ sign_seen_maybe|add:manual_validations_total.sign_seen_not_sure }}</td>
+            <td><strong>
+              {{ sign_seen_yes|add:sign_seen_no|add:sign_seen_maybe|add:manual_validations_total.sign_seen_yes|add:manual_validations_total.sign_seen_no|add:manual_validations_total.sign_seen_not_sure }}
+            </strong></td>
+          </tr>
+          {% elif share_validations and manual_validations %}
+            <tr class="info">
+              <td>{% blocktrans %}Total{% endblocktrans %}</td>
+              <td>
+                {{ share_validation_aggregation.agrees|add:manual_validations_total.sign_seen_yes }}</td>
+              <td>
+                {{ share_validation_aggregation.disagrees|add:manual_validations_total.sign_seen_no }}</td>
+              <td>{{ manual_validations_total.sign_seen_not_sure }}</td>
+              <td><strong>
+                {{ share_validation_aggregation.agrees|add:share_validation_aggregation.disagrees|add:manual_validations_total.sign_seen_yes|add:manual_validations_total.sign_seen_no|add:manual_validations_total.sign_seen_not_sure }}
+              </strong></td>
+            </tr>
         {% endif %}
       </tbody>
     </table>
@@ -87,6 +129,43 @@
             {% if record.comment %}
               <div>
                 <span class="glyphicon glyphicon-comment" aria-hidden="true"></span>&nbsp;{{ record.comment }}
+              </div>
+            {% endif %}
+          </dd>
+        {% endfor %}
+      </dl>
+    </div>
+  </div>
+{% endif %}
+{% if manual_validations %}
+  {#    ManualValidationAggregations #}
+  <div>
+    <h4>
+      {% blocktrans %}Face to Face Validation aggregations{% endblocktrans %} ({{ manual_validations|length }})
+      {% if manual_validations|length > 0 %}
+        <span class="glyphicon glyphicon-chevron-down" aria-hidden="true" data-toggle="collapse"
+              data-target="#manual_validations" aria-expanded="false"
+              aria-controls="manual_validations"></span>
+      {% endif %}
+    </h4>
+    <div class="collapse" id="manual_validations">
+      <dl class="well well-md">
+        {% for aggregate in manual_validations %}
+          <dt {% if not forloop.first %}class="top-margin"{% endif %} id="vr_{{ aggregate.id }}">
+            &nbsp;{{ aggregate.group }}
+          </dt>
+          <dd>
+            <div>
+              <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>&nbsp;{{ aggregate.sign_seen_yes }}&nbsp;
+              <span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>&nbsp;{{ aggregate.sign_seen_no }}&nbsp;
+              <span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span>&nbsp;{{ aggregate.sign_seen_not_sure }}
+            </div>
+          </dd>
+          <dd>
+            {% if aggregate.comments %}
+              <div>
+                <span class="glyphicon glyphicon-comment"
+                      aria-hidden="true"></span>&nbsp;{{ aggregate.comments }}
               </div>
             {% endif %}
           </dd>
