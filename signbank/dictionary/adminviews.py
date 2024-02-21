@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import csv
 import json
 from collections import defaultdict
+from uuid import uuid4
 
 import djqscsv
 from django.conf import settings
@@ -18,6 +19,7 @@ from django.db.models.functions import Concat
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.translation import get_language
 from django.utils.translation import ugettext as _
 from django.views.generic.detail import DetailView
@@ -30,7 +32,7 @@ from tagging.models import Tag, TaggedItem
 
 from ..comments import CommentTagForm
 from ..video.forms import GlossVideoForGlossForm
-from ..video.models import GlossVideo
+from ..video.models import GlossVideo, GlossVideoToken
 from .forms import (GlossRelationForm, GlossRelationSearchForm,
                     GlossSearchForm, MorphologyForm, RelationForm, TagsAddForm)
 from .models import (Dataset, FieldChoice, Gloss, GlossRelation,
@@ -287,7 +289,6 @@ class GlossListView(ListView):
             video_type__field="video_type",
             video_type__english_name="validation",
             videofile__isnull=False,
-            is_public=True,
             title="Main",
         )
 
@@ -319,15 +320,25 @@ class GlossListView(ListView):
         ]
         writer.writerow(headers)
 
+        glossvideo_tokens = []
+
         for gloss_record in csv_queryset:
             row = [gloss_record.idgloss, gloss_record.gloss_main_aggregate]
             # In theory there should only be one video matching the above query, or none.
             if video := next((v for v in gloss_record.validation_videos if v.is_video), None):
-                row.append(video.videofile.storage.public_url(video.videofile.name))
+                token = uuid4()
+                glossvideo_tokens.append(GlossVideoToken(token=token, video=video))
+                url = reverse(
+                    "video:get_signed_glossvideo_url",
+                    kwargs={"token": token, "videoid": video.pk}
+                )
+                row.append(self.request.build_absolute_uri(url))
             else:
                 row.append("")
                 row.append("")
             writer.writerow(row)
+
+        GlossVideoToken.objects.bulk_create(glossvideo_tokens)
 
         return response
 

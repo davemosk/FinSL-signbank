@@ -25,7 +25,7 @@ from signbank.dictionary.models import (
     Language,
     SignLanguage, ShareValidationAggregation, ValidationRecord
 )
-from signbank.video.models import GlossVideo
+from signbank.video.models import GlossVideo, GlossVideoToken
 
 
 class GlossListViewTestCase(TestCase):
@@ -108,7 +108,7 @@ class GlossListViewTestCase(TestCase):
         )
         testfile = SimpleUploadedFile(
             "testvid.mp4", b'data \x00\x01', content_type="video/mp4")
-        self.glossvid = GlossVideo.objects.create(
+        glossvid = GlossVideo.objects.create(
             gloss=testgloss,
             is_public=True,
             dataset=testgloss.dataset,
@@ -131,17 +131,22 @@ class GlossListViewTestCase(TestCase):
         )
 
         content = response.content.decode('utf-8')
-        cvs_reader = csv.reader(io.StringIO(content))
-        body = list(cvs_reader)
-        self.assertEqual(len(body), 2)
+        csv_reader = csv.reader(io.StringIO(content))
+        csv_content = list(csv_reader)
+        self.assertEqual(len(csv_content), 2)
 
-        headers = body[0]
-        body = body[1]
+        video_tokens = GlossVideoToken.objects.filter(video=glossvid)
+        self.assertEqual(video_tokens.count(), 1)
+        video_token = video_tokens.get()
+        headers = csv_content[0]
+        body = csv_content[1]
         self.assertEqual(["idgloss", "gloss_main", "video_url"], headers)
         self.assertEqual(testgloss.idgloss, body[0])
         self.assertEqual(translation.translations, body[1])
         # video url changes between environments, so only checking it's not empty
-        self.assertNotEqual("", body[2])
+        partial_url = reverse("video:get_signed_glossvideo_url",
+                              kwargs={"token": video_token.token, "videoid": glossvid.pk})
+        self.assertIn(partial_url, body[2])
 
     def test_get_validation_results_csv(self):
         """

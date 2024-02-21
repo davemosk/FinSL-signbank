@@ -6,7 +6,7 @@ from django.db.models import Count
 from django.utils.translation import ugettext as _
 from django.utils.translation import ugettext_lazy as _lazy
 
-from .models import GlossVideo
+from .models import GlossVideo, GlossVideoToken
 
 
 class HasGlossFilter(admin.SimpleListFilter):
@@ -105,9 +105,15 @@ class GlossVideoAdmin(admin.ModelAdmin):
         return qs.select_related("gloss", "video_type", "dataset")
 
 
+class GlossVideoTokenAdmin(admin.ModelAdmin):
+    model = GlossVideoToken
+
+    list_display = ("video", "token")
+
 class GlossVideoInline(admin.TabularInline):
     model = GlossVideo
     extra = 0
 
 
 admin.site.register(GlossVideo, GlossVideoAdmin)
+admin.site.register(GlossVideoToken, GlossVideoTokenAdmin)

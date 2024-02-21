@@ -32,5 +32,10 @@ urlpatterns = [
     path('publicity/', views.change_glossvideo_publicity,
          name='change_glossvideo_publicity'),
 
-    path('csv', views.export_glossvideos_csv, name='export_glossvideos_csv')
+    path('csv', views.export_glossvideos_csv, name='export_glossvideos_csv'),
+    path(
+        'signed_url/<uuid:token>/<int:videoid>/',
+         views.get_signed_video_url_from_glossvideotoken,
+         name="get_signed_glossvideo_url"
+     )
 ]
