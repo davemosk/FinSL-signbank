@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import copy
 import csv
 import random
 from unittest import mock
@@ -15,7 +16,7 @@ from guardian.shortcuts import assign_perm
 from tagging.models import Tag, TaggedItem
 
 from signbank.dictionary.models import SignLanguage, Dataset, FieldChoice, Gloss, Language, \
-    ValidationRecord
+    ManualValidationAggregation, ValidationRecord
 
 
 class ShareCSVImportTestCase(TestCase):
@@ -564,3 +565,222 @@ class QualtricsCSVImportTestCase(TestCase):
         response = self.client.get(reverse('dictionary:confirm_import_qualtrics_csv'))
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("dictionary:import_qualtrics_csv"))
+
+
+class ManualValidationCSVImportTestCase(TestCase):
+    def setUp(self):
+        # Create user and add permissions
+        self.user = User.objects.create_user(username="test", email=None, password="test")
+        csv_permission = Permission.objects.get(codename='import_csv')
+        self.user.user_permissions.add(csv_permission)
+
+        # Create client with change_gloss permission.
+        self.client = Client()
+        self.client.force_login(self.user)
+
+        # Create user with no permissions
+        self.user_noperm = User.objects.create_user(username="noperm", email=None,
+                                                    password="noperm")
+        self.client_noperm = Client()
+        self.client_noperm.force_login(self.user_noperm)
+
+        # Create client not logged in
+        self.client_nologin = Client()
+
+        # Create a gloss
+        # Migrations have id=1 already
+        self.signlanguage = SignLanguage.objects.create(pk=2, name="testsignlanguage",
+                                                        language_code_3char="tst")
+        self.dataset = Dataset.objects.create(name="testdataset", signlanguage=self.signlanguage)
+        self.gloss_1 = Gloss.objects.create(idgloss="testgloss:1", dataset=self.dataset)
+        self.gloss_2 = Gloss.objects.create(idgloss="testgloss:2", dataset=self.dataset)
+
+        # Assign view permissions to dataset for user
+        assign_perm('view_dataset', self.user, self.dataset)
+
+    # Unimportant columns are excluded from csv
+    _csv_headers = [
+        "group",
+        "idgloss",
+        "yes",
+        "no",
+        "abstain or not sure",
+        "comments"
+    ]
+    _csv_content = [
+        {
+            "group": "Test",
+            "idgloss": "testgloss:1",
+            "yes": "1",
+            "no": "",
+            "abstain or not sure": "",
+            "comments": "comment"
+        },
+        {
+            "group": "Test",
+            "idgloss": "testgloss:2",
+            "yes": "",
+            "no": "0",
+            "abstain or not sure": "1",
+            "comments": ""
+        },
+        # gloss does not exist in test scenario
+        {
+            "group": "Test",
+            "idgloss": "testgloss:222",
+            "yes": "1",
+            "no": "",
+            "abstain or not sure": "",
+            "comments": "comment"
+        },
+    ]
+
+    def test_import_view_post_with_no_permission(self):
+        """Test that you get 302 Found or 403 Forbidden if you try without csv import permission."""
+        response = self.client_noperm.post(reverse('dictionary:import_manual_validation_csv'))
+        # Make sure user does not have change_gloss permission.
+        self.assertFalse(response.wsgi_request.user.has_perm('dictionary.import_csv'))
+        # Should return 302 Found, or 403 Forbidden
+        self.assertIn(response.status_code, [403, 302])
+
+    def test_import_view_post_nologin(self):
+        """Testing POST with anonymous user."""
+        response = self.client_nologin.post(reverse('dictionary:import_manual_validation_csv'))
+        # Should return 302 Found, or 403 Forbidden
+        self.assertIn(response.status_code, [302, 403])
+
+    def test_import_view_no_post_method(self):
+        """Test that using GET re-renders import view"""
+        response = self.client.get(reverse('dictionary:import_manual_validation_csv'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.request["PATH_INFO"],
+            reverse('dictionary:import_manual_validation_csv')
+        )
+
+    def test_import_view_missing_required_header(self):
+        """Test a missing column re-renders import view"""
+        file_name = "test.csv"
+        csv_content = copy.deepcopy(self._csv_content)
+        csv_headers = copy.deepcopy(self._csv_headers).pop()
+
+        with open(file_name, "w") as file:
+            writer = csv.writer(file)
+            writer.writerow(csv_headers)
+            for response in csv_content:
+                del response["comments"]
+                writer.writerow(response.values())
+        data = open(file_name, "rb")
+        file = SimpleUploadedFile(
+            content=data.read(), name=data.name, content_type="content/multipart"
+        )
+
+        response = self.client.post(
+            reverse('dictionary:import_manual_validation_csv'),
+            {"file": file},
+            format="multipart"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.request["PATH_INFO"],
+            reverse('dictionary:import_manual_validation_csv')
+        )
+    def test_import_view_successful_file_upload(self):
+        """Test a csv file can successfully be read by manual validation csv import view"""
+        file_name = "test.csv"
+        csv_content = self._csv_content
+
+        with open(file_name, "w") as file:
+            writer = csv.writer(file)
+            writer.writerow(self._csv_headers)
+            for response in csv_content:
+                writer.writerow(response.values())
+        data = open(file_name, "rb")
+        file = SimpleUploadedFile(
+            content=data.read(), name=data.name, content_type="content/multipart"
+        )
+
+        response = self.client.post(
+            reverse('dictionary:import_manual_validation_csv'),
+            {"file": file},
+            format="multipart"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session = self.client.session
+        self.assertListEqual(sorted(session["glosses"]), ["1", "2", "222"])
+        self.assertDictEqual({"Test": csv_content}, session["group_row_map"])
+
+    def test_confirmation_view_confirm_manual_validation_aggregation_creation(self):
+        """
+        Test that the confirm manual validation import csv view can successfully create validation records
+        for a gloss.
+        """
+        csv_content = copy.deepcopy(self._csv_content)
+        csv_content[0]["idgloss"] = f"testgloss:{self.gloss_1.pk}"
+        csv_content[1]["idgloss"] = f"testgloss:{self.gloss_2.pk}"
+
+        s = self.client.session
+        s.update({
+            "glosses": [str(self.gloss_1.pk), str(self.gloss_2.pk), "222"],
+            "group_row_map": {"Test": csv_content}
+        })
+        s.save()
+
+        response = self.client.post(
+            reverse("dictionary:confirm_import_manual_validation_csv"),
+            {"confirm": True}
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertListEqual(response.context["missing_glosses"], [("Test", "testgloss:222")])
+
+        # check the details of the validation aggregations
+        manual_validations_gloss_1_qs = ManualValidationAggregation.objects.filter(
+            gloss=self.gloss_1)
+        self.assertTrue(manual_validations_gloss_1_qs.count(), 1)
+        self.assertTrue(manual_validations_gloss_1_qs.filter(
+            sign_seen_yes=1,
+            sign_seen_no=0,
+            sign_seen_not_sure=0,
+            group="Test",
+            comments="comment",
+        ).exists())
+
+        manual_validations_gloss_2_qs = ManualValidationAggregation.objects.filter(
+            gloss=self.gloss_2)
+        self.assertTrue(manual_validations_gloss_2_qs.count(), 1)
+        self.assertTrue(manual_validations_gloss_2_qs.filter(
+            sign_seen_yes=0,
+            sign_seen_no=0,
+            sign_seen_not_sure=1,
+            group="Test",
+            comments="",
+        ).exists())
+
+    def test_confirmation_view_cancel_manual_validation_aggregation_creation(self):
+        csv_content = self._csv_content
+        s = self.client.session
+        s.update({
+            "glosses": [str(self.gloss_1.pk), str(self.gloss_2.pk), "222"],
+            "group_row_map": {
+                "Test": csv_content}
+        })
+        s.save()
+
+        response = self.client.post(
+            reverse("dictionary:confirm_import_manual_validation_csv"),
+            {"cancel": True}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("dictionary:import_manual_validation_csv"))
+        new_session = self.client.session
+        self.assertNotIn("glosses", new_session.keys())
+        self.assertNotIn("group_row_map", new_session.keys())
+
+    def test_confirmation_view_no_post_method(self):
+        """Test that using GET redirects to import view"""
+        response = self.client.get(reverse('dictionary:confirm_import_manual_validation_csv'))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("dictionary:import_manual_validation_csv"))

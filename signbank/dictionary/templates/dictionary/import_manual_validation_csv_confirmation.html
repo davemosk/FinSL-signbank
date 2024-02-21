@@ -1,0 +1,40 @@
+{% extends 'baselayout.html' %}
+{% load stylesheet %}
+{% load bootstrap3 %}
+{% load i18n %}
+{% block bootstrap3_title %}{% blocktrans %}Confirm Import Manual Validation CSV{% endblocktrans %} | {% endblock %}
+
+{% block content %}
+{% if perms.dictionary.import_csv %}
+    <div>
+      {% if group_row_map %}
+        <h3>{% blocktrans %}ManualValidationAggregations to be added{% endblocktrans %}</h3>
+        {% for group, gloss_count in group_gloss_count.items %}
+          <p>{% blocktrans %}Group: {{ group }} - {{ gloss_count }} glosses{% endblocktrans %}</p>
+        {% endfor %}
+        <form action='{% url "dictionary:confirm_import_manual_validation_csv" %}' method='post'>
+          {% csrf_token %}
+          <input class='btn btn-primary' name='confirm' type='submit' value='{% blocktrans %}Confirm{% endblocktrans %}'>
+          <input class='btn btn-primary' name='cancel' type='submit' value='{% blocktrans %}Cancel{% endblocktrans %}'>
+        </form>
+      {% endif %}
+    </div>
+    <div>
+      {% if manual_validation_aggregations %}
+        <div>
+          <h3>{% blocktrans %}Manual validation aggregations were successfully added{% endblocktrans %}</h3>
+          <p>{% blocktrans %}Added total of {{ manual_validation_aggregations_count }} validation aggregations.{% endblocktrans %}</p>
+        </div>
+        {% if missing_glosses %}
+          <div>
+            <h4>{% blocktrans %}Could not find some glosses{% endblocktrans %}</h4>
+            {% for group, idgloss in missing_glosses %}
+              <p>{% blocktrans %}Group: {{ group }} - Gloss: {{ idgloss }}{% endblocktrans %}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <p><a href="{% url "dictionary:import_manual_validation_csv" %}">{% blocktrans %}Return to the form{% endblocktrans %}</a></p>
+      {% endif %}
+    </div>
+{% endif %}
+{% endblock %}
