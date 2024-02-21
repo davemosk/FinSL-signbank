@@ -219,6 +219,14 @@ class GlossListViewTestCase(TestCase):
             user_name="Sallymil",
             comment="Too complicated"
         )
+        ManualValidationAggregation.objects.create(
+            gloss=testgloss_1,
+            group="Test",
+            sign_seen_yes=1,
+            sign_seen_no=1,
+            sign_seen_not_sure=1,
+            comments=""
+        )
 
         testgloss_2 = Gloss.objects.create(
             idgloss="testgloss:2", dataset=dataset, created_by=self.user, updated_by=self.user
@@ -271,6 +279,14 @@ class GlossListViewTestCase(TestCase):
             user_name="Sallymil",
             comment="Funny word"
         )
+        mva_g2 = ManualValidationAggregation.objects.create(
+            gloss=testgloss_2,
+            group="Test",
+            sign_seen_yes=1,
+            sign_seen_no=1,
+            sign_seen_not_sure=1,
+            comments="test"
+        )
 
         tag_id = \
             Tag.objects.filter(name=settings.TAG_VALIDATION_CHECK_RESULTS).values_list("pk",
@@ -306,10 +322,10 @@ class GlossListViewTestCase(TestCase):
         gloss_1_response = body[1]
         gloss_2_response = body[2]
         self.assertEqual(testgloss_1.idgloss, gloss_1_response[0])
-        self.assertEqual("4", gloss_1_response[1])  # have seen sign - yes
-        self.assertEqual("8", gloss_1_response[2])  # have seen sign - no
-        self.assertEqual("1", gloss_1_response[3])  # have seen sign - not sure
-        self.assertEqual("13", gloss_1_response[4])  # total
+        self.assertEqual("5", gloss_1_response[1])  # have seen sign - yes
+        self.assertEqual("9", gloss_1_response[2])  # have seen sign - no
+        self.assertEqual("2", gloss_1_response[3])  # have seen sign - not sure
+        self.assertEqual("16", gloss_1_response[4])  # total
         # comments
         self.assertNotIn(
             f"{vr1_g1.respondent_first_name} {vr1_g1.respondent_last_name}: {vr1_g1.comment}",
@@ -324,10 +340,10 @@ class GlossListViewTestCase(TestCase):
         self.assertIn(f"{c2_g1.user_name}: {c2_g1.comment}", gloss_1_response[5])
 
         self.assertEqual(testgloss_2.idgloss, gloss_2_response[0])
-        self.assertEqual("8", gloss_2_response[1])  # have seen sign - yes
-        self.assertEqual("4", gloss_2_response[2])  # have seen sign - no
-        self.assertEqual("1", gloss_2_response[3])  # have seen sign - not sure
-        self.assertEqual("13", gloss_2_response[4])  # total
+        self.assertEqual("9", gloss_2_response[1])  # have seen sign - yes
+        self.assertEqual("5", gloss_2_response[2])  # have seen sign - no
+        self.assertEqual("2", gloss_2_response[3])  # have seen sign - not sure
+        self.assertEqual("16", gloss_2_response[4])  # total
         # comments
         self.assertNotIn(
             f"{vr1_g2.respondent_first_name} {vr1_g2.respondent_last_name}: {vr1_g2.comment}",
@@ -340,6 +356,7 @@ class GlossListViewTestCase(TestCase):
             gloss_2_response[5])
         self.assertIn(f"{c1_g2.user_name}: {c1_g2.comment}", gloss_2_response[5])
         self.assertIn(f"{c2_g2.user_name}: {c2_g2.comment}", gloss_2_response[5])
+        self.assertIn(f"{mva_g2.group}: {mva_g2.comments}", gloss_2_response[5])
 
     def test_post(self):
         """Testing that the search page can't be accessed with POST."""

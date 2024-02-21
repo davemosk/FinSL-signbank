@@ -389,7 +389,8 @@ class GlossListView(ListView):
                     "validation_records", queryset=sign_seen_not_sure_validation_records,
                     to_attr="not_sure_vrs"
                 ),
-                Prefetch("share_validation_aggregations", to_attr="share_vas")
+                Prefetch("share_validation_aggregations", to_attr="share_vas"),
+                Prefetch("manual_validation_aggregation", to_attr="manual_vas")
             )
         )
         gloss_pks = csv_queryset.values_list("pk", flat=True)
@@ -414,10 +415,18 @@ class GlossListView(ListView):
 
         for gloss_record in csv_queryset:
             sign_seen_yes = len(gloss_record.yes_vrs) + sum(
-                [share_va.agrees for share_va in gloss_record.share_vas])
+                [share_va.agrees for share_va in gloss_record.share_vas]
+            ) +sum(
+                [manual_va.sign_seen_yes for manual_va in gloss_record.manual_vas]
+            )
             sign_seen_no = len(gloss_record.no_vrs) + sum(
-                [share_va.disagrees for share_va in gloss_record.share_vas])
-            sign_seen_not_sure = len(gloss_record.not_sure_vrs)
+                [share_va.disagrees for share_va in gloss_record.share_vas]
+            ) + sum(
+                [manual_va.sign_seen_no for manual_va in gloss_record.manual_vas]
+            )
+            sign_seen_not_sure = len(gloss_record.not_sure_vrs) + sum(
+                [manual_va.sign_seen_not_sure for manual_va in gloss_record.manual_vas]
+            )
             total = sum([sign_seen_yes, sign_seen_no, sign_seen_not_sure])
             records_with_comments = gloss_record.yes_vrs + gloss_record.no_vrs + gloss_record.not_sure_vrs
             records_with_comments = [x for x in records_with_comments if x.comment != ""]
@@ -426,6 +435,9 @@ class GlossListView(ListView):
                 comment += f"{record.respondent_first_name} {record.respondent_last_name}: {record.comment} | "
             for share_comment in gloss_share_comment_map[gloss_record.pk]:
                 comment += f"{share_comment.user_name}: {share_comment.comment} | "
+            for manual_va in gloss_record.manual_vas:
+                if manual_va.comments:
+                    comment += f"{manual_va.group}: {manual_va.comments}"
             row = [
                 gloss_record.idgloss,
                 sign_seen_yes,
