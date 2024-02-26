@@ -289,7 +289,6 @@ class GlossListView(ListView):
             video_type__field="video_type",
             video_type__english_name="validation",
             videofile__isnull=False,
-            title="Main",
         )
 
         csv_queryset = (
