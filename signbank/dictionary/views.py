@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+import os
 
 import json
+import time
 
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import render
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.admin.views.decorators import user_passes_test
@@ -14,15 +17,20 @@ from django.utils.translation import ugettext as _
 from django.views.generic.list import ListView
 from django.views.generic import FormView
 from django.db.models import Q, F, Count, Case, Value, When, BooleanField
+from urllib.parse import quote
+from wsgiref.util import FileWrapper
 
 from tagging.models import Tag
 from guardian.shortcuts import get_perms, get_objects_for_user, get_users_with_perms
 from notifications.signals import notify
 
-from .models import Dataset, Keyword, FieldChoice, Gloss, GlossRelation
-from .forms import GlossCreateForm, LexiconForm
-from ..video.forms import GlossVideoForm
-from .update import add_tags_to_gloss
+from signbank.dictionary.models import Dataset, Keyword, FieldChoice, Gloss, GlossRelation
+from signbank.dictionary.forms import GlossCreateForm, LexiconForm
+from signbank.dictionary import tools
+from signbank.dictionary.update import add_tags_to_gloss
+
+from signbank.video.models import GlossVideo
+from signbank.video.forms import GlossVideoForm
 
 
 @permission_required('dictionary.add_gloss')
@@ -160,3 +168,148 @@ def network_graph(request):
                   {'context': context,
                    'form': form
                    })
+
+
+def package(request):
+    """
+    This view is copied from Global Signbank.
+    It has been adapted to work for NZSL's data structure.
+    """
+    if request.user.is_authenticated:
+        if 'dataset_name' in request.GET:
+            dataset = Dataset.objects.get(name=request.GET['dataset_name'])
+        else:
+            dataset = Dataset.objects.get(name=settings.DEFAULT_DATASET_ACRONYM)
+        available_glosses = Gloss.objects.filter(dataset=dataset)
+    else:
+        dataset = Dataset.objects.get(name=settings.DEFAULT_DATASET_ACRONYM)
+        available_glosses = Gloss.objects.filter(dataset=dataset)
+
+    first_part_of_file_name = 'signbank_pa'
+
+    timestamp_part_of_file_name = str(int(time.time()))
+
+    if 'since_timestamp' in request.GET:
+        first_part_of_file_name += 'tch'
+        since_timestamp = int(request.GET['since_timestamp'])
+        timestamp_part_of_file_name = request.GET[
+                                          'since_timestamp'] + '-' + timestamp_part_of_file_name
+    else:
+        first_part_of_file_name += 'ckage'
+        since_timestamp = 0
+
+    archive_file_name = '.'.join([first_part_of_file_name, timestamp_part_of_file_name, 'zip'])
+    archive_file_path = settings.SIGNBANK_PACKAGES_FOLDER + "/" + archive_file_name
+
+    available_glossvideos = GlossVideo.objects.filter(gloss__in=available_glosses)
+
+    video_urls = {
+        os.path.splitext(os.path.basename(gv.videofile.name))[0]: reverse(
+            'dictionary:protected_media',
+            kwargs={"filename": gv.videofile.name}
+        )
+        for gv in available_glossvideos
+        if os.path.exists(str(gv.videofile.path))
+        and os.path.getmtime(str(gv.videofile.path)) > since_timestamp
+        and gv.is_video()
+    }
+
+    image_urls = {
+        os.path.splitext(os.path.basename(gv.videofile.name))[0]: reverse(
+            'dictionary:protected_media', kwargs={"filename": gv.videofile.name}
+        )
+        for gv in available_glossvideos
+        if os.path.exists(str(gv.videofile.path))
+        and os.path.getmtime(str(gv.videofile.path)) > since_timestamp
+        and gv.is_image()
+    }
+
+    collected_data = {'video_urls': video_urls,
+                      'image_urls': image_urls,
+                      'glosses': tools.get_gloss_data(since_timestamp, dataset)}
+
+    tools.create_zip_with_json_files(collected_data, archive_file_path)
+
+    response = HttpResponse(FileWrapper(open(archive_file_path, 'rb')),
+                            content_type='application/zip')
+    response['Content-Disposition'] = 'attachment; filename=' + archive_file_name
+    return response
+
+
+def info(request):
+    """
+    This view is copied from Global Signbank.
+    It has been adapted to work for NZSL's data structure.
+    """
+    user_datasets = get_objects_for_user(request.user, 'change_dataset',
+                                                            Dataset)
+    user_datasets_names = [dataset.name for dataset in user_datasets]
+
+    # Put the default dataset in first position
+    if settings.DEFAULT_DATASET_ACRONYM in user_datasets_names:
+        user_datasets_names.insert(0, user_datasets_names.pop(
+            user_datasets_names.index(settings.DEFAULT_DATASET_ACRONYM)))
+
+    if user_datasets_names:
+        return HttpResponse(json.dumps(user_datasets_names), content_type='application/json')
+    else:
+        return HttpResponse(json.dumps([settings.LANGUAGE_NAME, settings.COUNTRY_NAME]),
+                            content_type='application/json')
+
+
+def protected_media(request, filename, show_indexes=False):
+    """
+    This view is copied from Global Signbank.
+    It has been adapted to work for NZSL's data structure.
+    """
+    if not request.user.is_authenticated:
+
+        # If we are not logged in, try to find if this maybe belongs to a gloss that is free to see for everbody?
+        (name, ext) = os.path.splitext(os.path.basename(filename))
+        if 'handshape' in name:
+            # handshape images are allowed to be seen in Show All Handshapes
+            pass
+        else:
+            gloss_pk = int(filename.split('.')[-2].split('-')[-1])
+
+            try:
+                Gloss.objects.get(pk=gloss_pk)
+            except Gloss.DoesNotExist:
+                return HttpResponse(status=401)
+
+        # If we got here, the gloss was found and in the web dictionary, so we can continue
+
+    filename = os.path.normpath(filename)
+
+    dir_path = settings.WRITABLE_FOLDER
+    path = dir_path.encode('utf-8') + filename.encode('utf-8')
+
+    if not os.path.exists(path):
+        # quote the filename instead to resolve special characters in the url
+        (head, tail) = os.path.split(filename)
+        quoted_filename = quote(tail, safe='')
+        quoted_path = os.path.join(dir_path, head, quoted_filename)
+        if not os.path.exists(quoted_path):
+            raise Http404("File does not exist.")
+        else:
+            filename = quoted_filename
+            path = quoted_path
+
+    if not settings.USE_X_SENDFILE:
+        if filename.split('.')[-1] == 'mp4':
+            response = HttpResponse(content_type='video/mp4')
+        elif filename.split('.')[-1] == 'png':
+            response = HttpResponse(content_type='image/png')
+        elif filename.split('.')[-1] == 'jpg':
+            response = HttpResponse(content_type='image/jpg')
+        else:
+            response = HttpResponse()
+
+        response['Content-Disposition'] = 'inline;filename=' + filename + ';filename*=UTF-8'
+        response['X-Sendfile'] = path
+
+        return response
+
+    else:
+        from django.views.static import serve
+        return serve(request, filename, dir_path, show_indexes)
