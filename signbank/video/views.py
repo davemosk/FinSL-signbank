@@ -35,7 +35,6 @@ def get_signed_video_url_from_glossvideotoken(request, token, videoid):
 
     video = video_token.video
     url = video.videofile.storage.url(video.videofile.name)
-    video_token.delete()
     return redirect(url)
 
 

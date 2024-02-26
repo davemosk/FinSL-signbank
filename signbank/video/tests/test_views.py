@@ -332,5 +332,3 @@ class GlossVideoTokenSignedUrlTestCase(TestCase):
             response.url,
             self.glossvid.videofile.storage.url(self.glossvid.videofile.name)
         )
-        video_tokens = GlossVideoToken.objects.all()
-        self.assertEqual(video_tokens.count(), 0)
