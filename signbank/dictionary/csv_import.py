@@ -448,7 +448,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                         "url": video_url,
                         "file_name": file_name,
                         "gloss_pk": gloss.pk,
-                        "title": "Main",
+                        "video_type": "main",
                         "version": 0
                     }
                     videos.append(glossvideo)
@@ -464,7 +464,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                             "url": video_url,
                             "file_name": file_name,
                             "gloss_pk": gloss.pk,
-                            "title": "Illustration",
+                            "video_type": "main",
                             "version": i
                         }
                         videos.append(glossvideo)
@@ -480,7 +480,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
                             "url": video_url,
                             "file_name": file_name,
                             "gloss_pk": gloss.pk,
-                            "title": f"finalexample{i + 1}",
+                            "video_type": f"finalexample{i + 1}",
                             "version": i
                         }
                         videos.append(glossvideo)

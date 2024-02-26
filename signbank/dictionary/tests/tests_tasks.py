@@ -19,23 +19,34 @@ class RetrieveVideoForGloss(TestCase):
         self.signlanguage = SignLanguage.objects.create(pk=2, name="testsignlanguage",
                                                         language_code_3char="tst")
         self.dataset = Dataset.objects.create(name="testdataset", signlanguage=self.signlanguage)
-        FieldChoice.objects.create(field="video_type", english_name="validation",
-                                   machine_value=random.randint(0, 99999))
+
+        self.main_vt = FieldChoice.objects.create(
+            field="video_type", english_name="main", machine_value=random.randint(0, 99999)
+        )
+        self.finalexample1_vt = FieldChoice.objects.create(
+            field="video_type", english_name="finalexample1",
+            machine_value=random.randint(0, 99999)
+        )
+        self.finalexample2_vt = FieldChoice.objects.create(
+            field="video_type", english_name="finalexample2",
+            machine_value=random.randint(0, 99999)
+        )
         self.gloss = Gloss.objects.create(idgloss="testgloss", dataset=self.dataset)
 
     @override_settings(MEDIA_ROOT="")
     def test_retrieve_videos_for_glosses(self):
-        video_details = [{
-            "url": "/kiwifruit-2-6422.png",
-            "file_name": (
-                f"{settings.MEDIA_ROOT}/glossvideo/"
-                f"{self.gloss.pk}-{self.gloss.idgloss}_illustration_0.png"
-            ),
-            "gloss_pk": self.gloss.pk,
-            "title": "Illustration",
-            "version": 0
-        }]
-        title_before_task_run = video_details[0]["title"]
+        video_details = [
+            {
+                "url": "/kiwifruit_1.mp4",
+                "file_name": (
+                    f"{settings.MEDIA_ROOT}/glossvideo/"
+                    f"{self.gloss.pk}-{self.gloss.idgloss}_finalexample_1.png"
+                ),
+                "gloss_pk": self.gloss.pk,
+                "video_type": "finalexample1",
+                "version": 0
+            }
+        ]
         dummy_file = SimpleUploadedFile(
             video_details[0]["file_name"], b'data \x00\x01', content_type="video/mp4")
 
@@ -51,5 +62,6 @@ class RetrieveVideoForGloss(TestCase):
         self.assertTrue(videos.exists())
         self.assertEqual(videos.count(), 1)
         video = videos.get()
-        self.assertNotEqual(video.title, title_before_task_run)
-        self.assertEqual(video.title, "")
+        self.assertEqual(video.video_type, self.finalexample1_vt)
+        self.assertEqual(video.title, dummy_file.name)
+
