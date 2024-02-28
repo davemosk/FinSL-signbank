@@ -183,7 +183,7 @@ class GlossAdmin(VersionAdmin):
     actions = [publish, unpublish, exclude_from_ecv, include_in_ecv]
 
     fieldsets = ((None, {'fields': ('dataset', 'assigned_user', 'published', 'exclude_from_ecv', 'id', 'idgloss', 'idgloss_mi', 'wordclasses', 'notes', 'hint', 'signer', 'filmbatch', 'concise',
-                                    'lemma')},),
+                                    'lemma', 'nzsl_share_id')},),
                  (_('Created/Updated'), {'fields': ('created_at',
                   'created_by', 'updated_at', 'updated_by')},),
                  (_('Morphology'), {'fields': ('inflection_temporal', 'inflection_manner_degree', 'inflection_plural', 'number_incorporated', 'locatable', 'directional',

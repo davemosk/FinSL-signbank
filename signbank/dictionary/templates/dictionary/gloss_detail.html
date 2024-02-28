@@ -467,6 +467,11 @@ $('#id_comment').atwho({
                     <td id='sign-number'>{{gloss.id}}</td>
                 </tr>
                 <tr>
+                  <th>{% blocktrans %}NZSL Share ID:{% endblocktrans %}</th>
+                  <td class='edit edit_text'
+                      id='nzsl_share_id'>{% value gloss.nzsl_share_id %}</td>
+                </tr>
+                <tr>
                     <th>{% blocktrans %}Film batch:{% endblocktrans %}</th>
                     <td class="edit edit_text" id='filmbatch'>{{gloss.filmbatch}}</td>
                 </tr>

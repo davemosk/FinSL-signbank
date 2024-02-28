@@ -592,7 +592,9 @@ class Gloss(models.Model):
                                        related_name="age_variation", blank=True, null=True, on_delete=models.SET_NULL)
 
     # lemma
-    lemma = models.ForeignKey('Lemma', verbose_name=_("Lemma"), null=True, on_delete=models.SET_NULL)
+    lemma = models.ForeignKey('Lemma', verbose_name=_("Lemma"), null=True, blank=True, on_delete=models.SET_NULL)
+
+    nzsl_share_id = models.CharField(max_length=255, default="", blank=True)
 
     def __str__(self):
         return self.idgloss
