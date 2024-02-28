@@ -17,10 +17,7 @@
           <input class='btn btn-primary' name='confirm' type='submit' value='{% blocktrans %}Confirm{% endblocktrans %}'>
           <input class='btn btn-primary' name='cancel' type='submit' value='{% blocktrans %}Cancel{% endblocktrans %}'>
         </form>
-      {% endif %}
-    </div>
-    <div>
-      {% if manual_validation_aggregations %}
+      {% elif manual_validation_aggregations %}
         <div>
           <h3>{% blocktrans %}Manual validation aggregations were successfully added{% endblocktrans %}</h3>
           <p>{% blocktrans %}Added total of {{ manual_validation_aggregations_count }} validation aggregations.{% endblocktrans %}</p>

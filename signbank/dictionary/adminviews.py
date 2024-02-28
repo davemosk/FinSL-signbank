@@ -414,19 +414,20 @@ class GlossListView(ListView):
         writer.writerow(headers)
 
         for gloss_record in csv_queryset:
-            sign_seen_yes = len(gloss_record.yes_vrs) + sum(
-                [share_va.agrees for share_va in gloss_record.share_vas]
-            ) +sum(
-                [manual_va.sign_seen_yes for manual_va in gloss_record.manual_vas]
-            )
-            sign_seen_no = len(gloss_record.no_vrs) + sum(
-                [share_va.disagrees for share_va in gloss_record.share_vas]
-            ) + sum(
-                [manual_va.sign_seen_no for manual_va in gloss_record.manual_vas]
-            )
-            sign_seen_not_sure = len(gloss_record.not_sure_vrs) + sum(
-                [manual_va.sign_seen_not_sure for manual_va in gloss_record.manual_vas]
-            )
+            sign_seen_yes = sum([
+                len(gloss_record.yes_vrs),
+                sum([share_va.agrees for share_va in gloss_record.share_vas]),
+                sum([manual_va.sign_seen_yes for manual_va in gloss_record.manual_vas])
+            ])
+            sign_seen_no = sum([
+                len(gloss_record.no_vrs),
+                sum([share_va.disagrees for share_va in gloss_record.share_vas]),
+                sum([manual_va.sign_seen_no for manual_va in gloss_record.manual_vas])
+            ])
+            sign_seen_not_sure = sum([
+                len(gloss_record.not_sure_vrs),
+                sum([manual_va.sign_seen_not_sure for manual_va in gloss_record.manual_vas])
+            ])
             total = sum([sign_seen_yes, sign_seen_no, sign_seen_not_sure])
             records_with_comments = gloss_record.yes_vrs + gloss_record.no_vrs + gloss_record.not_sure_vrs
             records_with_comments = [x for x in records_with_comments if x.comment != ""]
@@ -437,7 +438,7 @@ class GlossListView(ListView):
                 comment += f"{share_comment.user_name}: {share_comment.comment} | "
             for manual_va in gloss_record.manual_vas:
                 if manual_va.comments:
-                    comment += f"{manual_va.group}: {manual_va.comments}"
+                    comment += f"{manual_va.group}: {manual_va.comments} | "
             row = [
                 gloss_record.idgloss,
                 sign_seen_yes,
@@ -900,37 +901,92 @@ class GlossDetailView(DetailView):
 
             gloss_content_type = ContentType.objects.get_for_model(Gloss)
             share_comments = Comment.objects.filter(content_type=gloss_content_type, object_pk=self.object.pk, is_public=False)
+
             validation_records = ValidationRecord.objects.filter(gloss=self.object)
+            validation_records_exist = validation_records.exists()
+            validation_record_totals = {
+                "sign_seen_yes": validation_records.filter(
+                    sign_seen=ValidationRecord.SignSeenChoices.YES).count(),
+
+                "sign_seen_no": validation_records.filter(
+                    sign_seen=ValidationRecord.SignSeenChoices.NO).count(),
+
+                "sign_seen_not_sure": validation_records.filter(
+                    sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE).count()
+            }
+            validation_record_totals["totals"] = sum([
+                validation_record_totals["sign_seen_yes"],
+                validation_record_totals["sign_seen_no"],
+                validation_record_totals["sign_seen_not_sure"]
+            ])
+
             share_validation_aggregations = ShareValidationAggregation.objects.filter(
                 gloss=self.object)
-            share_validation_aggregation = {"agrees": 0, "disagrees": 0}
+            share_validations_exist = share_validation_aggregations.exists()
+            share_validation_totals = {"agrees": 0, "disagrees": 0, "totals":0}
             for share_validation in share_validation_aggregations:
-                share_validation_aggregation["agrees"] += share_validation.agrees
-                share_validation_aggregation["disagrees"] += share_validation.disagrees
+                share_validation_totals["agrees"] += share_validation.agrees
+                share_validation_totals["disagrees"] += share_validation.disagrees
+            share_validation_totals["totals"] = sum([
+                share_validation_totals["agrees"],
+                share_validation_totals["disagrees"]
+            ])
 
             manual_validation_aggregations = ManualValidationAggregation.objects.filter(
                 gloss=self.object
             )
-            manual_validations_total = {
-                "sign_seen_yes": 0, "sign_seen_no": 0, "sign_seen_not_sure": 0
+            manual_validations_exist = manual_validation_aggregations.exists()
+            manual_validations_totals = {
+                "sign_seen_yes": 0, "sign_seen_no": 0, "sign_seen_not_sure": 0, "totals": 0
             }
             for manual_validation in manual_validation_aggregations:
-                manual_validations_total["sign_seen_yes"] += manual_validation.sign_seen_yes
-                manual_validations_total["sign_seen_no"] += manual_validation.sign_seen_no
-                manual_validations_total["sign_seen_not_sure"] += manual_validation.sign_seen_not_sure
+                manual_validations_totals["sign_seen_yes"] += manual_validation.sign_seen_yes
+                manual_validations_totals["sign_seen_no"] += manual_validation.sign_seen_no
+                manual_validations_totals["sign_seen_not_sure"] += manual_validation.sign_seen_not_sure
+            manual_validations_totals["totals"] = sum([
+                manual_validations_totals["sign_seen_yes"],
+                manual_validations_totals["sign_seen_no"],
+                manual_validations_totals["sign_seen_not_sure"]
+            ])
 
+            totals = {
+                "sign_seen_yes": sum([
+                    validation_record_totals["sign_seen_yes"],
+                    share_validation_totals["agrees"],
+                    manual_validations_totals["sign_seen_yes"]
+                ]),
+                "sign_seen_no": sum([
+                    validation_record_totals["sign_seen_no"],
+                    share_validation_totals["disagrees"],
+                    manual_validations_totals["sign_seen_no"]
+                ]),
+                "sign_seen_not_sure": sum([
+                    validation_record_totals["sign_seen_not_sure"],
+                    manual_validations_totals["sign_seen_not_sure"]
+                ]),
+                "overall": sum([
+                    validation_record_totals["totals"],
+                    share_validation_totals["totals"],
+                    manual_validations_totals["totals"]
+                ])
+            }
             context['share_comments'] = share_comments
             context['validation_records'] = validation_records
-            context['share_validation_aggregation'] = share_validation_aggregation
             context['share_validations'] = share_validation_aggregations
             context['manual_validations'] = manual_validation_aggregations
-            context['manual_validations_total'] = manual_validations_total
-            context['sign_seen_yes'] = validation_records.filter(
-                sign_seen=ValidationRecord.SignSeenChoices.YES).count()
-            context['sign_seen_no'] = validation_records.filter(
-                sign_seen=ValidationRecord.SignSeenChoices.NO).count()
-            context['sign_seen_maybe'] = validation_records.filter(
-                sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE).count()
+            context['show_totals_row'] = (
+                # objects for all three are present
+                (validation_records_exist and share_validations_exist and manual_validations_exist)
+                # or objects for any two are present
+                or (validation_records_exist and share_validations_exist)
+                or (validation_records_exist and manual_validations_exist)
+                or (share_validations_exist and manual_validations_exist)
+            )
+
+            context['validation_record_totals'] = validation_record_totals
+            context['share_validation_totals'] = share_validation_totals
+            context['manual_validations_totals'] = manual_validations_totals
+            context['totals'] = totals
 
         # Pass info about which fields we want to see
         gl = context['gloss']

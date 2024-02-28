@@ -8,6 +8,7 @@ from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth.models import User, Permission
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -662,7 +663,8 @@ class ManualValidationCSVImportTestCase(TestCase):
         """Test a missing column re-renders import view"""
         file_name = "test.csv"
         csv_content = copy.deepcopy(self._csv_content)
-        csv_headers = copy.deepcopy(self._csv_headers).pop()
+        csv_headers = copy.deepcopy(self._csv_headers)
+        csv_headers.pop()
 
         with open(file_name, "w") as file:
             writer = csv.writer(file)
@@ -686,6 +688,31 @@ class ManualValidationCSVImportTestCase(TestCase):
             response.request["PATH_INFO"],
             reverse('dictionary:import_manual_validation_csv')
         )
+
+    def test_non_integer_row_value_raises_validation_error(self):
+        """Test a non_compliant row value raises a ValidationError"""
+        file_name = "test.csv"
+        csv_content = copy.deepcopy(self._csv_content)[0]
+        csv_headers = copy.deepcopy(self._csv_headers)
+
+        with open(file_name, "w") as file:
+            writer = csv.writer(file)
+            writer.writerow(csv_headers)
+            csv_content["no"] = "not integer"
+            writer.writerow(csv_content.values())
+        data = open(file_name, "rb")
+        file = SimpleUploadedFile(
+            content=data.read(), name=data.name, content_type="content/multipart"
+        )
+
+        response = self.client.post(
+            reverse('dictionary:import_manual_validation_csv'),
+            {"file": file},
+            format="multipart"
+        )
+        self.assertRaises(ValidationError)
+        self.assertEqual(response.status_code, 200)
+
     def test_import_view_successful_file_upload(self):
         """Test a csv file can successfully be read by manual validation csv import view"""
         file_name = "test.csv"

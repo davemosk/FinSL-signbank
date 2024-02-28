@@ -429,17 +429,27 @@ class TestValidationResultsView(TestCase):
         self.assertListEqual(list(response.context["share_comments"]), [self.share_comment])
         self.assertListEqual(list(response.context["validation_records"]),
                              [self.validation_record])
-        self.assertDictEqual(response.context["share_validation_aggregation"],
-                             {"agrees": 7, "disagrees": 7})
+        self.assertDictEqual(
+            response.context["share_validation_totals"],
+        {"agrees": 7, "disagrees": 7, "totals": 14}
+        )
         self.assertIn(self.share_validation_aggregation_1, response.context["share_validations"])
         self.assertIn(self.share_validation_aggregation_2, response.context["share_validations"])
         self.assertIn(self.manual_validation_1, response.context["manual_validations"])
         self.assertIn(self.manual_validation_2, response.context["manual_validations"])
-        self.assertDictEqual(response.context["manual_validations_total"],
-                             {"sign_seen_yes": 1, "sign_seen_no": 1, "sign_seen_not_sure": 3})
-        self.assertEqual(response.context["sign_seen_yes"], 1)
-        self.assertEqual(response.context["sign_seen_no"], 0)
-        self.assertEqual(response.context["sign_seen_maybe"], 0)
+        self.assertDictEqual(
+            response.context["manual_validations_totals"],
+            {"sign_seen_yes": 1, "sign_seen_no": 1, "sign_seen_not_sure": 3, "totals": 5}
+        )
+        self.assertDictEqual(
+            response.context["validation_record_totals"],
+            {"sign_seen_yes": 1, "sign_seen_no": 0, "sign_seen_not_sure": 0, "totals": 1}
+        )
+        self.assertDictEqual(
+            response.context["totals"],
+            {"sign_seen_yes": 9, "sign_seen_no": 8, "sign_seen_not_sure": 3, "overall": 20}
+        )
+        self.assertTrue(response.context["show_totals_row"])
 
     def test_validation_results_in_context_single_share_and_manual_results(self):
         ShareValidationAggregation.objects.filter(gloss=self.gloss).last().delete()
@@ -451,16 +461,26 @@ class TestValidationResultsView(TestCase):
         self.assertListEqual(list(response.context["share_comments"]), [self.share_comment])
         self.assertListEqual(list(response.context["validation_records"]),
                              [self.validation_record])
-        self.assertDictEqual(response.context["share_validation_aggregation"],
-                             {"agrees": 2, "disagrees": 5})
+        self.assertDictEqual(
+            response.context["share_validation_totals"],
+            {"agrees": 2, "disagrees": 5, "totals": 7}
+        )
         self.assertIn(self.share_validation_aggregation_1, response.context["share_validations"])
         self.assertIn(self.manual_validation_1, response.context["manual_validations"])
         self.assertNotIn(self.manual_validation_2, response.context["manual_validations"])
-        self.assertDictEqual(response.context["manual_validations_total"],
-                             {"sign_seen_yes": 1, "sign_seen_no": 1, "sign_seen_not_sure": 0})
-        self.assertEqual(response.context["sign_seen_yes"], 1)
-        self.assertEqual(response.context["sign_seen_no"], 0)
-        self.assertEqual(response.context["sign_seen_maybe"], 0)
+        self.assertDictEqual(
+            response.context["manual_validations_totals"],
+            {"sign_seen_yes": 1, "sign_seen_no": 1, "sign_seen_not_sure": 0, "totals": 2}
+        )
+        self.assertDictEqual(
+            response.context["validation_record_totals"],
+            {"sign_seen_yes": 1, "sign_seen_no": 0, "sign_seen_not_sure": 0, "totals": 1}
+        )
+        self.assertDictEqual(
+            response.context["totals"],
+            {"sign_seen_yes": 4, "sign_seen_no": 6, "sign_seen_not_sure": 0, "overall": 10}
+        )
+        self.assertTrue(response.context["show_totals_row"])
 
     def test_validation_results_in_context_no_share_and_manual_results(self):
         ShareValidationAggregation.objects.filter(gloss=self.gloss).delete()
@@ -472,14 +492,24 @@ class TestValidationResultsView(TestCase):
         self.assertListEqual(list(response.context["share_comments"]), [self.share_comment])
         self.assertListEqual(list(response.context["validation_records"]),
                              [self.validation_record])
-        self.assertDictEqual(response.context["share_validation_aggregation"],
-                             {"agrees": 0, "disagrees": 0})
+        self.assertDictEqual(
+            response.context["share_validation_totals"],
+            {"agrees": 0, "disagrees": 0, "totals": 0}
+        )
         empty_share_qs = ShareValidationAggregation.objects.none()
         self.assertQuerysetEqual(response.context["share_validations"], empty_share_qs)
         empty_manual_qs = ManualValidationAggregation.objects.none()
         self.assertQuerysetEqual(response.context["manual_validations"], empty_manual_qs)
-        self.assertDictEqual(response.context["manual_validations_total"],
-                             {"sign_seen_yes": 0, "sign_seen_no": 0, "sign_seen_not_sure": 0})
-        self.assertEqual(response.context["sign_seen_yes"], 1)
-        self.assertEqual(response.context["sign_seen_no"], 0)
-        self.assertEqual(response.context["sign_seen_maybe"], 0)
+        self.assertDictEqual(
+            response.context["manual_validations_totals"],
+            {"sign_seen_yes": 0, "sign_seen_no": 0, "sign_seen_not_sure": 0, "totals": 0}
+        )
+        self.assertDictEqual(
+            response.context["validation_record_totals"],
+            {"sign_seen_yes": 1, "sign_seen_no": 0, "sign_seen_not_sure": 0, "totals": 1}
+        )
+        self.assertDictEqual(
+            response.context["totals"],
+            {"sign_seen_yes": 1, "sign_seen_no": 0, "sign_seen_not_sure": 0, "overall": 1}
+        )
+        self.assertFalse(response.context["show_totals_row"])
