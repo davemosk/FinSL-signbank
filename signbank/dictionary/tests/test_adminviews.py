@@ -110,11 +110,10 @@ class GlossListViewTestCase(TestCase):
             "testvid.mp4", b'data \x00\x01', content_type="video/mp4")
         glossvid = GlossVideo.objects.create(
             gloss=testgloss,
-            is_public=True,
+            is_public=False,
             dataset=testgloss.dataset,
             videofile=testfile,
             video_type=validation_video_type,
-            title="Main"
         )
 
         tag_id = Tag.objects.filter(name=settings.TAG_READY_FOR_VALIDATION).values_list("pk", flat=True)[0]

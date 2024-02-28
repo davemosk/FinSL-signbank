@@ -15,7 +15,7 @@ class VideoDetail(TypedDict):
     url: str
     file_name: str
     gloss_pk: int
-    title: str
+    video_type: str
     version: int
 
 
@@ -62,9 +62,20 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
     - title
     - version
     """
-    validation_video_type = FieldChoice.objects.filter(field="video_type",
-                                                       english_name="validation").first()
     main_video_type = FieldChoice.objects.filter(field="video_type", english_name="main").first()
+    finalexample_1_video_type = FieldChoice.objects.filter(
+        field="video_type",
+        english_name="finalexample1"
+    ).first()
+    finalexample_2_video_type = FieldChoice.objects.filter(
+        field="video_type",
+        english_name="finalexample2"
+    ).first()
+    video_type_map = {
+        "main": main_video_type,
+        "finalexample1": finalexample_1_video_type,
+        "finalexample2": finalexample_2_video_type
+    }
     videos_to_create = []
 
     temp_dir = TemporaryDirectory(dir=settings.MEDIA_ROOT)
@@ -92,20 +103,14 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
 
         gloss = Gloss.objects.get(pk=video["gloss_pk"])
 
-        # change video type to main for illustrations
-        video_type = validation_video_type
-        if video["title"] == "Illustration":
-            video_type = main_video_type
-            video["title"] = ""
-
         gloss_video = GlossVideo(
-            title=video["title"],
             gloss=gloss,
             dataset=gloss.dataset,
             videofile=file,
+            title=file,
             version=video["version"],
             is_public=False,
-            video_type=video_type
+            video_type=video_type_map.get(video["video_type"], None)
         )
 
         if not s3_storage_used:
