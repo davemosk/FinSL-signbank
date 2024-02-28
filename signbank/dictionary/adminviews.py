@@ -974,14 +974,8 @@ class GlossDetailView(DetailView):
             context['validation_records'] = validation_records
             context['share_validations'] = share_validation_aggregations
             context['manual_validations'] = manual_validation_aggregations
-            context['show_totals_row'] = (
-                # objects for all three are present
-                (validation_records_exist and share_validations_exist and manual_validations_exist)
-                # or objects for any two are present
-                or (validation_records_exist and share_validations_exist)
-                or (validation_records_exist and manual_validations_exist)
-                or (share_validations_exist and manual_validations_exist)
-            )
+            num_totals = [validation_records_exist, share_validations_exist, manual_validations_exist].count(True)
+            context['show_totals_row'] = num_totals > 1
 
             context['validation_record_totals'] = validation_record_totals
             context['share_validation_totals'] = share_validation_totals
