@@ -83,6 +83,10 @@ urlpatterns = [
          csv_import.import_qualtrics_csv, name='import_qualtrics_csv'),
     path('advanced/import/csv/qualtrics/confirm/',
          csv_import.confirm_import_qualtrics_csv, name='confirm_import_qualtrics_csv'),
+    path('advanced/import/csv/manual-validation/',
+         csv_import.import_manual_validation, name='import_manual_validation_csv'),
+    path('advanced/import/csv/manual-validation/confirm/',
+         csv_import.confirm_import_manual_validation, name='confirm_import_manual_validation_csv'),
 
     # AJAX urls
     path('ajax/keyword/<str:prefix>',

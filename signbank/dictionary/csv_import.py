@@ -8,13 +8,14 @@ import random
 import re
 import threading
 
+from _collections import defaultdict
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, reverse
@@ -26,7 +27,7 @@ from tagging.models import Tag, TaggedItem
 
 from .forms import CSVFileOnlyUpload, CSVUploadForm
 from .models import (Dataset, FieldChoice, Gloss, GlossTranslations, Language,
-                     ShareValidationAggregation, ValidationRecord)
+                     ManualValidationAggregation, ShareValidationAggregation, ValidationRecord)
 from .tasks import retrieve_videos_for_glosses
 
 User = get_user_model()
@@ -719,5 +720,182 @@ def confirm_import_qualtrics_csv(request):
             "responses_count": len(validation_records),
             "gloss_count": len(gloss_dict),
             "missing_gloss_question_pairs": missing_gloss_pk_question_pairs
+        }
+    )
+
+
+def _check_row_can_be_converted_to_integer(row, keys):
+    for key in keys:
+        if row[key]:
+            try:
+                int(row[key])
+            except ValueError:
+                raise ValidationError(
+                    f"Row for group {row['group']} - gloss {row['idgloss']} contains non-integer "
+                    f"{key.upper()} column value"
+                )
+
+
+@login_required
+@permission_required("dictionary.import_csv")
+def import_manual_validation(request):
+    """
+    Import ManualValidationAggregations from a CSV file
+    """
+    # Make sure that the session variables are flushed before using this view.
+    request.session.pop("group_row_map", None)
+    request.session.pop("glosses", None)
+
+    if request.method != "POST":
+        # If request type is not POST, return to the original form.
+        csv_form = CSVFileOnlyUpload()
+        return render(request, "dictionary/import_manual_validation_csv.html",
+                      {"import_csv_form": csv_form}, )
+
+    form = CSVFileOnlyUpload(request.POST, request.FILES)
+
+    if not form.is_valid():
+        # If form is not valid, set a error message and return to the original form.
+        messages.add_message(request, messages.ERROR,
+                             _("The provided CSV-file does not meet the requirements "
+                               "or there is some other problem."))
+        return render(request, "dictionary/import_manual_validation_csv.html",
+                      {"import_csv_form": form}, )
+
+    group_row_map = defaultdict(list)
+    group_gloss_count = defaultdict(int)
+    glosses = []
+    required_headers = [
+        "group",
+        "idgloss",
+        "yes",
+        "no",
+        "abstain or not sure",
+        "comments"
+    ]
+    try:
+        validation_record_reader = csv.DictReader(
+            codecs.iterdecode(form.cleaned_data["file"], "utf-8"),
+            delimiter=",",
+            quotechar='"'
+        )
+        missing_headers = set(required_headers) - set(validation_record_reader.fieldnames)
+        if missing_headers != set():
+            request.session.pop("group_row_map", None)
+            request.session.pop("glosses", None)
+            # Set a message to be shown so that the user knows what is going on.
+            messages.add_message(request, messages.ERROR,
+                                 _(f"CSV is missing required columns: {missing_headers}"))
+            return render(request,
+                              "dictionary/import_manual_validation_csv.html",
+                              {"import_csv_form": CSVFileOnlyUpload()}, )
+
+        for row in validation_record_reader:
+            if validation_record_reader.line_num == 1:
+                continue
+            _check_row_can_be_converted_to_integer(row, ["yes", "no", "abstain or not sure"])
+            group_row_map[row["group"]].append(row)
+            group_gloss_count[row["group"]] += 1
+            glosses.append(row["idgloss"].split(":")[1])
+
+    except ValidationError as e:
+        request.session.pop("group_row_map", None)
+        request.session.pop("glosses", None)
+        # Set a message to be shown so that the user knows what is going on.
+        messages.add_message(request, messages.ERROR, _("File contains non-compliant data:" + str(e)))
+        return render(request, "dictionary/import_manual_validation_csv.html",
+                      {"import_csv_form": CSVFileOnlyUpload()}, )
+
+    except csv.Error as e:
+        # Can't open file, remove session variables
+        request.session.pop("group_row_map", None)
+        request.session.pop("glosses", None)
+        # Set a message to be shown so that the user knows what is going on.
+        messages.add_message(request, messages.ERROR, _("Cannot open the file:" + str(e)))
+        return render(request, "dictionary/import_manual_validation_csv.html",
+                      {"import_csv_form": CSVFileOnlyUpload()}, )
+    except UnicodeDecodeError as e:
+        # File is not UTF-8 encoded.
+        messages.add_message(request, messages.ERROR, _("File must be UTF-8 encoded!"))
+        return render(request, "dictionary/import_manual_validation_csv.html",
+                      {"import_csv_form": CSVFileOnlyUpload()}, )
+
+    # Store dataset's id and the list of glosses to be added in session.
+    request.session["group_row_map"] = group_row_map
+    request.session["glosses"] = list(set(glosses))
+
+    return render(
+        request, "dictionary/import_manual_validation_csv_confirmation.html",
+        {
+            # iterating over defaultdicts causes issues in template rendering
+            "group_row_map": dict(group_row_map),
+            "group_gloss_count": dict(group_gloss_count)
+        }
+    )
+
+
+@login_required
+@permission_required("dictionary.import_csv")
+@transaction.atomic()
+def confirm_import_manual_validation(request):
+    """This view adds the data to database if the user confirms the action"""
+    if not request.method == "POST":
+        # If request method is not POST, redirect to the import form
+        return HttpResponseRedirect(reverse("dictionary:import_manual_validation_csv"))
+
+    if "cancel" in request.POST:
+        # If user cancels adding data, flush session variables
+        request.session.pop("group_row_map", None)
+        request.session.pop("glosses", None)
+        # Set a message to be shown so that the user knows what is going on.
+        messages.add_message(request, messages.WARNING, _("Cancelled adding CSV data."))
+        return HttpResponseRedirect(reverse("dictionary:import_manual_validation_csv"))
+
+    if not "confirm" in request.POST:
+        return HttpResponseRedirect(reverse("dictionary:import_manual_validation_csv"))
+
+    manual_validation_aggregations = []
+    missing_glosses = []
+
+    if "group_row_map" and "glosses" in request.session:
+        gloss_pk_list = request.session["glosses"]
+        gloss_dict = Gloss.objects.in_bulk(gloss_pk_list)
+
+        gloss_row_map = request.session["group_row_map"]
+
+        # Go through csv data
+        for group, rows in gloss_row_map.items():
+            for row in rows:
+                gloss = gloss_dict.get(int(row["idgloss"].split(":")[1]))
+                if not gloss:
+                    missing_glosses.append((group, row["idgloss"]))
+                    continue
+                sign_seen_yes = row["yes"]
+                sign_seen_no = row["no"]
+                sign_seen_not_sure = row["abstain or not sure"]
+                comments = row["comments"]
+                manual_validation_aggregations.append(ManualValidationAggregation(
+                    gloss=gloss,
+                    group=group,
+                    sign_seen_yes=int(sign_seen_yes) if sign_seen_yes else 0,
+                    sign_seen_no=int(sign_seen_no) if sign_seen_no else 0,
+                    sign_seen_not_sure=int(sign_seen_not_sure) if sign_seen_not_sure else 0,
+                    comments=comments
+                ))
+
+        ManualValidationAggregation.objects.bulk_create(manual_validation_aggregations)
+
+        del request.session["group_row_map"]
+        del request.session["glosses"]
+
+        # Set a message to be shown so that the user knows what is going on.
+        messages.add_message(request, messages.SUCCESS,
+                             _("ValidationRecords were added succesfully."))
+    return render(
+        request, "dictionary/import_manual_validation_csv_confirmation.html",
+        {
+            "manual_validation_aggregations": manual_validation_aggregations,
+            "manual_validation_aggregations_count": len(manual_validation_aggregations),
+            "missing_glosses": missing_glosses
         }
     )
