@@ -29,8 +29,10 @@ from .forms import CSVFileOnlyUpload, CSVUploadForm
 from .models import (Dataset, FieldChoice, Gloss, GlossTranslations, Language,
                      ManualValidationAggregation, ShareValidationAggregation, ValidationRecord)
 from .tasks import retrieve_videos_for_glosses
+from ..video.models import GlossVideo
 
 User = get_user_model()
+
 
 @login_required
 @permission_required('dictionary.import_csv')
@@ -567,7 +569,7 @@ def import_qualtrics_csv(request):
         )
 
         question_numbers = []
-        question_to_gloss_map = {}
+        question_to_glossvideo_map = {}
 
         for header in validation_record_reader.fieldnames:
             # The format of the three question headers pertaining to each gloss is described in
@@ -587,12 +589,12 @@ def import_qualtrics_csv(request):
             elif validation_record_reader.line_num == 2:
                 # Extract gloss pks from urls for each question number from the second line
                 # The second line is build something like {number}_Q1 - {video_url} - Have seen it or use it myself
-                # and each url is build as bellow, making glossvideo/ the stable part of the url:
-                # {host}/glossvideo/{gloss pk}/{gloss word}.{gloss pk}.{rest of video name}.{extension}
+                # and each url is build as bellow:
+                # {host}/video/signed_url/{token}/{video pk}/
                 # See docs/validation_result_model for more info
                 for question in question_numbers:
-                    gloss_pk = row[f"{question}_Q1_1"].split("glossvideo/")[1].split("/")[0]
-                    question_to_gloss_map[question] = int(gloss_pk)
+                    video_pk = row[f"{question}_Q1_1"].split("/")[-2]
+                    question_to_glossvideo_map[question] = int(video_pk)
 
             elif row["Status"] not in ("IP Address", "Imported"):
                 skipped_rows.append(row)
@@ -617,7 +619,7 @@ def import_qualtrics_csv(request):
     # Store dataset's id and the list of glosses to be added in session.
     request.session["validation_records"] = validation_records
     request.session["question_numbers"] = question_numbers
-    request.session["question_gloss_map"] = question_to_gloss_map
+    request.session["question_glossvideo_map"] = question_to_glossvideo_map
 
     return render(request, "dictionary/import_qualtrics_csv_confirmation.html",
                   {"validation_records": validation_records, "skipped_rows": skipped_rows})
@@ -636,7 +638,7 @@ def confirm_import_qualtrics_csv(request):
         # If user cancels adding data, flush session variables
         request.session.pop("validation_records", None)
         request.session.pop("question_numbers", None)
-        request.session.pop("question_gloss_map", None)
+        request.session.pop("question_glossvideo_map", None)
         # Set a message to be shown so that the user knows what is going on.
         messages.add_message(request, messages.WARNING, _("Cancelled adding CSV data."))
         return HttpResponseRedirect(reverse("dictionary:import_qualtrics_csv"))
@@ -649,17 +651,18 @@ def confirm_import_qualtrics_csv(request):
     missing_gloss_pk_question_pairs = {}
     bulk_tagged_items = []
 
-    if "validation_records" and "question_numbers" and "question_gloss_map" in request.session:
+    if "validation_records" and "question_numbers" and "question_glossvideo_map" in request.session:
         # Retrieve glosses
-        gloss_pk_list = request.session["question_gloss_map"].values()
-        gloss_dict = Gloss.objects.in_bulk(gloss_pk_list)
+        glossvideo_pk_list = request.session["question_glossvideo_map"].values()
+        glossvideo_dict = GlossVideo.objects.select_related("gloss").in_bulk(glossvideo_pk_list)
         gloss_content_type = ContentType.objects.get_for_model(Gloss)
         check_result_tag = Tag.objects.get(name=settings.TAG_VALIDATION_CHECK_RESULTS)
         ready_for_validation_tag = Tag.objects.get(name=settings.TAG_READY_FOR_VALIDATION)
 
         questions_numbers = request.session["question_numbers"]
-        question_gloss_map = request.session["question_gloss_map"]
+        question_glossvideo_map = request.session["question_glossvideo_map"]
         validation_records = request.session["validation_records"]
+        gloss_pks = []
 
         # Go through csv data
         for record in validation_records:
@@ -675,7 +678,7 @@ def confirm_import_qualtrics_csv(request):
                     sign_seen = ValidationRecord.SignSeenChoices.NOT_SURE.value
 
                 try:
-                    gloss = gloss_dict[question_gloss_map[question_number]]
+                    gloss = glossvideo_dict[question_glossvideo_map[question_number]].gloss
                     validation_records_added.append(ValidationRecord(
                         gloss=gloss,
                         sign_seen=ValidationRecord.SignSeenChoices(sign_seen),
@@ -684,11 +687,12 @@ def confirm_import_qualtrics_csv(request):
                         respondent_last_name=respondent_last_name,
                         comment=record.get(f"{question_number}_Q2_5_TEXT", ""),
                     ))
+                    gloss_pks.append(gloss.pk)
                 except KeyError:
-                    missing_gloss_pk_question_pairs[question_number] = question_gloss_map[
+                    missing_gloss_pk_question_pairs[question_number] = question_glossvideo_map[
                         question_number]
 
-        for gloss_pk in gloss_dict.keys():
+        for gloss_pk in gloss_pks:
             bulk_tagged_items.append(TaggedItem(
                 content_type=gloss_content_type,
                 object_id=gloss_pk,
@@ -701,13 +705,13 @@ def confirm_import_qualtrics_csv(request):
         TaggedItem.objects.bulk_create(bulk_tagged_items, ignore_conflicts=True)
         TaggedItem.objects.filter(
             content_type=gloss_content_type,
-            object_id__in=gloss_dict.keys(),
+            object_id__in=gloss_pks,
             tag=ready_for_validation_tag
         ).delete()
 
         del request.session["validation_records"]
         del request.session["question_numbers"]
-        del request.session["question_gloss_map"]
+        del request.session["question_glossvideo_map"]
 
         # Set a message to be shown so that the user knows what is going on.
         messages.add_message(request, messages.SUCCESS,
@@ -718,7 +722,7 @@ def confirm_import_qualtrics_csv(request):
             "validation_records_added": validation_records_added,
             "validation_record_count": len(validation_records_added),
             "responses_count": len(validation_records),
-            "gloss_count": len(gloss_dict),
+            "gloss_count": len(gloss_pks),
             "missing_gloss_question_pairs": missing_gloss_pk_question_pairs
         }
     )

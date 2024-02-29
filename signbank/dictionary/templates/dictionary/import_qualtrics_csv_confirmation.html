@@ -37,9 +37,9 @@
         </div>
         {% if missing_gloss_question_pairs %}
           <div>
-            <h4>{% blocktrans %}Could not find glosses for some questions{% endblocktrans %}</h4>
-            {% for question, gloss_pk in missing_gloss_question_pairs.items %}
-            <p>{% blocktrans %}Question number:{% endblocktrans %} {{ question }}{% blocktrans %} - Gloss PK:{% endblocktrans %} {{ gloss_pk }}</p>
+            <h4>{% blocktrans %}Could not find glossvideos (and therefore glosses) for some questions{% endblocktrans %}</h4>
+            {% for question, glossvideo_pk in missing_gloss_question_pairs.items %}
+            <p>{% blocktrans %}Question number:{% endblocktrans %} {{ question }}{% blocktrans %} - GlossVideo PK:{% endblocktrans %} {{ glossvideo_pk }}</p>
             {% endfor %}
           </div>
         {% endif %}
