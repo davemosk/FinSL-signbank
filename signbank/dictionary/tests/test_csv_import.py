@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import copy
 import csv
 import random
+import uuid
 from unittest import mock
 
 from django.conf import settings
@@ -16,8 +17,10 @@ from django_comments import get_model as comments_get_model
 from guardian.shortcuts import assign_perm
 from tagging.models import Tag, TaggedItem
 
-from signbank.dictionary.models import SignLanguage, Dataset, FieldChoice, Gloss, Language, \
-    ManualValidationAggregation, ValidationRecord
+from signbank.dictionary.models import (
+    SignLanguage, Dataset, FieldChoice, Gloss, Language,
+    ManualValidationAggregation, ValidationRecord)
+from signbank.video.models import GlossVideo
 
 
 class ShareCSVImportTestCase(TestCase):
@@ -142,7 +145,8 @@ class ShareCSVImportTestCase(TestCase):
             "glosses_new": glosses
         })
         s.save()
-        with mock.patch('signbank.dictionary.csv_import.retrieve_videos_for_glosses') as mock_tasks:
+        with mock.patch(
+                'signbank.dictionary.csv_import.retrieve_videos_for_glosses') as mock_tasks:
             mock_tasks.return_value = None
             response = self.client.post(
                 reverse("dictionary:confirm_import_nzsl_share_gloss_csv"),
@@ -267,9 +271,33 @@ class QualtricsCSVImportTestCase(TestCase):
         self.signlanguage = SignLanguage.objects.create(pk=2, name="testsignlanguage",
                                                         language_code_3char="tst")
         self.dataset = Dataset.objects.create(name="testdataset", signlanguage=self.signlanguage)
+        validation_video_type = FieldChoice.objects.get(
+            field="video_type", english_name="validation"
+        )
+
         self.gloss_1 = Gloss.objects.create(idgloss="testgloss:1", dataset=self.dataset)
+        testfile = SimpleUploadedFile(
+            "testvid.mp4", b'data \x00\x01', content_type="video/mp4")
+        self.glossvideo_1 = GlossVideo.objects.create(
+            gloss=self.gloss_1,
+            is_public=True,
+            dataset=self.gloss_1.dataset,
+            videofile=testfile,
+            video_type=validation_video_type,
+            title="Main"
+        )
         Tag.objects.add_tag(self.gloss_1, settings.TAG_READY_FOR_VALIDATION)
         self.gloss_2 = Gloss.objects.create(idgloss="testgloss:2", dataset=self.dataset)
+        testfile_2 = SimpleUploadedFile(
+            "testvid.mp4", b'data \x00\x01', content_type="video/mp4")
+        self.glossvideo_2 = GlossVideo.objects.create(
+            gloss=self.gloss_2,
+            is_public=True,
+            dataset=self.gloss_2.dataset,
+            videofile=testfile_2,
+            video_type=validation_video_type,
+            title="Main"
+        )
         Tag.objects.add_tag(self.gloss_2, settings.TAG_READY_FOR_VALIDATION)
 
         # Assign view permissions to dataset for user
@@ -298,13 +326,13 @@ class QualtricsCSVImportTestCase(TestCase):
             "ResponseId": "R_4PuIGsoEF7g76aE",
             "RecipientLastName": "Doe",
             "RecipientFirstName": "John",
-            "1_Q1_1": "unimportant_text/glossvideo/1/gloss_name.1.more_unimportant_text",
+            "1_Q1_1": f"unimportant_text/video/signed_url/{uuid.uuid4()}/1/ - Have seen this myself",
             "1_Q2": "",
             "1_Q2_5_TEXT": "",
-            "2_Q1_1": "unimportant_text/glossvideo/2/gloss_name.2.more_unimportant_text",
+            "2_Q1_1": f"unimportant_text/video/signed_url/{uuid.uuid4()}/2/ - Have seen this myself",
             "2_Q2": "",
             "2_Q2_5_TEXT": "comment",
-            "3_Q1_1": "unimportant_text/glossvideo/222/gloss_name.222.more_unimportant_text",
+            "3_Q1_1": f"unimportant_text/video/signed_url/{uuid.uuid4()}/3/ - Have seen this myself",
             "3_Q2": "",
             "3_Q2_5_TEXT": ""
         },
@@ -435,7 +463,7 @@ class QualtricsCSVImportTestCase(TestCase):
         session = self.client.session
         self.assertListEqual(expected_validation_records, session["validation_records"])
         self.assertListEqual(["1", "2", "3"], session["question_numbers"])
-        self.assertDictEqual({"1": 1, "2": 2, "3": 222}, session["question_gloss_map"])
+        self.assertDictEqual({"1": 1, "2": 2, "3": 3}, session["question_glossvideo_map"])
 
     def test_confirmation_view_confirm_gloss_creation(self):
         """
@@ -447,7 +475,8 @@ class QualtricsCSVImportTestCase(TestCase):
         s.update({
             "validation_records": csv_content[2:5],
             "question_numbers": ["1", "2", "3"],
-            "question_gloss_map": {"1": self.gloss_1.pk, "2": self.gloss_2.pk, "3": 222}
+            "question_glossvideo_map": {"1": self.glossvideo_1.pk, "2": self.glossvideo_2.pk,
+                                        "3": 222}
         })
         s.save()
 
@@ -523,7 +552,8 @@ class QualtricsCSVImportTestCase(TestCase):
         s.update({
             "validation_records": [csv_content[5]],
             "question_numbers": ["1", "2", "3"],
-            "question_gloss_map": {"1": self.gloss_1.pk, "2": self.gloss_2.pk, "3": 222}
+            "question_glossvideo_map": {"1": self.glossvideo_1.pk, "2": self.glossvideo_2.pk,
+                                        "3": 222}
         })
         s.save()
 
