@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import csv
 import json
 from collections import defaultdict
+from uuid import uuid4
 
 import djqscsv
 from django.conf import settings
@@ -12,16 +13,18 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.aggregates import StringAgg
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, F, OuterRef, Prefetch, Q, Value
+from django.db.models import Count, F, OuterRef, Prefetch, Q, Sum, Value
 from django.db.models.fields import CharField, NullBooleanField
 from django.db.models.functions import Concat
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.translation import get_language
 from django.utils.translation import ugettext as _
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
+from django_comments.models import Comment
 from guardian.shortcuts import (get_objects_for_user, get_perms,
                                 get_users_with_perms)
 from reversion.models import Version
@@ -29,12 +32,13 @@ from tagging.models import Tag, TaggedItem
 
 from ..comments import CommentTagForm
 from ..video.forms import GlossVideoForGlossForm
-from ..video.models import GlossVideo
+from ..video.models import GlossVideo, GlossVideoToken
 from .forms import (GlossRelationForm, GlossRelationSearchForm,
                     GlossSearchForm, MorphologyForm, RelationForm, TagsAddForm)
 from .models import (Dataset, FieldChoice, Gloss, GlossRelation,
-                     GlossTranslations, GlossURL, Lemma, MorphologyDefinition,
-                     Relation, RelationToForeignSign, Translation)
+                     GlossTranslations, GlossURL, Lemma, ManualValidationAggregation, MorphologyDefinition,
+                     Relation, RelationToForeignSign, ShareValidationAggregation, Translation,
+                     ValidationRecord)
 
 
 class GlossListView(ListView):
@@ -77,6 +81,8 @@ class GlossListView(ListView):
             return self.subquery_render_to_csv_response(context)
         elif self.request.GET.get("format") == "CSV-ready-for-validation":
             return self.ready_for_validation_render_to_csv_response(context)
+        elif self.request.GET.get("format") == "CSV-validation-results":
+            return self.validation_results_render_to_csv_response(context)
         else:
             return super(GlossListView, self).render_to_response(context)
 
@@ -275,12 +281,14 @@ class GlossListView(ListView):
             settings.TAG_READY_FOR_VALIDATION
         )
 
+        # three types of GlossVideos are imported for validation: illustrations, usage examples
+        # and videos.
+        # Only the videos have title Main and validation video-type
         gloss_video_qs = GlossVideo.objects.select_related("video_type").filter(
             video_type__isnull=False,
             video_type__field="video_type",
             video_type__english_name="validation",
             videofile__isnull=False,
-            is_public=True,
         )
 
         csv_queryset = (
@@ -311,13 +319,133 @@ class GlossListView(ListView):
         ]
         writer.writerow(headers)
 
+        glossvideo_tokens = []
+
         for gloss_record in csv_queryset:
             row = [gloss_record.idgloss, gloss_record.gloss_main_aggregate]
-            try:
-                validation_video = gloss_record.validation_videos[0]
-                row.append(validation_video.videofile.storage.public_url(validation_video.videofile.name))
-            except IndexError:
+            # In theory there should only be one video matching the above query, or none.
+            if video := next((v for v in gloss_record.validation_videos if v.is_video), None):
+                token = uuid4()
+                glossvideo_tokens.append(GlossVideoToken(token=token, video=video))
+                url = reverse(
+                    "video:get_signed_glossvideo_url",
+                    kwargs={"token": token, "videoid": video.pk}
+                )
+                row.append(self.request.build_absolute_uri(url))
+            else:
                 row.append("")
+                row.append("")
+            writer.writerow(row)
+
+        GlossVideoToken.objects.bulk_create(glossvideo_tokens)
+
+        return response
+
+    def validation_results_render_to_csv_response(self, context):
+        if not self.request.user.has_perm("dictionary.export_csv"):
+            msg = _("You do not have permissions to export to CSV.")
+            messages.error(self.request, msg)
+            raise PermissionDenied(msg)
+
+        # Create the HttpResponse object with the appropriate CSV header.
+        # It is a Python file-like object.
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response[
+            "Content-Disposition"
+        ] = 'attachment; filename="validation-results-export.csv"'
+
+        # Set up for outputting CSV.
+        writer = csv.writer(response)
+
+        # The queryset may or may not already be filtered for the validation:check-results tag.
+        # We have to make sure it is filtered by the tag, so we are filtering again
+        check_results_qs = TaggedItem.objects.get_by_model(
+            self.get_queryset(),
+            settings.TAG_VALIDATION_CHECK_RESULTS
+        )
+
+        sign_seen_yes_validation_records = ValidationRecord.objects.filter(
+            sign_seen=ValidationRecord.SignSeenChoices.YES
+        )
+        sign_seen_no_validation_records = ValidationRecord.objects.filter(
+            sign_seen=ValidationRecord.SignSeenChoices.NO
+        )
+        sign_seen_not_sure_validation_records = ValidationRecord.objects.filter(
+            sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE
+        )
+
+        csv_queryset = (
+            check_results_qs
+            .prefetch_related(
+                Prefetch(
+                    "validation_records", queryset=sign_seen_yes_validation_records,
+                    to_attr="yes_vrs"
+                ),
+                Prefetch(
+                    "validation_records", queryset=sign_seen_no_validation_records,
+                    to_attr="no_vrs"
+                ), Prefetch(
+                    "validation_records", queryset=sign_seen_not_sure_validation_records,
+                    to_attr="not_sure_vrs"
+                ),
+                Prefetch("share_validation_aggregations", to_attr="share_vas"),
+                Prefetch("manual_validation_aggregation", to_attr="manual_vas")
+            )
+        )
+        gloss_pks = csv_queryset.values_list("pk", flat=True)
+        gloss_share_comment_map = {pk: [] for pk in gloss_pks}
+        share_comments = Comment.objects.filter(
+            content_type=ContentType.objects.get_for_model(Gloss),
+            object_pk__in=[str(pk) for pk in gloss_pks],
+            is_public=False
+        )
+        for comment in share_comments:
+            gloss_share_comment_map[int(comment.object_pk)].append(comment)
+
+        headers = [
+            "idgloss",
+            "have seen sign - yes",
+            "have seen sign - no",
+            "have seen sign - not sure",
+            "total",
+            "comments"
+        ]
+        writer.writerow(headers)
+
+        for gloss_record in csv_queryset:
+            sign_seen_yes = sum([
+                len(gloss_record.yes_vrs),
+                sum([share_va.agrees for share_va in gloss_record.share_vas]),
+                sum([manual_va.sign_seen_yes for manual_va in gloss_record.manual_vas])
+            ])
+            sign_seen_no = sum([
+                len(gloss_record.no_vrs),
+                sum([share_va.disagrees for share_va in gloss_record.share_vas]),
+                sum([manual_va.sign_seen_no for manual_va in gloss_record.manual_vas])
+            ])
+            sign_seen_not_sure = sum([
+                len(gloss_record.not_sure_vrs),
+                sum([manual_va.sign_seen_not_sure for manual_va in gloss_record.manual_vas])
+            ])
+            total = sum([sign_seen_yes, sign_seen_no, sign_seen_not_sure])
+            records_with_comments = gloss_record.yes_vrs + gloss_record.no_vrs + gloss_record.not_sure_vrs
+            records_with_comments = [x for x in records_with_comments if x.comment != ""]
+            comment = ""
+            for record in records_with_comments:
+                comment += f"{record.respondent_first_name} {record.respondent_last_name}: {record.comment} | "
+            for share_comment in gloss_share_comment_map[gloss_record.pk]:
+                comment += f"{share_comment.user_name}: {share_comment.comment} | "
+            for manual_va in gloss_record.manual_vas:
+                if manual_va.comments:
+                    comment += f"{manual_va.group}: {manual_va.comments} | "
+            row = [
+                gloss_record.idgloss,
+                sign_seen_yes,
+                sign_seen_no,
+                sign_seen_not_sure,
+                total,
+                comment
+            ]
             writer.writerow(row)
 
         return response
@@ -769,6 +897,89 @@ class GlossDetailView(DetailView):
                                       'Translations', translations_old_str, translations_new_str))
 
             context['revisions'] = revisions
+
+            gloss_content_type = ContentType.objects.get_for_model(Gloss)
+            share_comments = Comment.objects.filter(content_type=gloss_content_type, object_pk=self.object.pk, is_public=False)
+
+            validation_records = ValidationRecord.objects.filter(gloss=self.object)
+            validation_records_exist = validation_records.exists()
+            validation_record_totals = {
+                "sign_seen_yes": validation_records.filter(
+                    sign_seen=ValidationRecord.SignSeenChoices.YES).count(),
+
+                "sign_seen_no": validation_records.filter(
+                    sign_seen=ValidationRecord.SignSeenChoices.NO).count(),
+
+                "sign_seen_not_sure": validation_records.filter(
+                    sign_seen=ValidationRecord.SignSeenChoices.NOT_SURE).count()
+            }
+            validation_record_totals["totals"] = sum([
+                validation_record_totals["sign_seen_yes"],
+                validation_record_totals["sign_seen_no"],
+                validation_record_totals["sign_seen_not_sure"]
+            ])
+
+            share_validation_aggregations = ShareValidationAggregation.objects.filter(
+                gloss=self.object)
+            share_validations_exist = share_validation_aggregations.exists()
+            share_validation_totals = {"agrees": 0, "disagrees": 0, "totals":0}
+            for share_validation in share_validation_aggregations:
+                share_validation_totals["agrees"] += share_validation.agrees
+                share_validation_totals["disagrees"] += share_validation.disagrees
+            share_validation_totals["totals"] = sum([
+                share_validation_totals["agrees"],
+                share_validation_totals["disagrees"]
+            ])
+
+            manual_validation_aggregations = ManualValidationAggregation.objects.filter(
+                gloss=self.object
+            )
+            manual_validations_exist = manual_validation_aggregations.exists()
+            manual_validations_totals = {
+                "sign_seen_yes": 0, "sign_seen_no": 0, "sign_seen_not_sure": 0, "totals": 0
+            }
+            for manual_validation in manual_validation_aggregations:
+                manual_validations_totals["sign_seen_yes"] += manual_validation.sign_seen_yes
+                manual_validations_totals["sign_seen_no"] += manual_validation.sign_seen_no
+                manual_validations_totals["sign_seen_not_sure"] += manual_validation.sign_seen_not_sure
+            manual_validations_totals["totals"] = sum([
+                manual_validations_totals["sign_seen_yes"],
+                manual_validations_totals["sign_seen_no"],
+                manual_validations_totals["sign_seen_not_sure"]
+            ])
+
+            totals = {
+                "sign_seen_yes": sum([
+                    validation_record_totals["sign_seen_yes"],
+                    share_validation_totals["agrees"],
+                    manual_validations_totals["sign_seen_yes"]
+                ]),
+                "sign_seen_no": sum([
+                    validation_record_totals["sign_seen_no"],
+                    share_validation_totals["disagrees"],
+                    manual_validations_totals["sign_seen_no"]
+                ]),
+                "sign_seen_not_sure": sum([
+                    validation_record_totals["sign_seen_not_sure"],
+                    manual_validations_totals["sign_seen_not_sure"]
+                ]),
+                "overall": sum([
+                    validation_record_totals["totals"],
+                    share_validation_totals["totals"],
+                    manual_validations_totals["totals"]
+                ])
+            }
+            context['share_comments'] = share_comments
+            context['validation_records'] = validation_records
+            context['share_validations'] = share_validation_aggregations
+            context['manual_validations'] = manual_validation_aggregations
+            num_totals = [validation_records_exist, share_validations_exist, manual_validations_exist].count(True)
+            context['show_totals_row'] = num_totals > 1
+
+            context['validation_record_totals'] = validation_record_totals
+            context['share_validation_totals'] = share_validation_totals
+            context['manual_validations_totals'] = manual_validations_totals
+            context['totals'] = totals
 
         # Pass info about which fields we want to see
         gl = context['gloss']

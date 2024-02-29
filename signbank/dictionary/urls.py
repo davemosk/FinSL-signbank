@@ -6,7 +6,7 @@ from django.urls import path
 from django.views.generic.base import RedirectView
 
 # Views
-from . import adminviews, delete, publicviews, update, views
+from . import adminviews, csv_import, delete, publicviews, update, views
 
 # Application namespace
 app_name = 'dictionary'
@@ -72,9 +72,21 @@ urlpatterns = [
 
     # CSV import urls
     path('advanced/import/csv/',
-         update.import_gloss_csv, name='import_gloss_csv'),
+         csv_import.import_gloss_csv, name='import_gloss_csv'),
     path('advanced/import/csv/confirm/',
-         update.confirm_import_gloss_csv, name='confirm_import_gloss_csv'),
+         csv_import.confirm_import_gloss_csv, name='confirm_import_gloss_csv'),
+    path('advanced/import/csv/nzsl-share/',
+         csv_import.import_nzsl_share_gloss_csv, name='import_nzsl_share_gloss_csv'),
+    path('advanced/import/csv/nzsl-share/confirm/',
+         csv_import.confirm_import_nzsl_share_gloss_csv, name='confirm_import_nzsl_share_gloss_csv'),
+    path('advanced/import/csv/qualtrics/',
+         csv_import.import_qualtrics_csv, name='import_qualtrics_csv'),
+    path('advanced/import/csv/qualtrics/confirm/',
+         csv_import.confirm_import_qualtrics_csv, name='confirm_import_qualtrics_csv'),
+    path('advanced/import/csv/manual-validation/',
+         csv_import.import_manual_validation, name='import_manual_validation_csv'),
+    path('advanced/import/csv/manual-validation/confirm/',
+         csv_import.confirm_import_manual_validation, name='confirm_import_manual_validation_csv'),
 
     # AJAX urls
     path('ajax/keyword/<str:prefix>',

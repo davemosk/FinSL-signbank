@@ -373,3 +373,15 @@ div.btn-default > a.dropdown-toggle {
 div.btn-default > a.dropdown-toggle:hover {
     text-decoration: none;
 }
+
+.normal-font {
+    font-weight: normal;
+}
+
+.top-margin {
+    margin-top: 10px;
+}
+
+.bottom-margin-100 {
+    margin-bottom: 100px;
+}

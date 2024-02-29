@@ -2,7 +2,6 @@
 """Models for the Signbank dictionary/corpus."""
 from __future__ import unicode_literals
 
-import json
 import re
 from collections import OrderedDict
 from itertools import groupby
@@ -14,8 +13,7 @@ from django.db import OperationalError, models
 from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
 from tagging.models import Tag
-from tagging.registry import AlreadyRegistered
-from tagging.registry import register as tagging_register
+from tagging.registry import AlreadyRegistered, register as tagging_register
 
 
 class Dataset(models.Model):
@@ -594,7 +592,9 @@ class Gloss(models.Model):
                                        related_name="age_variation", blank=True, null=True, on_delete=models.SET_NULL)
 
     # lemma
-    lemma = models.ForeignKey('Lemma', verbose_name=_("Lemma"), null=True, on_delete=models.SET_NULL)
+    lemma = models.ForeignKey('Lemma', verbose_name=_("Lemma"), null=True, blank=True, on_delete=models.SET_NULL)
+
+    nzsl_share_id = models.CharField(max_length=255, default="", blank=True)
 
     def __str__(self):
         return self.idgloss
@@ -786,6 +786,72 @@ class MorphologyDefinition(models.Model):
 
     def __str__(self):
         return str(self.morpheme.idgloss) + ' is ' + str(self.role) + ' of ' + str(self.parent_gloss.idgloss)
+
+
+class ShareValidationAggregation(models.Model):
+    """
+    Captures how many people on NZSL Share agree or disagree with a gloss
+    """
+    gloss = models.ForeignKey(Gloss, related_name="share_validation_aggregations",
+                              on_delete=models.CASCADE)
+    agrees = models.PositiveIntegerField()
+    disagrees = models.PositiveIntegerField()
+
+
+class ManualValidationAggregation(models.Model):
+    """
+    Captures aggregated validation of manual records
+    """
+    gloss = models.ForeignKey(Gloss, related_name="manual_validation_aggregation",
+                              on_delete=models.CASCADE)
+    group = models.CharField(
+        default="",
+        max_length=255,
+        help_text="The group the manual validation round was conducted for",
+    )
+    sign_seen_yes = models.PositiveIntegerField()
+    sign_seen_no = models.PositiveIntegerField()
+    sign_seen_not_sure = models.PositiveIntegerField()
+    comments = models.TextField(
+        default="", blank=True,
+        help_text="Optional comments made about the gloss during manual validation"
+    )
+
+
+class ValidationRecord(models.Model):
+    """Record Qualtrics validation result for a gloss """
+
+    class SignSeenChoices(models.TextChoices):
+        YES = "yes", "Yes"
+        NO = "no", "No"
+        NOT_SURE = "not_sure", "Not sure"
+
+    gloss = models.ForeignKey(Gloss, related_name="validation_records", on_delete=models.CASCADE)
+    sign_seen = models.CharField(
+        max_length=50, choices=SignSeenChoices.choices,
+        help_text="Result of the survey question 'Have seen it or use it myself'"
+    )
+    response_id = models.CharField(
+        max_length=255, help_text="Identifier of specific survey result in Qualtrics"
+    )  # can potentially make this unique
+    respondent_first_name = models.CharField(
+        max_length=255, default="", help_text="Survey respondents first name"
+    )
+    respondent_last_name = models.CharField(
+        max_length=255, default="", help_text="Survey respondents last name"
+    )
+    comment = models.TextField(
+        default="", help_text="Optional comment the survey respondent can leave about the gloss"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['gloss', 'response_id'],
+                name='unique_gloss_response_pair'
+            )
+        ]
+
 
 
 # Register Models for django-tagging to add wrappers around django-tagging API.

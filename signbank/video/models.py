@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import datetime
 import mimetypes
 import os
+import uuid
 
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
@@ -265,3 +266,8 @@ class GlossVideo(models.Model):
 
     def __str__(self):
         return self.videofile.name
+
+
+class GlossVideoToken(models.Model):
+    token = models.UUIDField(default=uuid.uuid4)
+    video = models.ForeignKey(to=GlossVideo, on_delete=models.CASCADE)

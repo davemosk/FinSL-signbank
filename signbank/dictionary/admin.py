@@ -10,16 +10,16 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.forms import CheckboxSelectMultiple, ModelForm, Textarea
 from django.utils.translation import ugettext as _
-from django.utils.translation import ugettext_lazy as _lazy
 from guardian.admin import GuardedModelAdmin
 from modeltranslation.admin import TranslationAdmin as ModelTranslationAdmin
 from reversion.admin import VersionAdmin
 from tagging.models import Tag, TaggedItem
 
-from ..video.admin import GlossVideoInline
 from .models import (AllowedTags, Dataset, Dialect, FieldChoice, Gloss, Lemma,
                      GlossRelation, GlossTranslations, GlossURL, Language,
-                     SignLanguage, Translation)
+                     ManualValidationAggregation, ShareValidationAggregation,
+                     SignLanguage, Translation, ValidationRecord)
+from ..video.admin import GlossVideoInline
 
 
 class TagListFilter(admin.SimpleListFilter):
@@ -183,7 +183,7 @@ class GlossAdmin(VersionAdmin):
     actions = [publish, unpublish, exclude_from_ecv, include_in_ecv]
 
     fieldsets = ((None, {'fields': ('dataset', 'assigned_user', 'published', 'exclude_from_ecv', 'id', 'idgloss', 'idgloss_mi', 'wordclasses', 'notes', 'hint', 'signer', 'filmbatch', 'concise',
-                                    'lemma')},),
+                                    'lemma', 'nzsl_share_id')},),
                  (_('Created/Updated'), {'fields': ('created_at',
                   'created_by', 'updated_at', 'updated_by')},),
                  (_('Morphology'), {'fields': ('inflection_temporal', 'inflection_manner_degree', 'inflection_plural', 'number_incorporated', 'locatable', 'directional',
@@ -271,10 +271,14 @@ class SignLanguageAdmin(VersionAdmin, ModelTranslationAdmin):
     inlines = [DialectInline]
 
 
+class ShareValidationAggregationAdmin(VersionAdmin):
+    models = ShareValidationAggregation
+    list_display = ('gloss', 'agrees', 'disagrees')
+
+
 class FieldChoiceAdmin(admin.ModelAdmin):
     model = FieldChoice
     list_display = ('field', 'english_name', 'machine_value',)
-
 
 
 class AssignedGlossInline(admin.StackedInline):
@@ -290,6 +294,51 @@ class AssignedGlossInline(admin.StackedInline):
         return False
 
 
+class InputFilter(admin.SimpleListFilter):
+    template = 'admin/input_filter.html'
+
+    def lookups(self, request, model_admin):
+        # Dummy, required to show the filter.
+        return ((),)
+
+    def choices(self, changelist):
+        # Grab only the "all" option.
+        all_choice = next(super().choices(changelist))
+        all_choice['query_parts'] = (
+            (k, v)
+            for k, v in changelist.get_filters_params().items()
+            if k != self.parameter_name
+        )
+        yield all_choice
+
+
+class GlossFilter(InputFilter):
+    parameter_name = 'gloss'
+    title = _('Gloss')
+
+    def queryset(self, request, queryset):
+        if self.value() is not None:
+            gloss = self.value()
+
+            return queryset.filter(
+                models.Q(gloss__idgloss__contains=gloss)
+            )
+
+
+class ManualValidationAggregationAdmin(admin.ModelAdmin):
+    model = ManualValidationAggregation
+    list_display = ("gloss", "group", "sign_seen_yes", "sign_seen_no", "sign_seen_not_sure")
+    search_fields = ["group"]
+    list_filter = [GlossFilter, "group"]
+
+
+class ValidationRecordAdmin(admin.ModelAdmin):
+    model = ValidationRecord
+    list_display = ("gloss", "response_id", "sign_seen")
+    search_fields = ["response_id"]
+    list_filter = [GlossFilter, "sign_seen"]
+
+
 class UserAdmin(AuthUserAdmin):
     inlines = [AssignedGlossInline]
 
@@ -302,6 +351,9 @@ admin.site.register(Dataset, DatasetAdmin)
 admin.site.register(GlossRelation, GlossRelationAdmin)
 admin.site.register(AllowedTags, AllowedTagsAdmin)
 admin.site.register(Lemma)
+admin.site.register(ShareValidationAggregation, ShareValidationAggregationAdmin)
+admin.site.register(ManualValidationAggregation, ManualValidationAggregationAdmin)
+admin.site.register(ValidationRecord, ValidationRecordAdmin)
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)

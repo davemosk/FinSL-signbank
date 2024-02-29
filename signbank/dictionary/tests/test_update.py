@@ -3,12 +3,10 @@ from __future__ import unicode_literals
 
 import os
 
-from django.test import TestCase
-from django.test import Client
-from django.urls import reverse
 from django.contrib.auth.models import User, Permission
 from django.core.files.base import ContentFile
-
+from django.test import Client, TestCase
+from django.urls import reverse
 from guardian.shortcuts import assign_perm
 
 from signbank.dictionary.models import SignLanguage, Dataset, Gloss, Language
