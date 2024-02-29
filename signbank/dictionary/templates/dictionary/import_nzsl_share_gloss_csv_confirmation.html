@@ -30,6 +30,21 @@
         <input class='btn btn-primary' name='cancel' type='submit' value='{% blocktrans %}Cancel{% endblocktrans %}'>
       </form>
     {% endif %}
+    {% if skipped_existing_glosses %}
+      <div>
+        <h4>{% blocktrans %}Some existing glosses have the following NZSL Share ids already associated to them{% endblocktrans %}</h4>
+        <table class="table">
+          <th>NZSL Share ID</th>
+          <th>Share gloss data</th>
+          {% for gloss_data in skipped_existing_glosses %}
+            <tr>
+              <td>{{ gloss_data.id }}</td>
+              <td>{{ gloss_data.word }}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    {% endif %}
 
     {% if glosses_added %}
         <h3>{% blocktrans %}The following glosses were added to{% endblocktrans %} <span class="label label-default">{{dataset}}</span></h3>
