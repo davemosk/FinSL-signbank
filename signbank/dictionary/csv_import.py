@@ -650,6 +650,7 @@ def confirm_import_qualtrics_csv(request):
     validation_records = []
     missing_gloss_pk_question_pairs = {}
     bulk_tagged_items = []
+    gloss_pks = set()
 
     if "validation_records" and "question_numbers" and "question_glossvideo_map" in request.session:
         # Retrieve glosses
@@ -662,7 +663,6 @@ def confirm_import_qualtrics_csv(request):
         questions_numbers = request.session["question_numbers"]
         question_glossvideo_map = request.session["question_glossvideo_map"]
         validation_records = request.session["validation_records"]
-        gloss_pks = []
 
         # Go through csv data
         for record in validation_records:
@@ -687,7 +687,7 @@ def confirm_import_qualtrics_csv(request):
                         respondent_last_name=respondent_last_name,
                         comment=record.get(f"{question_number}_Q2_5_TEXT", ""),
                     ))
-                    gloss_pks.append(gloss.pk)
+                    gloss_pks.add(gloss.pk)
                 except KeyError:
                     missing_gloss_pk_question_pairs[question_number] = question_glossvideo_map[
                         question_number]

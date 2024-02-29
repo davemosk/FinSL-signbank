@@ -490,6 +490,9 @@ class QualtricsCSVImportTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
         self.assertDictEqual(response.context["missing_gloss_question_pairs"], {"3": 222})
+        self.assertEqual(response.context["validation_record_count"], 6)
+        self.assertEqual(response.context["responses_count"], 3)
+        self.assertEqual(response.context["gloss_count"], 2)
 
         # check the details of the validation records
         validation_qs_gloss_1 = ValidationRecord.objects.filter(gloss=self.gloss_1)
