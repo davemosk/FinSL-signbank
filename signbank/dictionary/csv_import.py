@@ -231,10 +231,23 @@ def import_nzsl_share_gloss_csv(request):
         for row in glossreader:
             if glossreader.line_num == 1:
                 continue
-            if row["id"] not in existing_nzsl_share_ids:
-                new_glosses.append(row)
+            if row["id"] in existing_nzsl_share_ids:
+
+                # nzsl_share_id is not a reliable index, due to manual intervention
+                try:
+                    gloss = Gloss.objects.filter(nzsl_share_id=row["id"]).get()
+                except (Gloss.DoesNotExist, Gloss.MultipleObjectsReturned) as e:
+                    print(e)
+                    continue
+
+                # if gloss has video/s we skip it, otherwise we add it anyway
+                if gloss.glossvideo_set.all().exists():
+                    skipped_existing_glosses.append(row)
+                else:
+                    new_glosses.append(row)
             else:
-                skipped_existing_glosses.append(row)
+                new_glosses.append(row)
+
     except csv.Error as e:
         # Can't open file, remove session variables
         request.session.pop("dataset_id", None)
