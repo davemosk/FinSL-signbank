@@ -197,6 +197,39 @@ class ShareCSVImportTestCase(TestCase):
         with self.assertRaises(AssertionError):
             self.assertListEqual([csv_content[1]], response.context["skipped_existing_glosses"])
 
+    def test_duplicate_share_ids_existing_on_glosses_with_no_videos_are_skipped(self):
+        """
+        Test a csv file row. If there is more than one existing gloss matching the
+        nzsl_share_id, gracefully skip the row regardless of whether the glosses have
+        videos or not.
+        """
+        file_name = "test.csv"
+        csv_content = [copy.deepcopy(self._csv_content), copy.deepcopy(self._csv_content)]
+        csv_content[1]["id"] = "12345"
+
+        with open(file_name, "w") as file:
+            writer = csv.writer(file)
+            writer.writerow(csv_content[0].keys())
+            for row in csv_content:
+                writer.writerow(row.values())
+        data = open(file_name, "rb")
+        file = SimpleUploadedFile(
+            content=data.read(), name=data.name, content_type="content/multipart"
+        )
+        # Same nzsl_share_id
+        Gloss.objects.create(dataset=self.dataset, idgloss="Share:11", nzsl_share_id="12345")
+        Gloss.objects.create(dataset=self.dataset, idgloss="Share:12", nzsl_share_id="12345")
+        response = self.client.post(
+            reverse('dictionary:import_nzsl_share_gloss_csv'),
+            {"dataset": self.dataset.pk, "file": file},
+            format="multipart"
+        )
+        self.assertEqual(response.status_code, 200)
+        session = self.client.session
+        self.assertEqual(self.dataset.pk, session["dataset_id"])
+        self.assertListEqual([csv_content[0]], session["glosses_new"])
+        self.assertListEqual([csv_content[1]], response.context["skipped_existing_glosses"])
+
     def test_confirmation_view_confirm_gloss_creation(self):
         """
         Test that the confirm NZSLShare import csv view can successfully create a gloss and

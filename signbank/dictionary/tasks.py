@@ -10,7 +10,6 @@ from django.db import connection
 from .models import FieldChoice, Gloss
 from ..video.models import GlossVideo
 
-
 class VideoDetail(TypedDict):
     url: str
     file_name: str
@@ -62,6 +61,7 @@ def retrieve_videos_for_glosses(video_details: List[VideoDetail]):
     - title
     - version
     """
+
     main_video_type = FieldChoice.objects.filter(field="video_type", english_name="main").first()
     finalexample_1_video_type = FieldChoice.objects.filter(
         field="video_type",

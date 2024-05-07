@@ -147,7 +147,7 @@ def confirm_import_gloss_csv(request):
                 del request.session['glosses_new']
                 del request.session['dataset_id']
                 # Set a message to be shown so that the user knows what is going on.
-                messages.add_message(request, messages.SUCCESS, _('Glosses were added succesfully.'))
+                messages.add_message(request, messages.SUCCESS, _('Glosses were added successfully.'))
             return render(request, "dictionary/import_gloss_csv_confirmation.html", {'glosses_added': glosses_added,
                                                                                      'dataset': dataset.name})
         else:
@@ -238,6 +238,7 @@ def import_nzsl_share_gloss_csv(request):
                     gloss = Gloss.objects.filter(nzsl_share_id=row["id"]).get()
                 except (Gloss.DoesNotExist, Gloss.MultipleObjectsReturned) as e:
                     print(e)
+                    skipped_existing_glosses.append(row)
                     continue
 
                 # if gloss has video/s we skip it, otherwise we add it anyway
@@ -274,6 +275,57 @@ def import_nzsl_share_gloss_csv(request):
                   })
 
 
+def update_retrieval_videos(videos, gloss_data, gloss):
+    """ prep videos, illustrations and usage example for video retrieval """
+
+    if gloss_data.get("videos", None):
+        video_url = gloss_data["videos"]
+        extension = video_url[-3:]
+        file_name = (
+            f"{gloss.pk}-{gloss_data['word']}.{gloss.pk}_video.{extension}"
+        )
+
+        glossvideo = {
+            "url": video_url,
+            "file_name": file_name,
+            "gloss_pk": gloss.pk,
+            "video_type": "main",
+            "version": 0
+        }
+        videos.append(glossvideo)
+
+    if gloss_data.get("illustrations", None):
+        for i, video_url in enumerate(gloss_data["illustrations"].split("|")):
+            extension = video_url[-3:]
+            file_name = (
+                f"{gloss.pk}-{gloss_data['word']}.{gloss.pk}_illustration_{i + 1}.{extension}"
+            )
+
+            glossvideo = {
+                "url": video_url,
+                "file_name": file_name,
+                "gloss_pk": gloss.pk,
+                "video_type": "main",
+                "version": i
+            }
+            videos.append(glossvideo)
+
+    if gloss_data.get("usage_examples", None):
+        for i, video_url in enumerate(gloss_data["usage_examples"].split("|")):
+            extension = video_url[-3:]
+            file_name = (
+                f"{gloss.pk}-{gloss_data['word']}.{gloss.pk}_usageexample_{i + 1}.{extension}"
+            )
+
+            glossvideo = {
+                "url": video_url,
+                "file_name": file_name,
+                "gloss_pk": gloss.pk,
+                "video_type": f"finalexample{i + 1}",
+                "version": i
+            }
+            videos.append(glossvideo)
+
 @login_required
 @permission_required("dictionary.import_csv")
 @transaction.atomic()
@@ -305,6 +357,8 @@ def confirm_import_nzsl_share_gloss_csv(request):
     bulk_tagged_items = []
     contributors = []
     bulk_share_validation_aggregations = []
+    video_import_only_glosses_data = {}
+    video_import_only_glosses = []
 
     if "glosses_new" and "dataset_id" in request.session:
         dataset = Dataset.objects.get(id=request.session["dataset_id"])
@@ -334,6 +388,19 @@ def confirm_import_nzsl_share_gloss_csv(request):
             # will iterate over these glosses again after bulk creating
             # and to ensure we get the correct gloss_data for words that appear multiple
             # times we'll use the row_num as the identifier for the gloss data
+
+            # if the gloss already exists at this point, it can only mean that
+            # it has no videos and we want to import videos for it
+            # try-except saves us a db call
+            try:
+                nzsl_share_id = gloss_data["id"]
+                gloss = Gloss.objects.filter(nzsl_share_id=nzsl_share_id).get()
+                video_import_only_glosses_data[nzsl_share_id] = gloss_data
+                video_import_only_glosses.append(gloss)
+                continue
+            except Gloss.DoesNotExist as e:
+                pass
+
             new_glosses[str(row_num)] = gloss_data
             bulk_create_gloss.append(Gloss(
                 dataset=dataset,
@@ -470,53 +537,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
             ))
 
             # prep videos, illustrations and usage example for video retrieval
-            if gloss_data.get("videos", None):
-                video_url = gloss_data["videos"]
-                extension = video_url[-3:]
-                file_name = (
-                    f"{gloss.pk}-{word_en}.{gloss.pk}_video.{extension}"
-                )
-
-                glossvideo = {
-                    "url": video_url,
-                    "file_name": file_name,
-                    "gloss_pk": gloss.pk,
-                    "video_type": "main",
-                    "version": 0
-                }
-                videos.append(glossvideo)
-
-            if gloss_data.get("illustrations", None):
-                for i, video_url in enumerate(gloss_data["illustrations"].split("|")):
-                    extension = video_url[-3:]
-                    file_name = (
-                        f"{gloss.pk}-{word_en}.{gloss.pk}_illustration_{i + 1}.{extension}"
-                    )
-
-                    glossvideo = {
-                        "url": video_url,
-                        "file_name": file_name,
-                        "gloss_pk": gloss.pk,
-                        "video_type": "main",
-                        "version": i
-                    }
-                    videos.append(glossvideo)
-
-            if gloss_data.get("usage_examples", None):
-                for i, video_url in enumerate(gloss_data["usage_examples"].split("|")):
-                    extension = video_url[-3:]
-                    file_name = (
-                        f"{gloss.pk}-{word_en}.{gloss.pk}_usageexample_{i + 1}.{extension}"
-                    )
-
-                    glossvideo = {
-                        "url": video_url,
-                        "file_name": file_name,
-                        "gloss_pk": gloss.pk,
-                        "video_type": f"finalexample{i + 1}",
-                        "version": i
-                    }
-                    videos.append(glossvideo)
+            update_retrieval_videos(videos, gloss_data, gloss)
 
             glosses_added.append(gloss)
 
@@ -541,6 +562,16 @@ def confirm_import_nzsl_share_gloss_csv(request):
         TaggedItem.objects.bulk_create(bulk_tagged_items)
         ShareValidationAggregation.objects.bulk_create(bulk_share_validation_aggregations)
 
+        # Add the video-update only glosses
+        for video_import_gloss in video_import_only_glosses:
+            # prep videos, illustrations and usage example for video retrieval
+            update_retrieval_videos(
+                videos,
+                video_import_only_glosses_data[video_import_gloss.nzsl_share_id],
+                video_import_gloss
+            )
+            glosses_added.append(video_import_gloss)
+
         # start Thread to process gloss video retrieval in the background
         t = threading.Thread(
             target=retrieve_videos_for_glosses,
@@ -553,7 +584,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
         del request.session["dataset_id"]
 
         # Set a message to be shown so that the user knows what is going on.
-        messages.add_message(request, messages.SUCCESS, _("Glosses were added succesfully."))
+        messages.add_message(request, messages.SUCCESS, _("Glosses were added successfully."))
     return render(
         request, "dictionary/import_nzsl_share_gloss_csv_confirmation.html",
         {
@@ -747,7 +778,7 @@ def confirm_import_qualtrics_csv(request):
 
         # Set a message to be shown so that the user knows what is going on.
         messages.add_message(request, messages.SUCCESS,
-                             _("ValidationRecords were added succesfully."))
+                             _("ValidationRecords were added successfully."))
     return render(
         request, "dictionary/import_qualtrics_csv_confirmation.html",
         {
@@ -926,7 +957,7 @@ def confirm_import_manual_validation(request):
 
         # Set a message to be shown so that the user knows what is going on.
         messages.add_message(request, messages.SUCCESS,
-                             _("ValidationRecords were added succesfully."))
+                             _("ValidationRecords were added successfully."))
     return render(
         request, "dictionary/import_manual_validation_csv_confirmation.html",
         {
