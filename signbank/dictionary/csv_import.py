@@ -798,7 +798,7 @@ def import_manual_validation(request):
     ]
     try:
         validation_record_reader = csv.DictReader(
-            codecs.iterdecode(form.cleaned_data["file"], "utf-8"),
+            codecs.iterdecode(form.cleaned_data["file"], "utf-8-sig"),
             delimiter=",",
             quotechar='"'
         )
@@ -815,6 +815,8 @@ def import_manual_validation(request):
 
         for row in validation_record_reader:
             if validation_record_reader.line_num == 1:
+                continue
+            if ":" not in row["idgloss"]:
                 continue
             _check_row_can_be_converted_to_integer(row, ["yes", "no", "abstain or not sure"])
             group_row_map[row["group"]].append(row)
