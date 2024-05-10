@@ -237,7 +237,7 @@ def import_nzsl_share_gloss_csv(request):
                 try:
                     gloss = Gloss.objects.filter(nzsl_share_id=row["id"]).get()
                 except (Gloss.DoesNotExist, Gloss.MultipleObjectsReturned) as e:
-                    print(e)
+                    print(f"nzsl_share_id = {row['id']} {str(e)}")
                     skipped_existing_glosses.append(row)
                     continue
 
@@ -275,20 +275,23 @@ def import_nzsl_share_gloss_csv(request):
                   })
 
 
-def update_retrieval_videos(videos, gloss_data, gloss):
+def update_retrieval_videos(videos, gloss_data):
     """ prep videos, illustrations and usage example for video retrieval """
+
+    gloss_pk = gloss_data['pk']
+    gloss_word = gloss_data['word']
 
     if gloss_data.get("videos", None):
         video_url = gloss_data["videos"]
         extension = video_url[-3:]
         file_name = (
-            f"{gloss.pk}-{gloss_data['word']}.{gloss.pk}_video.{extension}"
+            f"{gloss_pk}-{gloss_word}.{gloss_pk}_video.{extension}"
         )
 
         glossvideo = {
             "url": video_url,
             "file_name": file_name,
-            "gloss_pk": gloss.pk,
+            "gloss_pk": gloss_pk,
             "video_type": "main",
             "version": 0
         }
@@ -298,13 +301,13 @@ def update_retrieval_videos(videos, gloss_data, gloss):
         for i, video_url in enumerate(gloss_data["illustrations"].split("|")):
             extension = video_url[-3:]
             file_name = (
-                f"{gloss.pk}-{gloss_data['word']}.{gloss.pk}_illustration_{i + 1}.{extension}"
+                f"{gloss_pk}-{gloss_word}.{gloss_pk}_illustration_{i + 1}.{extension}"
             )
 
             glossvideo = {
                 "url": video_url,
                 "file_name": file_name,
-                "gloss_pk": gloss.pk,
+                "gloss_pk": gloss_pk,
                 "video_type": "main",
                 "version": i
             }
@@ -314,13 +317,13 @@ def update_retrieval_videos(videos, gloss_data, gloss):
         for i, video_url in enumerate(gloss_data["usage_examples"].split("|")):
             extension = video_url[-3:]
             file_name = (
-                f"{gloss.pk}-{gloss_data['word']}.{gloss.pk}_usageexample_{i + 1}.{extension}"
+                f"{gloss_pk}-{gloss_word}.{gloss_pk}_usageexample_{i + 1}.{extension}"
             )
 
             glossvideo = {
                 "url": video_url,
                 "file_name": file_name,
-                "gloss_pk": gloss.pk,
+                "gloss_pk": gloss_pk,
                 "video_type": f"finalexample{i + 1}",
                 "version": i
             }
@@ -396,9 +399,10 @@ def confirm_import_nzsl_share_gloss_csv(request):
                 nzsl_share_id = gloss_data["id"]
                 gloss = Gloss.objects.filter(nzsl_share_id=nzsl_share_id).get()
                 video_import_only_glosses_data[nzsl_share_id] = gloss_data
+                video_import_only_glosses_data[nzsl_share_id]['pk'] = gloss.pk
                 video_import_only_glosses.append(gloss)
                 continue
-            except Gloss.DoesNotExist as e:
+            except Gloss.DoesNotExist:
                 pass
 
             new_glosses[str(row_num)] = gloss_data
@@ -440,6 +444,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
         for gloss in bulk_created:
             word_en, row_num = gloss.idgloss.split("_row")
             gloss_data = new_glosses[row_num]
+            gloss_data["pk"] = gloss.pk
 
             # get semantic fields for gloss_data topics
             if gloss_data.get("topic_names", None):
@@ -537,7 +542,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
             ))
 
             # prep videos, illustrations and usage example for video retrieval
-            update_retrieval_videos(videos, gloss_data, gloss)
+            update_retrieval_videos(videos, gloss_data)
 
             glosses_added.append(gloss)
 
@@ -568,10 +573,8 @@ def confirm_import_nzsl_share_gloss_csv(request):
             update_retrieval_videos(
                 videos,
                 video_import_only_glosses_data[video_import_gloss.nzsl_share_id],
-                video_import_gloss
             )
             glosses_added.append(video_import_gloss)
-
         # start Thread to process gloss video retrieval in the background
         t = threading.Thread(
             target=retrieve_videos_for_glosses,

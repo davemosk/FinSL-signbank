@@ -165,7 +165,7 @@ class ShareCSVImportTestCase(TestCase):
         self.assertListEqual([csv_content[0]], session["glosses_new"])
         self.assertListEqual([csv_content[1]], response.context["skipped_existing_glosses"])
 
-    def test_share_ids_existing_on_glosses_with_no_videos_are_not_skipped(self):
+    def test_share_ids_existing_on_glosses_with_no_videos_have_their_videos_reimported(self):
         """
         Test a csv file row, for which an existing gloss has the share id associated with it,
         is not skipped if it has no video associated (glosses without videos may be re-imported)
