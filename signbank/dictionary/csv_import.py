@@ -798,7 +798,7 @@ def import_manual_validation(request):
     ]
     try:
         validation_record_reader = csv.DictReader(
-            codecs.iterdecode(form.cleaned_data["file"], "utf-8"),
+            codecs.iterdecode(form.cleaned_data["file"], "utf-8-sig"),
             delimiter=",",
             quotechar='"'
         )
