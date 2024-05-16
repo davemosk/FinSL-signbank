@@ -125,10 +125,11 @@ class ShareCSVImportTestCase(TestCase):
         self.assertEqual(self.dataset.pk, session["dataset_id"])
         self.assertListEqual([self._csv_content], session["glosses_new"])
 
-    def test_share_ids_existing_on_glosses_are_skipped(self):
+    def test_share_ids_existing_on_glosses_with_videos_are_skipped(self):
         """
-        Test a csv file which contains a row for which an existing gloss has the share id
-        associated with it is skipped
+        Test a csv file row, for which an existing gloss has the share id associated
+        with it, is skipped, so long as it has a video (glosses with videos may not
+        be re-imported)
         """
         file_name = "test.csv"
         csv_content = [copy.deepcopy(self._csv_content), copy.deepcopy(self._csv_content)]
@@ -143,8 +144,81 @@ class ShareCSVImportTestCase(TestCase):
         file = SimpleUploadedFile(
             content=data.read(), name=data.name, content_type="content/multipart"
         )
-        Gloss.objects.create(dataset=self.dataset, idgloss="Share:11", nzsl_share_id="12345")
+        gloss = Gloss.objects.create(dataset=self.dataset, idgloss="Share:11", nzsl_share_id="12345")
+        GlossVideo.objects.create(
+            gloss=gloss,
+            is_public=True,
+            dataset=Dataset.objects.create(name="testdataset2", signlanguage=self.signlanguage),
+            videofile=SimpleUploadedFile("testvid.mp4", b'data \x00\x01', content_type="video/mp4"),
+            video_type=FieldChoice.objects.first(),
+            title="Main"
+        )
 
+        response = self.client.post(
+            reverse('dictionary:import_nzsl_share_gloss_csv'),
+            {"dataset": self.dataset.pk, "file": file},
+            format="multipart"
+        )
+        self.assertEqual(response.status_code, 200)
+        session = self.client.session
+        self.assertEqual(self.dataset.pk, session["dataset_id"])
+        self.assertListEqual([csv_content[0]], session["glosses_new"])
+        self.assertListEqual([csv_content[1]], response.context["skipped_existing_glosses"])
+
+    def test_share_ids_existing_on_glosses_with_no_videos_have_their_videos_reimported(self):
+        """
+        Test a csv file row, for which an existing gloss has the share id associated with it,
+        is not skipped if it has no video associated (glosses without videos may be re-imported)
+        """
+        file_name = "test.csv"
+        csv_content = [copy.deepcopy(self._csv_content), copy.deepcopy(self._csv_content)]
+        csv_content[1]["id"] = "12345"
+
+        with open(file_name, "w") as file:
+            writer = csv.writer(file)
+            writer.writerow(csv_content[0].keys())
+            for row in csv_content:
+                writer.writerow(row.values())
+        data = open(file_name, "rb")
+        file = SimpleUploadedFile(
+            content=data.read(), name=data.name, content_type="content/multipart"
+        )
+        gloss = Gloss.objects.create(dataset=self.dataset, idgloss="Share:11", nzsl_share_id="12345")
+        response = self.client.post(
+            reverse('dictionary:import_nzsl_share_gloss_csv'),
+            {"dataset": self.dataset.pk, "file": file},
+            format="multipart"
+        )
+        self.assertEqual(response.status_code, 200)
+        session = self.client.session
+        self.assertEqual(self.dataset.pk, session["dataset_id"])
+        with self.assertRaises(AssertionError):
+            self.assertListEqual([csv_content[0]], session["glosses_new"])
+        with self.assertRaises(AssertionError):
+            self.assertListEqual([csv_content[1]], response.context["skipped_existing_glosses"])
+
+    def test_duplicate_share_ids_existing_on_glosses_with_no_videos_are_skipped(self):
+        """
+        Test a csv file row. If there is more than one existing gloss matching the
+        nzsl_share_id, gracefully skip the row regardless of whether the glosses have
+        videos or not.
+        """
+        file_name = "test.csv"
+        csv_content = [copy.deepcopy(self._csv_content), copy.deepcopy(self._csv_content)]
+        csv_content[1]["id"] = "12345"
+
+        with open(file_name, "w") as file:
+            writer = csv.writer(file)
+            writer.writerow(csv_content[0].keys())
+            for row in csv_content:
+                writer.writerow(row.values())
+        data = open(file_name, "rb")
+        file = SimpleUploadedFile(
+            content=data.read(), name=data.name, content_type="content/multipart"
+        )
+        # Same nzsl_share_id
+        Gloss.objects.create(dataset=self.dataset, idgloss="Share:11", nzsl_share_id="12345")
+        Gloss.objects.create(dataset=self.dataset, idgloss="Share:12", nzsl_share_id="12345")
         response = self.client.post(
             reverse('dictionary:import_nzsl_share_gloss_csv'),
             {"dataset": self.dataset.pk, "file": file},
