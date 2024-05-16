@@ -278,8 +278,8 @@ def import_nzsl_share_gloss_csv(request):
 def update_retrieval_videos(videos, gloss_data):
     """ prep videos, illustrations and usage example for video retrieval """
 
-    gloss_pk = gloss_data['pk']
-    gloss_word = gloss_data['word']
+    gloss_pk = gloss_data["gloss"].pk
+    gloss_word = gloss_data["word"]
 
     if gloss_data.get("videos", None):
         video_url = gloss_data["videos"]
@@ -360,8 +360,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
     bulk_tagged_items = []
     contributors = []
     bulk_share_validation_aggregations = []
-    video_import_only_glosses_data = {}
-    video_import_only_glosses = []
+    video_import_only_glosses_data = []
 
     if "glosses_new" and "dataset_id" in request.session:
         dataset = Dataset.objects.get(id=request.session["dataset_id"])
@@ -396,11 +395,10 @@ def confirm_import_nzsl_share_gloss_csv(request):
             # it has no videos and we want to import videos for it
             # try-except saves us a db call
             try:
-                nzsl_share_id = gloss_data["id"]
-                gloss = Gloss.objects.filter(nzsl_share_id=nzsl_share_id).get()
-                video_import_only_glosses_data[nzsl_share_id] = gloss_data
-                video_import_only_glosses_data[nzsl_share_id]['pk'] = gloss.pk
-                video_import_only_glosses.append(gloss)
+                gloss = Gloss.objects.filter(nzsl_share_id=gloss_data["id"]).get()
+                gloss_data_copy = gloss_data.copy()
+                gloss_data_copy["gloss"] = gloss
+                video_import_only_glosses_data.append(gloss_data_copy)
                 continue
             except Gloss.DoesNotExist:
                 pass
@@ -444,7 +442,7 @@ def confirm_import_nzsl_share_gloss_csv(request):
         for gloss in bulk_created:
             word_en, row_num = gloss.idgloss.split("_row")
             gloss_data = new_glosses[row_num]
-            gloss_data["pk"] = gloss.pk
+            gloss_data["gloss"] = gloss
 
             # get semantic fields for gloss_data topics
             if gloss_data.get("topic_names", None):
@@ -568,13 +566,11 @@ def confirm_import_nzsl_share_gloss_csv(request):
         ShareValidationAggregation.objects.bulk_create(bulk_share_validation_aggregations)
 
         # Add the video-update only glosses
-        for video_import_gloss in video_import_only_glosses:
+        for video_import_gloss_data in video_import_only_glosses_data:
             # prep videos, illustrations and usage example for video retrieval
-            update_retrieval_videos(
-                videos,
-                video_import_only_glosses_data[video_import_gloss.nzsl_share_id],
-            )
-            glosses_added.append(video_import_gloss)
+            update_retrieval_videos(videos, video_import_gloss_data)
+            glosses_added.append(video_import_gloss_data["gloss"])
+
         # start Thread to process gloss video retrieval in the background
         t = threading.Thread(
             target=retrieve_videos_for_glosses,
