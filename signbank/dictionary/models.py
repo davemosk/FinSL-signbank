@@ -9,6 +9,8 @@ from itertools import groupby
 import reversion
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.sites.models import Site
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db import OperationalError, models
 from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
@@ -598,6 +600,110 @@ class Gloss(models.Model):
 
     def __str__(self):
         return self.idgloss
+
+    @classmethod
+    def get_field_names(cls):
+        fields = cls._meta.get_fields(include_hidden=True)
+        return [field.name for field in fields if field.concrete]
+
+    @classmethod
+    def get_field(cls, field):
+        field = cls._meta.get_field(field)
+        return field
+
+    def get_wordclasses_display(self):
+        return ", ".join([d.english_name for d in self.wordclasses.all()])
+
+    def get_fields_dict(self, fieldnames):
+        """
+        This function is copied from Global Signbank.
+        It has been adapted to work for NZSL's data structure.
+        """
+
+        # TO DO include other gloss relations in the fieldnames (e.g., simultaneous morphology, below)
+        # a way to determine w/o hard-coding if a fieldname is for a related model
+        # then can use the above display methods
+        # related_models = [rel.related_model._meta.model_name for rel in self._meta.related_objects]
+        # print(related_models)
+        # requires changing search field names
+
+        fields = {}
+        site = Site.objects.get_current()
+        if 'idgloss' in fieldnames:
+            # this is the default setting API_FIELDS
+            fields['idgloss'] = self.idgloss
+
+        gloss_fields = [Gloss.get_field(fname) for fname in Gloss.get_field_names()]
+        fields_data = []
+        for field in gloss_fields:
+            if hasattr(field, 'field_choice_category'):
+                fc_category = field.field_choice_category
+            else:
+                fc_category = None
+            fields_data.append((field.name, field.verbose_name.title(), fc_category))
+
+        # gloss translations
+        if self.dataset:
+            for language in self.dataset.translation_languages.all():
+                glosstranslations = self.glosstranslations_set.filter(language=language)
+                if glosstranslations and glosstranslations.count() > 0:
+                    field_name = f"{_('Gloss')}: {language.name}"
+                    if field_name in fieldnames:
+                        fields[field_name] = glosstranslations.first().translations
+
+        # # Get the keywords associated with this sign
+        # allkwds = ", ".join([x.translation.text for x in self.translation_set.all()])
+        # field_name = Translation.__name__ + "s"
+        # if field_name in fieldnames and allkwds:
+        #     fields[field_name] = allkwds
+
+        for (f, field_verbose_name, fieldchoice_category) in fields_data:
+            if f == 'updated_at':
+                last_updated = getattr(self, f)
+                field_value = last_updated.date()
+            elif f == 'created_by':
+                field_value = ""
+                if self.created_by and self.created_by.first_name:
+                    field_value = self.created_by.first_name
+            elif f == 'wordclasses':
+                display_method = 'get_' + f + '_display'
+                field_value = getattr(self, display_method)()
+            elif fieldchoice_category:
+                fieldchoice = getattr(self, f)
+                if fieldchoice is None:
+                    continue
+                if fieldchoice.machine_value == 0:
+                    continue
+                field_value = fieldchoice.name if fieldchoice else '-'
+            else:
+                field_value = str(getattr(self, f))
+            if field_verbose_name in fieldnames and field_value not in ['', '-', "None"]:
+                fields[field_verbose_name] = field_value
+
+        if "Link" in fieldnames:
+            fields["Link"] = (
+                f"{site.domain}{reverse('dictionary:public_gloss_view', kwargs={'pk': self.pk})}"
+            )
+
+        if "Video" in fieldnames:
+            video_path = self.get_video_url()
+            if video_path:
+                fields["Video"] = (
+                    f"{site.domain}/{reverse('dictionary:protected_media', kwargs={'filename': video_path})}"
+                )
+
+        return fields
+
+    def get_video_path(self):
+        try:
+            glossvideo = self.glossvideo_set.get(version=0)
+            return str(glossvideo.videofile)
+        except ObjectDoesNotExist:
+            return ''
+        except MultipleObjectsReturned:
+            # Just return the first
+            glossvideos = self.glossvideo_set.filter(version=0)
+            return str(glossvideos[0].videofile)
 
     def get_absolute_url(self):
         return self.get_admin_absolute_url()

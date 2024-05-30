@@ -4,6 +4,7 @@ from __future__ import print_function, unicode_literals
 
 import mimetypes
 import os
+import pathlib
 import sys
 
 import dj_database_url
@@ -208,6 +209,17 @@ if os.getenv("DATABASE_URL"):
         'default': dj_database_url.config()
     }
 
+# Settings used for package and info endpoints
+DEFAULT_DATASET_ACRONYM = os.getenv("DEFAULT_DATASET_ACRONYM", "NZSL")
+WRITABLE_FOLDER_NAME = os.getenv("WRITABLE_FOLDER_NAME", "writable")
+WRITABLE_FOLDER = os.path.join(PROJECT_DIR, WRITABLE_FOLDER_NAME)
+pathlib.Path(WRITABLE_FOLDER).mkdir(parents=True, exist_ok=True)
+PACKAGES_FOLDER_NAME = os.getenv("PACKAGES_FOLDER_NAME", "packages")
+SIGNBANK_PACKAGES_FOLDER = os.path.join(WRITABLE_FOLDER, PACKAGES_FOLDER_NAME)
+pathlib.Path(SIGNBANK_PACKAGES_FOLDER).mkdir(parents=True, exist_ok=True)
+LANGUAGE_NAME = os.getenv("LANGUAGE_NAME", "NZSL")
+COUNTRY_NAME = os.getenv("COUNTRY_NAME", "New Zealand")
+USE_X_SENDFILE = os.getenv("USE_X_SENDFILE", 'false').lower() == 'true'
 
 # Set up SMTP
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
