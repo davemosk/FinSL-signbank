@@ -287,7 +287,7 @@ uploaded_glossvideos_listview = permission_required('video.change_glossvideo')(U
 
 def update_glossvideo(request):
     """Process the post request for updating a glossvideo."""
-    if request.is_ajax():
+    if request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest':
         # If request is AJAX, follow this procedure.
         data = json.loads(request.body.decode('utf-8'))
         if request.method == 'POST':
