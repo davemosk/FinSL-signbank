@@ -11,7 +11,7 @@ django-debug-toolbar
 django-guardian
 django-notifications-hq
 dj-database-url==0.5.0
-boto3
+boto3==1.22.8
 django-storages
 psycopg2==2.8.6
 certifi==2023.7.22
