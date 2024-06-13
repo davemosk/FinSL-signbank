@@ -11,7 +11,7 @@ from django.core.files.base import ContentFile
 from django.http import HttpResponse, HttpResponseNotAllowed, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
-from django.utils.translation import gettext as _
+from django.utils.translation import ugettext as _
 from django.views.generic.edit import FormView
 from django.views.generic.list import ListView
 from djqscsv import render_to_csv_response
