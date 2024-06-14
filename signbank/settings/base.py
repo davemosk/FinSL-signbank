@@ -10,7 +10,7 @@ import sys
 import dj_database_url
 from django.utils.translation import gettext_lazy as _
 
-# Workaround for a Django breaking change in 4+
+# Workaround for an issue in django-tagging which seems to no longer be maintained
 import django
 from django.utils.encoding import smart_str
 django.utils.encoding.smart_text = smart_str
