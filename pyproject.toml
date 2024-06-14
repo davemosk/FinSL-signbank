@@ -8,7 +8,6 @@ readme = "README.md"
 homepage = "https://signbank.nzsl.nz/"
 repository = "https://github.com/ODNZSL/NZSL-signbank"
 
-
 [tool.poetry.dependencies]
 python = "^3.9"
 django = "3.2.25"
