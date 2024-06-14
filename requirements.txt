@@ -1,4 +1,4 @@
-django==4.0
+django==4.1
 django-tagging
 django-reversion
 django-bootstrap3
@@ -10,7 +10,7 @@ django-queryset-csv
 django-debug-toolbar
 django-guardian
 django-notifications-hq
-dj-database-url==0.5.0
+dj-database-url
 boto3
 django-storages
 psycopg2==2.8.6

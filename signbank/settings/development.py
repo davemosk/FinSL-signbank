@@ -4,6 +4,22 @@ from __future__ import unicode_literals
 
 from signbank.settings.base import *
 
+# Needed for collectstatic
+try:
+    if DATABASES:
+        pass
+except NameError:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("POSTGRES_DB", "postgres"),
+            "USER": os.environ.get("POSTGRES_USER", "postgres"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
+            "HOST": os.environ.get("POSTGRES_HOST", "database"),
+            "PORT": os.environ.get("POSTGRES_PORT", 5432),
+        },
+    }
+
 # settings.base imports settings_secret
 # The following settings are defined in settings_secret:
 # SECRET_KEY, ADMINS, DATABASES, EMAIL_HOST, EMAIL_PORT, DEFAULT_FROM_EMAIL
