@@ -16,12 +16,8 @@ ENV DJANGO_SETTINGS_MODULE=signbank.settings.development
 
 RUN pip install "poetry==1.8.3"
 
-CMD poetry config installer.max-workers 10 && \
-    poetry config virtualenvs.create false &&  \
-    poetry install -v --no-root && \
-    bin/develop.py migrate --noinput && \
+CMD bin/develop.py migrate --noinput && \
     bin/develop.py createcachetable && \
-    bin/develop.py collectstatic --no-input && \
     (\
         (test $DJANGO_SETTINGS_MODULE = 'signbank.settings.development' && \
         echo "Loading initial content pages..." && \
@@ -50,6 +46,9 @@ RUN echo "APT::Install-Recommends \"0\";" >> /etc/apt/apt.conf.d/02recommends &&
 # Install requirements
 WORKDIR /app
 ADD pyproject.toml poetry.lock /app/
+RUN poetry config installer.max-workers 10 && \
+    poetry config virtualenvs.create false &&  \
+    poetry install -v --no-root
 
 # Copy frontend assets
 COPY --from=node /app/signbank/static/js ./signbank/static/js
@@ -57,3 +56,8 @@ COPY --from=node /app/signbank/static/css ./signbank/static/css
 
 # Install application
 ADD . /app
+
+# Collect static assets
+RUN bin/develop.py collectstatic --no-input
+
+
