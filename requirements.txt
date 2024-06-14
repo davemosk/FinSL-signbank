@@ -4,7 +4,7 @@ django-reversion
 django-bootstrap3
 django-summernote
 django-modeltranslation
-django-registration
+django-registration~=3.4
 django-contrib-comments
 django-queryset-csv
 django-debug-toolbar
