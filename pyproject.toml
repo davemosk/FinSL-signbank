@@ -5,6 +5,9 @@ description = "Web based database for sign language lexicons and corpuses. Fork 
 authors = ["Ackama <info@ackama.com>"]
 license = "BSD-3-Clause license"
 readme = "README.md"
+homepage = "https://signbank.nzsl.nz/"
+repository = "https://github.com/ODNZSL/NZSL-signbank"
+
 
 [tool.poetry.dependencies]
 python = "^3.9"
