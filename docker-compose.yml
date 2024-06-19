@@ -15,11 +15,20 @@ services:
             - "./:/app:z"
         links:
             - database
-            - mail
+        depends_on:
+          database:
+            condition: service_healthy
     database:
         image: postgres:14
         environment:
           - "POSTGRES_PASSWORD=postgres"
+        ports:
+          - 5432:5432
+        healthcheck:
+          test: ["CMD", "/usr/bin/pg_isready", "-h", "database", "-p", "5432", "-U", "postgres", "-d", "postgres"]
+          interval: 5s
+          timeout: 10s
+          retries: 120
     mail:
         image: djfarrelly/maildev
         ports:
