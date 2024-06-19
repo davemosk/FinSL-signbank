@@ -59,5 +59,3 @@ ADD . /app
 
 # Collect static assets
 RUN bin/develop.py collectstatic --no-input
-
-
