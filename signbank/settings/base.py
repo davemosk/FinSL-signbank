@@ -265,7 +265,7 @@ mimetypes.add_type("video/webm", ".webm", True)
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
 
 # Set ALLOWED_HOSTS from an environment variable, with defaults
-DEFAULT_ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+DEFAULT_ALLOWED_HOSTS = ['127.0.0.1', 'localhost','0.0.0.0']
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS").split(
     ",") if os.getenv("ALLOWED_HOSTS") else DEFAULT_ALLOWED_HOSTS
 
