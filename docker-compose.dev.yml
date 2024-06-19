@@ -14,7 +14,7 @@ services:
         volumes:
             - "./:/app:z"
         links:
-            - database:localhost
+            - database
         depends_on:
           database:
             condition: service_healthy
