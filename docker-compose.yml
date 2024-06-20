@@ -15,6 +15,7 @@ services:
             - "./:/app:z"
         links:
             - database
+            - mail
         depends_on:
           database:
             condition: service_healthy
