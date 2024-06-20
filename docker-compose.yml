@@ -27,9 +27,9 @@ services:
           - 5432:5432
         healthcheck:
           test: ["CMD", "/usr/bin/pg_isready", "-h", "database", "-p", "5432", "-U", "postgres", "-d", "postgres"]
-          interval: 5s
-          timeout: 10s
-          retries: 120
+          interval: 3s
+          timeout: 2s
+          retries: 5
     mail:
         image: djfarrelly/maildev
         ports:
