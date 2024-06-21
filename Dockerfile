@@ -14,8 +14,9 @@ FROM python:3.9
 
 ENV DJANGO_SETTINGS_MODULE=signbank.settings.development
 
-CMD pip install -r requirements.txt && \
-    bin/develop.py migrate --noinput && \
+RUN pip install "poetry==1.8.3"
+
+CMD bin/develop.py migrate --noinput && \
     bin/develop.py createcachetable && \
     (\
         (test $DJANGO_SETTINGS_MODULE = 'signbank.settings.development' && \
@@ -44,8 +45,10 @@ RUN echo "APT::Install-Recommends \"0\";" >> /etc/apt/apt.conf.d/02recommends &&
 
 # Install requirements
 WORKDIR /app
-ADD requirements.txt /app
-RUN pip --no-cache-dir install --src=/opt pyinotify -r requirements.txt
+ADD pyproject.toml poetry.lock /app/
+RUN poetry config installer.max-workers 10 && \
+    poetry config virtualenvs.create false &&  \
+    poetry install -v --no-root
 
 # Copy frontend assets
 COPY --from=node /app/signbank/static/js ./signbank/static/js
@@ -55,4 +58,4 @@ COPY --from=node /app/signbank/static/css ./signbank/static/css
 ADD . /app
 
 # Collect static assets
-RUN bin/develop.py collectstatic
+RUN bin/develop.py collectstatic --no-input

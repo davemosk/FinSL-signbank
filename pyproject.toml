@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "nzsl-signbank"
+version = "0.1.0"
+description = "Web based database for sign language lexicons and corpuses. Fork of NGT-signbank."
+authors = ["Ackama <info@ackama.com>"]
+license = "BSD-3-Clause license"
+readme = "README.md"
+homepage = "https://signbank.nzsl.nz/"
+repository = "https://github.com/ODNZSL/NZSL-signbank"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+django = "~3.2.25"
+django-bootstrap3 = "*"
+django-contrib-comments = "*"
+django-debug-toolbar = "*"
+django-guardian = "*"
+django-modeltranslation = "*"
+django-notifications-hq = "*"
+django-queryset-csv = "*"
+django-registration = "*"
+django-reversion = "*"
+django-storages = "*"
+django-summernote = "*"
+django-tagging = "*"
+boto3 = "*"
+certifi = "*"
+dj-database-url = "*"
+gunicorn = "*"
+psycopg2 = "*"
+sentry-sdk = "*"
+whitenoise = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
