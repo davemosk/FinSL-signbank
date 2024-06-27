@@ -8,7 +8,7 @@ import pathlib
 import sys
 
 import dj_database_url
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 
 sentry_dsn = os.environ.get('SENTRY_DSN', '')
