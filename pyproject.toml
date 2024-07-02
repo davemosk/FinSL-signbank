@@ -26,7 +26,9 @@ django-tagging = "*"
 boto3 = "*"
 certifi = "*"
 dj-database-url = "*"
-gunicorn = "*"
+# gunicorn 22.* has Worker (no URI read) issue
+# https://github.com/benoitc/gunicorn/issues/3207
+gunicorn = "~21.2.0"
 psycopg2 = "*"
 sentry-sdk = "*"
 whitenoise = "*"
