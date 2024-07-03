@@ -40,6 +40,7 @@ def get_signed_video_url_from_glossvideotoken(request, token, videoid):
 
 def upload_glossvideo(request):
     """Add a video from form and process the upload"""
+    print("UPLOAD_GLOSSVIDEO()")
     if request.method == 'POST':
         form = GlossVideoForm(request.POST, request.FILES)
         if form.is_valid():
