@@ -179,6 +179,9 @@ class UpploadGlossVideoTestCase(TestCase):
         """Test that the user can upload the glossvideo"""
         response = self.client.post(reverse('video:upload_glossvideo_gloss'), {
             'videofile': self.testfile, 'gloss': self.testgloss.pk, 'video_type': self.video_type.machine_value})
+        from pprint import pprint
+        pprint(reverse('video:upload_glossvideo_gloss'))
+        pprint({'videofile': self.testfile, 'gloss': self.testgloss.pk, 'video_type': self.video_type.machine_value})
         self.assertEqual(response.status_code, 302)
         # Make sure that the response redirect url is correct.
         self.assertEqual(response.url, "/")
