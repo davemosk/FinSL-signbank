@@ -96,11 +96,7 @@ def upload_glossvideo_gloss(request):
             else:  # Otherwise use the videos filename as the title.
                 video.title = videofile.name
             print("ATTEMPTING VIDEO SAVE")
-            try:
-                video.save()
-            except Exception as exc:
-                print(exc)
-                raise exc
+            video.save()
             print("DONE VIDEO SAVE")
 
             redirect_url = form.cleaned_data['redirect']
