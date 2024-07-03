@@ -35,9 +35,6 @@ class GlossVideoStorage(FileSystemStorage):
 
 class GlossVideoDynamicStorage(import_string(settings.GLOSS_VIDEO_FILE_STORAGE)):
 
-    def path(self, name):
-        return name
-
     def public_url(self, name):
         """ Return the public URL to the object in S3 or local storage.
         This is NOT a presigned URL, use #url for that.
