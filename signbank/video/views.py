@@ -40,12 +40,9 @@ def get_signed_video_url_from_glossvideotoken(request, token, videoid):
 
 def upload_glossvideo(request):
     """Add a video from form and process the upload"""
-    print("UPLOAD_GLOSSVIDEO()")
     if request.method == 'POST':
         form = GlossVideoForm(request.POST, request.FILES)
         if form.is_valid():
-            print("UPLOAD_GLOSSVIDEO: FORM.ISVALID()")
-
             videofile = form.cleaned_data['videofile']
             glossvideo = GlossVideo(videofile=videofile)
             title = form.cleaned_data['title']
@@ -72,8 +69,10 @@ upload_glossvideo_view = permission_required('video.add_glossvideo')(upload_glos
 def upload_glossvideo_gloss(request):
     """Add a video from form and process the upload"""
     if request.method == 'POST':
+        print("UPLOAD_GLOSSVIDEO()")
         form = GlossVideoForGlossForm(request.POST, request.FILES)
         if form.is_valid():
+            print("UPLOAD_GLOSSVIDEO: FORM.ISVALID()")
             gloss = form.cleaned_data['gloss']
 
             if 'view_dataset' not in get_perms(request.user, gloss.dataset):
