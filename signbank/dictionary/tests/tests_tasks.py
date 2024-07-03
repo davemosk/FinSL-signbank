@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import random
+import tempfile
 from unittest import mock
 
 from django.conf import settings
@@ -35,24 +36,22 @@ class RetrieveVideoForGloss(TestCase):
 
     @override_settings(MEDIA_ROOT="")
     def test_retrieve_videos_for_glosses(self):
+
         video_details = [
             {
                 "url": "/kiwifruit_1.mp4",
-                "file_name": (
-                    f"{settings.MEDIA_ROOT}/glossvideo/"
-                    f"{self.gloss.pk}-{self.gloss.idgloss}_finalexample_1.png"
-                ),
+                "file_name": f"{self.gloss.pk}-{self.gloss.idgloss}_finalexample_1.png",
                 "gloss_pk": self.gloss.pk,
                 "video_type": "finalexample1",
                 "version": 0
             }
         ]
-        dummy_file = SimpleUploadedFile(
-            video_details[0]["file_name"], b'data \x00\x01', content_type="video/mp4")
+        dummy_file = tempfile.NamedTemporaryFile()
+        dummy_file.write(b'data \x00\x01')
 
         with mock.patch("signbank.dictionary.tasks.urlretrieve") as mock_retrieve:
             with mock.patch("signbank.dictionary.tasks.connection.close") as mock_close_connection:
-                mock_retrieve.return_value = (dummy_file, None)
+                mock_retrieve.return_value = (dummy_file.name, None)
                 mock_close_connection.return_value = None
                 retrieve_videos_for_glosses(video_details)
                 mock_retrieve.assert_called_once()
