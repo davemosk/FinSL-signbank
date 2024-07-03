@@ -43,6 +43,7 @@ def upload_glossvideo(request):
     if request.method == 'POST':
         form = GlossVideoForm(request.POST, request.FILES)
         if form.is_valid():
+            print("UPLOAD_GLOSSVIDEO: FORM.ISVALID()")
 
             videofile = form.cleaned_data['videofile']
             glossvideo = GlossVideo(videofile=videofile)
