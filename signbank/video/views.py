@@ -81,23 +81,17 @@ def upload_glossvideo_gloss(request):
                 messages.error(request, msg)
                 raise PermissionDenied(msg)
 
-            print("ATTEMPTING VIDEOFILE CLEAN")
             videofile = form.cleaned_data['videofile']
-            print("DONE VIDEOFILE CLEAN")
             video_type = form.cleaned_data['video_type']
             video = GlossVideo(
                 gloss=gloss, videofile=videofile, video_type=video_type)
 
-            print("ATTEMPTING VIDEOFILE TITLE")
             video_title = form.cleaned_data['title']
-            print("DONE VIDEOFILE TITLE")
             if video_title:  # if video_title was provided in the form, use it
                 video.title = video_title
             else:  # Otherwise use the videos filename as the title.
                 video.title = videofile.name
-            print("ATTEMPTING VIDEO SAVE")
             video.save()
-            print("DONE VIDEO SAVE")
 
             redirect_url = form.cleaned_data['redirect']
             if redirect_url:
