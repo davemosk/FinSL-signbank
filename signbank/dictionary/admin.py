@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.forms import CheckboxSelectMultiple, ModelForm, Textarea
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from guardian.admin import GuardedModelAdmin
 from modeltranslation.admin import TranslationAdmin as ModelTranslationAdmin
 from reversion.admin import VersionAdmin

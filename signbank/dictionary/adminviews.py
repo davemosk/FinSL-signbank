@@ -21,7 +21,7 @@ from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.translation import get_language
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 from django_comments.models import Comment

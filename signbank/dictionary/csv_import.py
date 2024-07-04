@@ -20,7 +20,7 @@ from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, reverse
 from django.utils.timezone import get_current_timezone
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from django_comments.models import Comment
 from guardian.shortcuts import get_objects_for_user, get_perms
 from tagging.models import Tag, TaggedItem

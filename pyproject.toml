@@ -10,7 +10,7 @@ repository = "https://github.com/ODNZSL/NZSL-signbank"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-django = "~3.2.25"
+django = "~4.2.13"
 django-bootstrap3 = "*"
 django-contrib-comments = "*"
 django-debug-toolbar = "*"

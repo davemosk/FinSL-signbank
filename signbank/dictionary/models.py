@@ -13,7 +13,7 @@ from django.contrib.sites.models import Site
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db import OperationalError, models
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from tagging.models import Tag
 from tagging.registry import AlreadyRegistered, register as tagging_register
 
