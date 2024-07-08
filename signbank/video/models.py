@@ -197,7 +197,7 @@ class GlossVideo(models.Model):
                 # Set the actual file path to videofile.
                 self.videofile = saved_file_path
 
-                old_file.storage.delete(old_file.path)
+                old_file.storage.delete(old_file.name)
 
     def create_filename(self):
         """Returns a correctly named filename"""
