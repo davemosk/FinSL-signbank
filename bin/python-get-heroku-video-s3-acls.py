@@ -54,14 +54,31 @@ new_env["AWS_PROFILE"] = "nzsl"
 
 
 # Get all keys from S3
-print("Getting raw S3 keys recursively ($AWS_S3_BUCKET) ...")
+"""
+print(f"Getting raw S3 keys recursively ({AWS_S3_BUCKET}) ...")
 with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
     result = subprocess.run([AWS, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
                             env=new_env, shell=False, check=True,
                             text=True, stdout=f_obj)
 num_lines = sum(1 for _ in open(S3_BUCKET_RAW_KEYS_FILE))
 print(f"{num_lines} rows retrieved: {S3_BUCKET_RAW_KEYS_FILE}")
+"""
 
+# Get the video file keys from NZSL Signbank
+print(f"Getting raw video file keys from NZSL Signbank ({NZSL_APP}) ...")
+with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
+    result = subprocess.run([HEROKU, "pg:psql", "DATABASE_URL", "--app", f"{NZSL_APP}",
+                             "-c", "select videofile, is_public from video_glossvideo"],
+                            env=new_env, shell=False, check=True,
+                            text=True, stdout=f_obj)
+# Remove the first 2 and last 2 lines, as we cannot control pg:psql
+with open(NZSL_RAW_KEYS_FILE, "r") as f_obj:
+    lines = f_obj.readlines()
+    lines = lines[2:]
+    lines = lines[:-2]
+    for x in lines:
+        print(x)
 
-
+#num_lines = sum(1 for _ in open(NZSL_RAW_KEYS_FILE))
+#print(f"{num_lines} rows retrieved: {NZSL_RAW_KEYS_FILE}")
 
