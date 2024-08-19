@@ -59,49 +59,47 @@ else:
 new_env = os.environ.copy()
 new_env["AWS_PROFILE"] = "nzsl"
 
-
 # Get all keys from S3
 print(f"Getting raw S3 keys recursively ({AWS_S3_BUCKET}) ...")
+#TODO Change this to a file-like object
 with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
     result = subprocess.run([AWS, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
                             env=new_env, shell=False, check=True,
                             text=True, stdout=f_obj)
 
-# Get just the keys
-# Put them in an in-memory list, stripping newlines
+# Separate out just the keys (also strips newlines)
+# Put them in an in-memory list
 with open(S3_BUCKET_RAW_KEYS_FILE, "r") as f_obj:
     s3_bucket_raw_keys_list = [line.split()[3] for line in f_obj]
 print(f"{len(s3_bucket_raw_keys_list)} rows retrieved: {S3_BUCKET_RAW_KEYS_FILE}")
 
-# Write them back to the file for completeness
+# Write the keys back to the file
 with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
     for line in s3_bucket_raw_keys_list:
         f_obj.write(f"{line}\n")
 
-print(S3_BUCKET_RAW_KEYS_FILE)
-print("DEBUG EXIT")
-exit()
-
 # Get the video file keys from NZSL Signbank
 print(f"Getting raw video file keys from NZSL Signbank ({NZSL_APP}) ...")
+#TODO Change this to a file-like object
 with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
     result = subprocess.run([HEROKU, "pg:psql", "DATABASE_URL", "--app", f"{NZSL_APP}",
                              "-c", "select videofile, is_public from video_glossvideo"],
                             env=new_env, shell=False, check=True,
                             text=True, stdout=f_obj)
 
-# Put them in an in-memory list, stripping newlines
 # Remove the first 2 and last 2 lines, as we cannot control pg:psql's output formatting
 with open(NZSL_RAW_KEYS_FILE, "r") as f_obj:
-    nzsl_raw_keys_list = [line.rstrip() for line in f_obj]
+    nzsl_raw_keys_list = f_obj.readlines()
     nzsl_raw_keys_list = nzsl_raw_keys_list[2:]
     nzsl_raw_keys_list = nzsl_raw_keys_list[:-2]
+print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_RAW_KEYS_FILE}")
+
+# Put the raw lines back into the text file
 with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
     f_obj.writelines(nzsl_raw_keys_list)
-print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_RAW_KEYS_FILE}")
-#pprint(nzsl_raw_keys_list)
 
-# Write the NZSL keys to a dictionary so we can do fast operations on them
+# Separate out the NZSL key columns
+# Write them to a dictionary so we can do fast operations on them
 nzsl_raw_keys_dict = {}
 for rawl in nzsl_raw_keys_list:
     columns = rawl.split("|")
@@ -113,3 +111,12 @@ for rawl in nzsl_raw_keys_list:
 print("Getting S3 keys present and absent from NZSL Signbank ...")
 nzsl_cooked_keys_list = []
 s3_keys_not_in_nzsl_list = []
+
+for video_key in s3_bucket_raw_keys_list:
+    if video_key in nzsl_raw_keys_dict:
+        nzsl_cooked_keys_list.append(video_key)
+    else:
+        s3_keys_not_in_nzsl_list.append(video_key)
+
+print(f"PRESENT: {len(nzsl_cooked_keys_list)} keys")
+print(f"ABSENT: {len(s3_keys_not_in_nzsl_list)} keys")
