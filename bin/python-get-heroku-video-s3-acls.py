@@ -5,9 +5,16 @@
 #  s3:GetObjectAcl permissions or READ_ACP access to the object
 #  https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object-acl.html
 
+# FIXME
+# Currently pulling all data into text files the way the bash script
+# this python script is based on did it.
+# We may be able to get away with losing some of the files and doing
+# most of it in memory.
+
+
 import os
 import subprocess
-
+from pprint import pprint
 
 # Setup
 # TODO See how difficult using native API calls would be.
@@ -54,15 +61,26 @@ new_env["AWS_PROFILE"] = "nzsl"
 
 
 # Get all keys from S3
-"""
 print(f"Getting raw S3 keys recursively ({AWS_S3_BUCKET}) ...")
 with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
     result = subprocess.run([AWS, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
                             env=new_env, shell=False, check=True,
                             text=True, stdout=f_obj)
-num_lines = sum(1 for _ in open(S3_BUCKET_RAW_KEYS_FILE))
-print(f"{num_lines} rows retrieved: {S3_BUCKET_RAW_KEYS_FILE}")
-"""
+
+# Get just the keys
+# Put them in an in-memory list, stripping newlines
+with open(S3_BUCKET_RAW_KEYS_FILE, "r") as f_obj:
+    s3_bucket_raw_keys_list = [line.split()[3] for line in f_obj]
+print(f"{len(s3_bucket_raw_keys_list)} rows retrieved: {S3_BUCKET_RAW_KEYS_FILE}")
+
+# Write them back to the file for completeness
+with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
+    for line in s3_bucket_raw_keys_list:
+        f_obj.write(f"{line}\n")
+
+print(S3_BUCKET_RAW_KEYS_FILE)
+print("DEBUG EXIT")
+exit()
 
 # Get the video file keys from NZSL Signbank
 print(f"Getting raw video file keys from NZSL Signbank ({NZSL_APP}) ...")
@@ -71,12 +89,27 @@ with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
                              "-c", "select videofile, is_public from video_glossvideo"],
                             env=new_env, shell=False, check=True,
                             text=True, stdout=f_obj)
+
+# Put them in an in-memory list, stripping newlines
 # Remove the first 2 and last 2 lines, as we cannot control pg:psql's output formatting
 with open(NZSL_RAW_KEYS_FILE, "r") as f_obj:
-    lines = f_obj.readlines()
-    lines = lines[2:]
-    lines = lines[:-2]
+    nzsl_raw_keys_list = [line.rstrip() for line in f_obj]
+    nzsl_raw_keys_list = nzsl_raw_keys_list[2:]
+    nzsl_raw_keys_list = nzsl_raw_keys_list[:-2]
 with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
-    f_obj.writelines(lines)
-print(f"{len(lines)} rows retrieved: {NZSL_RAW_KEYS_FILE}")
+    f_obj.writelines(nzsl_raw_keys_list)
+print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_RAW_KEYS_FILE}")
+#pprint(nzsl_raw_keys_list)
 
+# Write the NZSL keys to a dictionary so we can do fast operations on them
+nzsl_raw_keys_dict = {}
+for rawl in nzsl_raw_keys_list:
+    columns = rawl.split("|")
+    video_key = columns[0].strip()
+    is_public = columns[1].strip().lower() == 't'
+    nzsl_raw_keys_dict[video_key] = is_public
+
+# Get the s3 keys present and absent from our NZSL keys
+print("Getting S3 keys present and absent from NZSL Signbank ...")
+nzsl_cooked_keys_list = []
+s3_keys_not_in_nzsl_list = []
