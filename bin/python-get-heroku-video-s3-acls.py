@@ -71,14 +71,12 @@ with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
                              "-c", "select videofile, is_public from video_glossvideo"],
                             env=new_env, shell=False, check=True,
                             text=True, stdout=f_obj)
-# Remove the first 2 and last 2 lines, as we cannot control pg:psql
+# Remove the first 2 and last 2 lines, as we cannot control pg:psql's output formatting
 with open(NZSL_RAW_KEYS_FILE, "r") as f_obj:
     lines = f_obj.readlines()
     lines = lines[2:]
     lines = lines[:-2]
-    for x in lines:
-        print(x)
-
-#num_lines = sum(1 for _ in open(NZSL_RAW_KEYS_FILE))
-#print(f"{num_lines} rows retrieved: {NZSL_RAW_KEYS_FILE}")
+with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
+    f_obj.writelines(lines)
+print(f"{len(lines)} rows retrieved: {NZSL_RAW_KEYS_FILE}")
 
