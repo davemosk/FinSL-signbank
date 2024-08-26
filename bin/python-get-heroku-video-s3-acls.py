@@ -5,26 +5,22 @@
 #  s3:GetObjectAcl permissions or READ_ACP access to the object
 #  https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object-acl.html
 
+# FIXME
+# Currently pulling all data into text files the way the bash script
+# that this python script is based on did it.
+# We may be able to get away with losing some the files and doing most
+# if not all of it in memory.
+
 
 import os
 import subprocess
-import boto3
 from pprint import pprint
 
-# Never store these in code
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", None)
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", None)
 
-print(AWS_ACCESS_KEY_ID)
-print(AWS_SECRET_ACCESS_KEY)
-
-# if DEBUG, we use the results stored in files and only process the ACLS online
 DEBUG = True
 
 # Setup
 # TODO See how difficult using native API calls would be.
-# Answer: Heroku - no idea
-# Answer: AWS - fairly simple
 HEROKU = "/usr/bin/heroku"
 AWS = "/usr/local/bin/aws"
 
@@ -116,6 +112,8 @@ if not DEBUG:
         video_key = columns[0].strip()
         is_public = columns[1].strip().lower() == 't'
         nzsl_raw_keys_dict[video_key] = is_public
+    # for item in nzsl_raw_keys_dict.items():
+    #    print(item)
 
     # Get the s3 keys present and absent from our NZSL keys
     print("Getting S3 keys present and absent from NZSL Signbank ...")
@@ -133,7 +131,7 @@ if not DEBUG:
             f_obj.write(f"{video_key}, {str(is_public)}\n")
 
 if DEBUG:
-    # We use the ones we recorded on the last non-DEBUG run
+    # We used the ones we recorded on the last non-DEBUG run
     with open(NZSL_COOKED_KEYS_FILE, "r") as f_obj:
         for line in f_obj.readlines():
             video_key, is_public = line.strip().split(", ")
@@ -141,30 +139,14 @@ if DEBUG:
 
 # From the ones present, get all their ACL information
 print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...")
-print("(Warning, this is a slow operation)")
 for video_key, is_public in nzsl_cooked_keys_dict.items():
     video_key = video_key.strip()
-    header = f"Key:    {video_key}\nPublic: {is_public}"
-
-    USE_S3_NATIVE = True
-
-    if USE_S3_NATIVE:
-        # Be very careful, never write anything back
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        )
-        acl = s3.get_object_acl(Key=video_key, Bucket=AWS_S3_BUCKET)
-        print(header)
-        pprint(acl)
-    else:
-        result = subprocess.run(
-            [AWS, "s3api", "get-object-acl", "--output", "text", "--bucket", AWS_S3_BUCKET, "--key", video_key],
-            env=new_env, shell=False, check=True, capture_output=True, text=True)
-        print(f"Key:    {video_key}")
-        print(f"Public: {is_public}")
-        print(header)
-        print(result.stdout)
+    print(f"Key:    {video_key}")
+    print(f"Public: {is_public}")
+    result = subprocess.run(
+        [AWS, "s3api", "get-object-acl", "--output", "text", "--bucket", AWS_S3_BUCKET, "--key", video_key],
+                            env=new_env, shell=False, check=True,
+                            capture_output=True, text=True)
+    print(result.stdout)
 
 
