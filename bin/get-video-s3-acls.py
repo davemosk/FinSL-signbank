@@ -21,11 +21,12 @@ parser = argparse.ArgumentParser(
     epilog="You must have a configured AWS profile to use this app. See the --awsprofile "
     "argument."
 )
+# Positional args
 parser.add_argument(
-    "--dburl",
-    required=True,
+    "dburl",
     help=f"(REQUIRED) Database url (e.g. value of DATABASE_URL on Heroku)",
 )
+# Named args
 parser.add_argument(
     "--cached",
     default=False,
