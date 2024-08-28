@@ -32,29 +32,33 @@ parser.add_argument(
     default=False,
     required=False,
     action="store_true",
-    help="Use keys generated on a previous non-cache run (default: False)",
+    help="Use keys generated on a previous non-cache run (default: %(default)s) "
+    "(Don't mix PRODUCTION and STAGING!)",
 )
 parser.add_argument(
     "--production",
     default=False,
     required=False,
     action="store_true",
-    help="Run in PRODUCTION mode (instead of STAGING) (default: False/STAGING)",
+    help="Run in PRODUCTION mode, instead of STAGING (default: %(default)s)",
 )
 parser.add_argument(
     "--pgclient",
     default=PGCLIENT,
     required=False,
-    help=f"Postgres client path (default: {PGCLIENT})",
+    help=f"Postgres client path (default: %(default)s)",
+)
+parser.add_argument(
+    "--awsclient",
+    default=AWS,
+    required=False,
+    help=f"AWS client path (default: %(default)s)",
 )
 parser.add_argument(
     "--awsprofile",
     default="nzsl",
     required=False,
-    help=f"AWS configured profile to use (default: 'nzsl')",
-)
-parser.add_argument(
-    "--awsclient", default=AWS, required=False, help=f"AWS client path (default: {AWS})"
+    help=f"AWS configured profile to use (default: '%(default)s')",
 )
 args = parser.parse_args()
 
@@ -195,8 +199,6 @@ else:
 print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...")
 for video_key, is_public in nzsl_cooked_keys_dict.items():
     video_key = video_key.strip()
-    print(f"Key:    {video_key}")
-    print(f"Public: {is_public}")
     result = subprocess.run(
         [
             AWS,
@@ -215,4 +217,6 @@ for video_key, is_public in nzsl_cooked_keys_dict.items():
         capture_output=True,
         text=True,
     )
+    print(f"Key:    {video_key}")
+    print(f"Public: {is_public}")
     print(result.stdout)
