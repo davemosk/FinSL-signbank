@@ -17,32 +17,44 @@ from pprint import pprint
 PGCLIENT = "/usr/bin/psql"
 AWS = "/usr/local/bin/aws"
 
-parser = argparse.ArgumentParser(epilog="You must have a configured AWS profile to use this app. See the --awsprofile argument.")
-parser.add_argument("--dburl",
-                    required=True,
-                    help=f"(REQUIRED) Database url (e.g. value of DATABASE_URL on Heroku)")
-parser.add_argument("--cached",
-                    default=False,
-                    required=False,
-                    action="store_true",
-                    help="Use keys generated on a previous non-cache run (default: False)")
-parser.add_argument("--production",
-                    default=False,
-                    required=False,
-                    action="store_true",
-                    help="Run in PRODUCTION mode (instead of STAGING) (default: False/STAGING)")
-parser.add_argument("--pgclient",
-                    default=PGCLIENT,
-                    required=False,
-                    help=f"Postgres client path (default: {PGCLIENT})")
-parser.add_argument("--awsprofile",
-                    default="nzsl",
-                    required=False,
-                    help=f"AWS configured profile to use (default: 'nzsl')")
-parser.add_argument("--awsclient",
-                    default=AWS,
-                    required=False,
-                    help=f"AWS client path (default: {AWS})")
+parser = argparse.ArgumentParser(
+    epilog="You must have a configured AWS profile to use this app. See the --awsprofile "
+    "argument."
+)
+parser.add_argument(
+    "--dburl",
+    required=True,
+    help=f"(REQUIRED) Database url (e.g. value of DATABASE_URL on Heroku)",
+)
+parser.add_argument(
+    "--cached",
+    default=False,
+    required=False,
+    action="store_true",
+    help="Use keys generated on a previous non-cache run (default: False)",
+)
+parser.add_argument(
+    "--production",
+    default=False,
+    required=False,
+    action="store_true",
+    help="Run in PRODUCTION mode (instead of STAGING) (default: False/STAGING)",
+)
+parser.add_argument(
+    "--pgclient",
+    default=PGCLIENT,
+    required=False,
+    help=f"Postgres client path (default: {PGCLIENT})",
+)
+parser.add_argument(
+    "--awsprofile",
+    default="nzsl",
+    required=False,
+    help=f"AWS configured profile to use (default: 'nzsl')",
+)
+parser.add_argument(
+    "--awsclient", default=AWS, required=False, help=f"AWS client path (default: {AWS})"
+)
 args = parser.parse_args()
 
 DATABASE_URL = args.dburl
@@ -97,12 +109,12 @@ if args.cached:
 else:
     print("Generating keys from scratch.")
     for p in (
-            NZSL_RAW_KEYS_FILE,
-            NZSL_COOKED_KEYS_FILE,
-            S3_BUCKET_RAW_KEYS_FILE,
-            S3_BUCKET_ERROR_KEYS_FILE,
-            S3_BUCKET_CONTENTS_FILE,
-            S3_KEYS_NOT_IN_NZSL
+        NZSL_RAW_KEYS_FILE,
+        NZSL_COOKED_KEYS_FILE,
+        S3_BUCKET_RAW_KEYS_FILE,
+        S3_BUCKET_ERROR_KEYS_FILE,
+        S3_BUCKET_CONTENTS_FILE,
+        S3_KEYS_NOT_IN_NZSL,
     ):
         f = open(p, "a")
         f.truncate()
@@ -111,9 +123,14 @@ else:
     # Get all keys from S3
     print(f"Getting raw S3 keys recursively ({AWS_S3_BUCKET}) ...")
     with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
-        result = subprocess.run([AWS, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
-                                env=new_env, shell=False, check=True,
-                                text=True, stdout=f_obj)
+        result = subprocess.run(
+            [AWS, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
+            env=new_env,
+            shell=False,
+            check=True,
+            text=True,
+            stdout=f_obj,
+        )
 
     # Separate out just the keys (also strips newlines)
     # Put them in an in-memory list
@@ -129,12 +146,20 @@ else:
     # Get the video file keys from NZSL Signbank
     print(f"Getting raw video file keys from NZSL Signbank ({NZSL_APP}) ...")
     with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
-        result = subprocess.run([PGCLIENT,
-                                 "-t",
-                                 "-c", "select videofile, is_public from video_glossvideo",
-                                f"{DATABASE_URL}"],
-                                env=new_env, shell=False, check=True,
-                                text=True, stdout=f_obj)
+        result = subprocess.run(
+            [
+                PGCLIENT,
+                "-t",
+                "-c",
+                "select videofile, is_public from video_glossvideo",
+                f"{DATABASE_URL}",
+            ],
+            env=new_env,
+            shell=False,
+            check=True,
+            text=True,
+            stdout=f_obj,
+        )
     with open(NZSL_RAW_KEYS_FILE, "r") as f_obj:
         nzsl_raw_keys_list = f_obj.readlines()
     print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_RAW_KEYS_FILE}")
@@ -147,7 +172,7 @@ else:
             continue
         columns = rawl.split("|")
         video_key = columns[0].strip()
-        is_public = columns[1].strip().lower() == 't'
+        is_public = columns[1].strip().lower() == "t"
         nzsl_raw_keys_dict[video_key] = is_public
 
     # Get the s3 keys present and absent from our NZSL keys
@@ -172,7 +197,21 @@ for video_key, is_public in nzsl_cooked_keys_dict.items():
     print(f"Key:    {video_key}")
     print(f"Public: {is_public}")
     result = subprocess.run(
-        [AWS, "s3api", "get-object-acl", "--output", "text", "--bucket", AWS_S3_BUCKET, "--key", video_key],
-        env=new_env, shell=False, check=True,
-        capture_output=True, text=True)
+        [
+            AWS,
+            "s3api",
+            "get-object-acl",
+            "--output",
+            "text",
+            "--bucket",
+            AWS_S3_BUCKET,
+            "--key",
+            video_key,
+        ],
+        env=new_env,
+        shell=False,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
     print(result.stdout)
