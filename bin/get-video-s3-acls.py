@@ -11,10 +11,13 @@ import subprocess
 import argparse
 from pprint import pprint
 
-HEROKU = "/usr/bin/heroku"
+PGCLIENT = "/usr/bin/psql"
 AWS = "/usr/local/bin/aws"
 
 parser = argparse.ArgumentParser(epilog="You must have a configured AWS profile to use this app. See the --awsprofile argument.")
+parser.add_argument("--dburl",
+                    required=True,
+                    help=f"(REQUIRED) Database url (e.g. value of DATABASE_URL on Heroku)")
 parser.add_argument("--cached",
                     default=False,
                     required=False,
@@ -26,34 +29,36 @@ parser.add_argument("--production",
                     action="store_true",
                     help="Run in PRODUCTION mode (instead of STAGING) (default: False/STAGING)")
 parser.add_argument("--pgclient",
-                    default=HEROKU,
+                    default=PGCLIENT,
                     required=False,
-                    help=f"Postgres client path (default: {HEROKU})")
+                    help=f"Postgres client path (default: {PGCLIENT})")
 parser.add_argument("--awsprofile",
                     default="nzsl",
                     required=False,
                     help=f"AWS configured profile to use (default: 'nzsl')")
-parser.add_argument("--s3client",
+parser.add_argument("--awsclient",
                     default=AWS,
                     required=False,
-                    help=f"AWS S3 client path (default: {AWS})")
+                    help=f"AWS client path (default: {AWS})")
 args = parser.parse_args()
 
-HEROKU = args.pgclient
-AWS = args.s3client
+DATABASE_URL = args.dburl
+PGCLIENT = args.pgclient
+AWS = args.awsclient
 
 if args.production:
-    print("Mode:                 PRODUCTION")
+    MODE_STR = "PRODUCTION"
     NZSL_APP = "nzsl-signbank-production"
     AWS_S3_BUCKET = "nzsl-signbank-media-production"
 else:
-    print("Mode:                 STAGING")
+    MODE_STR = "STAGING"
     NZSL_APP = "nzsl-signbank-uat"
     AWS_S3_BUCKET = "nzsl-signbank-media-uat"
 
 new_env = os.environ.copy()
 new_env["AWS_PROFILE"] = args.awsprofile
 
+print(f"Mode:                 {MODE_STR}")
 print(f"Target NZSL app:      {NZSL_APP}")
 print(f"Target AWS S3 bucket: {AWS_S3_BUCKET}")
 print(f"AWS profile using:    {new_env['AWS_PROFILE']}")
@@ -76,7 +81,7 @@ nzsl_cooked_keys_dict = {}
 s3_keys_not_in_nzsl_list = []
 
 if args.cached:
-    print("Using the video keys we recorded on the last non-cached run")
+    print("Using the video keys we recorded on the last non-cached run.")
     try:
         with open(NZSL_COOKED_KEYS_FILE, "r") as f_obj:
             for line in f_obj.readlines():
@@ -87,6 +92,7 @@ if args.cached:
         exit()
     print(f"PRESENT: {len(nzsl_cooked_keys_dict)} keys")
 else:
+    print("Generating keys from scratch.")
     for p in (
             NZSL_RAW_KEYS_FILE,
             NZSL_COOKED_KEYS_FILE,
@@ -120,31 +126,26 @@ else:
     # Get the video file keys from NZSL Signbank
     print(f"Getting raw video file keys from NZSL Signbank ({NZSL_APP}) ...")
     with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
-        result = subprocess.run([HEROKU, "pg:psql", "DATABASE_URL", "--app", f"{NZSL_APP}",
-                                 "-c", "select videofile, is_public from video_glossvideo"],
+        result = subprocess.run([PGCLIENT,
+                                 "-t",
+                                 "-c", "select videofile, is_public from video_glossvideo",
+                                f"{DATABASE_URL}"],
                                 env=new_env, shell=False, check=True,
                                 text=True, stdout=f_obj)
-
-    # Remove the first 2 and last 2 lines, as we cannot control pg:psql's output formatting
     with open(NZSL_RAW_KEYS_FILE, "r") as f_obj:
         nzsl_raw_keys_list = f_obj.readlines()
-        nzsl_raw_keys_list = nzsl_raw_keys_list[2:]
-        nzsl_raw_keys_list = nzsl_raw_keys_list[:-2]
     print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_RAW_KEYS_FILE}")
-
-    # Put the raw lines back into the text file
-    with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
-        f_obj.writelines(nzsl_raw_keys_list)
 
     # Separate out the NZSL key columns
     # Write them to a dictionary so we can do fast operations on them
     for rawl in nzsl_raw_keys_list:
+        rawl = rawl.strip()
+        if not rawl:
+            continue
         columns = rawl.split("|")
         video_key = columns[0].strip()
         is_public = columns[1].strip().lower() == 't'
         nzsl_raw_keys_dict[video_key] = is_public
-    # for item in nzsl_raw_keys_dict.items():
-    #    print(item)
 
     # Get the s3 keys present and absent from our NZSL keys
     print("Getting S3 keys present and absent from NZSL Signbank ...")
