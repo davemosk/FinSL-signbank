@@ -11,6 +11,9 @@ import subprocess
 import argparse
 from pprint import pprint
 
+# TODO
+# We are using external apps just for the moment.
+# These will be removed for native libraries.
 PGCLIENT = "/usr/bin/psql"
 AWS = "/usr/local/bin/aws"
 
