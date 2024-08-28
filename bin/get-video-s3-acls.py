@@ -11,36 +11,58 @@ import subprocess
 import argparse
 from pprint import pprint
 
-parser = argparse.ArgumentParser()
+HEROKU = "/usr/bin/heroku"
+AWS = "/usr/local/bin/aws"
+
+parser = argparse.ArgumentParser(epilog="You must have a configured AWS profile to use this app. See the --awsprofile argument.")
 parser.add_argument("--cached",
                     default=False,
                     required=False,
                     action="store_true",
-                    help="Use keys generated on a previous non-cache run")
+                    help="Use keys generated on a previous non-cache run (default: False)")
+parser.add_argument("--production",
+                    default=False,
+                    required=False,
+                    action="store_true",
+                    help="Run in PRODUCTION mode (instead of STAGING) (default: False/STAGING)")
+parser.add_argument("--pgclient",
+                    default=HEROKU,
+                    required=False,
+                    help=f"Postgres client path (default: {HEROKU})")
+parser.add_argument("--awsprofile",
+                    default="nzsl",
+                    required=False,
+                    help=f"AWS configured profile to use (default: 'nzsl')")
+parser.add_argument("--s3client",
+                    default=AWS,
+                    required=False,
+                    help=f"AWS S3 client path (default: {AWS})")
 args = parser.parse_args()
 
-# Setup
-HEROKU = "/usr/bin/heroku"
-AWS = "/usr/local/bin/aws"
+HEROKU = args.pgclient
+AWS = args.s3client
 
-RUN_MODE = "production"
-if RUN_MODE == "production":
-    print("PRODUCTION")
+if args.production:
+    print("Mode:                 PRODUCTION")
     NZSL_APP = "nzsl-signbank-production"
     AWS_S3_BUCKET = "nzsl-signbank-media-production"
 else:
-    print("STAGING")
+    print("Mode:                 STAGING")
     NZSL_APP = "nzsl-signbank-uat"
     AWS_S3_BUCKET = "nzsl-signbank-media-uat"
 
 new_env = os.environ.copy()
-new_env["AWS_PROFILE"] = "nzsl"
+new_env["AWS_PROFILE"] = args.awsprofile
+
+print(f"Target NZSL app:      {NZSL_APP}")
+print(f"Target AWS S3 bucket: {AWS_S3_BUCKET}")
+print(f"AWS profile using:    {new_env['AWS_PROFILE']}")
 
 TMPDIR = "/tmp/nzsl"
 try:
     os.makedirs(TMPDIR, exist_ok=True)
 except OSError as err:
-    print(f"Error creating directory: {err}")
+    print(f"Error creating temporary directory: {TMPDIR} {err}")
     exit()
 NZSL_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_raw_keys.txt"
 NZSL_COOKED_KEYS_FILE = f"{TMPDIR}/nzsl_cooked_keys.txt"
@@ -138,7 +160,6 @@ else:
     with open(NZSL_COOKED_KEYS_FILE, "w") as f_obj:
         for video_key, is_public in nzsl_cooked_keys_dict.items():
             f_obj.write(f"{video_key}, {str(is_public)}\n")
-
 
 # From the keys present in NZSL, get all their ACL information
 print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...")
