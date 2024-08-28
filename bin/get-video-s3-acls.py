@@ -9,7 +9,6 @@
 import os
 import subprocess
 import argparse
-from pprint import pprint
 
 # TODO
 # We are using external apps just for the moment.
