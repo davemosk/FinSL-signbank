@@ -18,22 +18,20 @@ PGCLIENT = "/usr/bin/psql"
 AWS = "/usr/local/bin/aws"
 
 parser = argparse.ArgumentParser(
-    epilog="You must have a configured AWS profile to use this app. See the --awsprofile "
+    description="You must have a configured AWS profile to use this app. See the --awsprofile "
     "argument."
 )
-# Positional args
+# Positional arguments
 parser.add_argument(
     "dburl",
     help=f"(REQUIRED) Database url (e.g. value of DATABASE_URL on Heroku)",
 )
-# Named args
+# Optional arguments
 parser.add_argument(
-    "--cached",
-    default=False,
+    "--awsprofile",
+    default="nzsl",
     required=False,
-    action="store_true",
-    help="Use keys generated on a previous non-cache run (default: %(default)s) "
-    "(Don't mix PRODUCTION and STAGING!)",
+    help=f"AWS configured profile to use (default: '%(default)s')",
 )
 parser.add_argument(
     "--production",
@@ -41,6 +39,14 @@ parser.add_argument(
     required=False,
     action="store_true",
     help="Run in PRODUCTION mode, instead of STAGING (default: %(default)s)",
+)
+parser.add_argument(
+    "--cached",
+    default=False,
+    required=False,
+    action="store_true",
+    help="Use keys generated on a previous non-cached run (default: %(default)s) "
+    "(Don't mix PRODUCTION and STAGING!)",
 )
 parser.add_argument(
     "--pgclient",
@@ -53,12 +59,6 @@ parser.add_argument(
     default=AWS,
     required=False,
     help=f"AWS client path (default: %(default)s)",
-)
-parser.add_argument(
-    "--awsprofile",
-    default="nzsl",
-    required=False,
-    help=f"AWS configured profile to use (default: '%(default)s')",
 )
 args = parser.parse_args()
 
