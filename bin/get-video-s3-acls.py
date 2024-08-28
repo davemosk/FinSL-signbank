@@ -36,7 +36,7 @@ parser.add_argument(
     "--awsprofile",
     default="nzsl",
     required=False,
-    help=f"AWSCLIENT configured profile to use (default: '%(default)s')",
+    help=f"AWS configured profile to use (default: '%(default)s')",
 )
 parser.add_argument(
     "--production",
@@ -63,7 +63,7 @@ parser.add_argument(
     "--awsclient",
     default=AWSCLIENT,
     required=False,
-    help=f"AWSCLIENT client path (default: %(default)s)",
+    help=f"AWS client path (default: %(default)s)",
 )
 args = parser.parse_args()
 
