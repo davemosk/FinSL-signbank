@@ -15,23 +15,29 @@ from pprint import pprint
 # We are using external apps just for the moment.
 # These will be removed for native libraries.
 PGCLIENT = "/usr/bin/psql"
-AWS = "/usr/local/bin/aws"
+AWSCLIENT = "/usr/local/bin/aws"
+
+# NZSL: Is there a database url defined in the environment?
+DATABASE_URL = os.getenv("DATABASE_URL", None)
 
 parser = argparse.ArgumentParser(
-    description="You must have a configured AWS profile to use this app. See the --awsprofile "
+    description="You must have a configured AWSCLIENT profile to use this app. See the --awsprofile "
     "argument."
 )
 # Positional arguments
-parser.add_argument(
-    "dburl",
-    help=f"(REQUIRED) Database url (e.g. value of DATABASE_URL on Heroku)",
-)
+if DATABASE_URL:
+    print("DATABASE_URL defined in environment")
+else:
+    parser.add_argument(
+        "dburl",
+        help=f"(REQUIRED) Database url (Overridden by DATABASE_URL environment variable)",
+    )
 # Optional arguments
 parser.add_argument(
     "--awsprofile",
     default="nzsl",
     required=False,
-    help=f"AWS configured profile to use (default: '%(default)s')",
+    help=f"AWSCLIENT configured profile to use (default: '%(default)s')",
 )
 parser.add_argument(
     "--production",
@@ -56,15 +62,11 @@ parser.add_argument(
 )
 parser.add_argument(
     "--awsclient",
-    default=AWS,
+    default=AWSCLIENT,
     required=False,
-    help=f"AWS client path (default: %(default)s)",
+    help=f"AWSCLIENT client path (default: %(default)s)",
 )
 args = parser.parse_args()
-
-DATABASE_URL = args.dburl
-PGCLIENT = args.pgclient
-AWS = args.awsclient
 
 if args.production:
     MODE_STR = "PRODUCTION"
@@ -78,10 +80,22 @@ else:
 new_env = os.environ.copy()
 new_env["AWS_PROFILE"] = args.awsprofile
 
+PGCLIENT = args.pgclient
+AWSCLIENT = args.awsclient
+
+if not DATABASE_URL:
+    DATABASE_URL = args.dburl
+
+if args.cached:
+    print("Using the video keys we recorded on the last non-cached run.")
+
 print(f"Mode:                 {MODE_STR}")
 print(f"Target NZSL app:      {NZSL_APP}")
 print(f"Target AWS S3 bucket: {AWS_S3_BUCKET}")
 print(f"AWS profile using:    {new_env['AWS_PROFILE']}")
+print(f"PGCLIENT:             {PGCLIENT}")
+print(f"AWSCLIENT:            {AWSCLIENT}")
+print(f"DATABASE_URL:\n{DATABASE_URL}")
 
 TMPDIR = "/tmp/nzsl"
 try:
@@ -94,14 +108,13 @@ NZSL_COOKED_KEYS_FILE = f"{TMPDIR}/nzsl_cooked_keys.txt"
 S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 S3_BUCKET_ERROR_KEYS_FILE = f"{TMPDIR}/s3_bucket_error_keys.csv"
 S3_BUCKET_CONTENTS_FILE = f"{TMPDIR}/s3_bucket_contents.csv"
-S3_KEYS_NOT_IN_NZSL = f"{TMPDIR}/s3_keys_not_in_nzsl.csv"
+S3_KEYS_NOT_IN_NZSL_FILE = f"{TMPDIR}/s3_keys_not_in_nzsl.csv"
 
 nzsl_raw_keys_dict = {}
 nzsl_cooked_keys_dict = {}
 s3_keys_not_in_nzsl_list = []
 
 if args.cached:
-    print("Using the video keys we recorded on the last non-cached run.")
     try:
         with open(NZSL_COOKED_KEYS_FILE, "r") as f_obj:
             for line in f_obj.readlines():
@@ -110,7 +123,14 @@ if args.cached:
     except FileNotFoundError:
         print(f"File not found: {NZSL_COOKED_KEYS_FILE}")
         exit()
+    try:
+        with open(S3_KEYS_NOT_IN_NZSL_FILE, "r") as f_obj:
+            s3_keys_not_in_nzsl_list = [line.strip() for line in f_obj.readlines()]
+    except FileNotFoundError:
+        print(f"File not found: {S3_KEYS_NOT_IN_NZSL_FILE}")
+        exit()
     print(f"PRESENT: {len(nzsl_cooked_keys_dict)} keys")
+    print(f"ABSENT:  {len(s3_keys_not_in_nzsl_list)} keys")
 else:
     print("Generating keys from scratch.")
     for p in (
@@ -119,7 +139,7 @@ else:
         S3_BUCKET_RAW_KEYS_FILE,
         S3_BUCKET_ERROR_KEYS_FILE,
         S3_BUCKET_CONTENTS_FILE,
-        S3_KEYS_NOT_IN_NZSL,
+        S3_KEYS_NOT_IN_NZSL_FILE,
     ):
         f = open(p, "a")
         f.truncate()
@@ -129,7 +149,7 @@ else:
     print(f"Getting raw S3 keys recursively ({AWS_S3_BUCKET}) ...")
     with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
         result = subprocess.run(
-            [AWS, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
+            [AWSCLIENT, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
             env=new_env,
             shell=False,
             check=True,
@@ -189,11 +209,16 @@ else:
             s3_keys_not_in_nzsl_list.append(video_key)
     print(f"PRESENT: {len(nzsl_cooked_keys_dict)} keys")
     print(f"ABSENT: {len(s3_keys_not_in_nzsl_list)} keys")
-    # Write just the cooked keys back to a file
-    # This is mainly for Debug
+
+    # Write the "cooked" (i.e. present) keys back to a file
     with open(NZSL_COOKED_KEYS_FILE, "w") as f_obj:
         for video_key, is_public in nzsl_cooked_keys_dict.items():
             f_obj.write(f"{video_key}, {str(is_public)}\n")
+
+    # Write the absent keys back to a file
+    with open(S3_KEYS_NOT_IN_NZSL_FILE, "w") as f_obj:
+        for video_key in s3_keys_not_in_nzsl_list:
+            f_obj.write(f"{video_key}\n")
 
 # From the keys present in NZSL, get all their ACL information
 print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...")
@@ -201,7 +226,7 @@ for video_key, is_public in nzsl_cooked_keys_dict.items():
     video_key = video_key.strip()
     result = subprocess.run(
         [
-            AWS,
+            AWSCLIENT,
             "s3api",
             "get-object-acl",
             "--output",
