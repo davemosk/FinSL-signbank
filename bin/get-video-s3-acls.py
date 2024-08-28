@@ -13,8 +13,8 @@ import argparse
 # TODO
 # We are using external apps just for the moment.
 # These will be removed for native libraries.
-PGCLIENT = "/usr/bin/psql"
 AWSCLIENT = "/usr/local/bin/aws"
+PGCLIENT = "/usr/bin/psql"
 
 # NZSL: Is there a database url defined in the environment?
 DATABASE_URL = os.getenv("DATABASE_URL", None)
@@ -79,21 +79,23 @@ else:
 new_env = os.environ.copy()
 new_env["AWS_PROFILE"] = args.awsprofile
 
-PGCLIENT = args.pgclient
 AWSCLIENT = args.awsclient
+PGCLIENT = args.pgclient
 
 if not DATABASE_URL:
     DATABASE_URL = args.dburl
 
 if args.cached:
     print("Using the video keys we recorded on the last non-cached run.")
+else:
+    print("Generating keys from scratch.")
 
-print(f"Mode:                 {MODE_STR}")
-print(f"Target NZSL app:      {NZSL_APP}")
-print(f"Target AWS S3 bucket: {AWS_S3_BUCKET}")
-print(f"AWS profile using:    {new_env['AWS_PROFILE']}")
-print(f"PGCLIENT:             {PGCLIENT}")
-print(f"AWSCLIENT:            {AWSCLIENT}")
+print(f"Mode:          {MODE_STR}")
+print(f"NZSL app:      {NZSL_APP}")
+print(f"AWS S3 bucket: {AWS_S3_BUCKET}")
+print(f"AWS profile:   {new_env['AWS_PROFILE']}")
+print(f"AWSCLIENT:     {AWSCLIENT}")
+print(f"PGCLIENT:      {PGCLIENT}")
 print(f"DATABASE_URL:\n{DATABASE_URL}")
 
 TMPDIR = "/tmp/nzsl"
@@ -104,6 +106,7 @@ except OSError as err:
     exit()
 NZSL_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_raw_keys.txt"
 NZSL_COOKED_KEYS_FILE = f"{TMPDIR}/nzsl_cooked_keys.txt"
+COOKED_DELIMITER = ", "
 S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 S3_BUCKET_ERROR_KEYS_FILE = f"{TMPDIR}/s3_bucket_error_keys.csv"
 S3_BUCKET_CONTENTS_FILE = f"{TMPDIR}/s3_bucket_contents.csv"
@@ -114,10 +117,11 @@ nzsl_cooked_keys_dict = {}
 s3_keys_not_in_nzsl_list = []
 
 if args.cached:
+    # Pull all info from existing files
     try:
         with open(NZSL_COOKED_KEYS_FILE, "r") as f_obj:
             for line in f_obj.readlines():
-                video_key, is_public = line.strip().split(", ")
+                video_key, is_public = line.strip().split(COOKED_DELIMITER)
                 nzsl_cooked_keys_dict[video_key] = is_public
     except FileNotFoundError:
         print(f"File not found: {NZSL_COOKED_KEYS_FILE}")
@@ -131,7 +135,7 @@ if args.cached:
     print(f"PRESENT: {len(nzsl_cooked_keys_dict)} keys")
     print(f"ABSENT:  {len(s3_keys_not_in_nzsl_list)} keys")
 else:
-    print("Generating keys from scratch.")
+    # Zero-out files
     for p in (
         NZSL_RAW_KEYS_FILE,
         NZSL_COOKED_KEYS_FILE,
@@ -144,8 +148,8 @@ else:
         f.truncate()
         f.close()
 
-    # Get all keys from S3
-    print(f"Getting raw S3 keys recursively ({AWS_S3_BUCKET}) ...")
+    # Get all keys from AWS S3
+    print(f"Getting raw AWS S3 keys recursively ({AWS_S3_BUCKET}) ...")
     with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
         result = subprocess.run(
             [AWSCLIENT, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
@@ -212,7 +216,7 @@ else:
     # Write the "cooked" (i.e. present) keys back to a file
     with open(NZSL_COOKED_KEYS_FILE, "w") as f_obj:
         for video_key, is_public in nzsl_cooked_keys_dict.items():
-            f_obj.write(f"{video_key}, {str(is_public)}\n")
+            f_obj.write(f"{video_key}{COOKED_DELIMITER}{str(is_public)}\n")
 
     # Write the absent keys back to a file
     with open(S3_KEYS_NOT_IN_NZSL_FILE, "w") as f_obj:
