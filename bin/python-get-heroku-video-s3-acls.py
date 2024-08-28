@@ -5,22 +5,21 @@
 #  s3:GetObjectAcl permissions or READ_ACP access to the object
 #  https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object-acl.html
 
-# FIXME
-# Currently pulling all data into text files the way the bash script
-# that this python script is based on did it.
-# We may be able to get away with losing some the files and doing most
-# if not all of it in memory.
-
 
 import os
 import subprocess
+import argparse
 from pprint import pprint
 
-
-DEBUG = True
+parser = argparse.ArgumentParser()
+parser.add_argument("--cached",
+                    default=False,
+                    required=False,
+                    action="store_true",
+                    help="Use keys generated on a previous non-cache run")
+args = parser.parse_args()
 
 # Setup
-# TODO See how difficult using native API calls would be.
 HEROKU = "/usr/bin/heroku"
 AWS = "/usr/local/bin/aws"
 
@@ -54,7 +53,18 @@ nzsl_raw_keys_dict = {}
 nzsl_cooked_keys_dict = {}
 s3_keys_not_in_nzsl_list = []
 
-if not DEBUG:
+if args.cached:
+    print("Using the video keys we recorded on the last non-cached run")
+    try:
+        with open(NZSL_COOKED_KEYS_FILE, "r") as f_obj:
+            for line in f_obj.readlines():
+                video_key, is_public = line.strip().split(", ")
+                nzsl_cooked_keys_dict[video_key] = is_public
+    except FileNotFoundError:
+        print(f"File not found: {NZSL_COOKED_KEYS_FILE}")
+        exit()
+    print(f"PRESENT: {len(nzsl_cooked_keys_dict)} keys")
+else:
     for p in (
             NZSL_RAW_KEYS_FILE,
             NZSL_COOKED_KEYS_FILE,
@@ -69,7 +79,6 @@ if not DEBUG:
 
     # Get all keys from S3
     print(f"Getting raw S3 keys recursively ({AWS_S3_BUCKET}) ...")
-    # TODO Change this to a file-like object
     with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
         result = subprocess.run([AWS, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
                                 env=new_env, shell=False, check=True,
@@ -130,14 +139,8 @@ if not DEBUG:
         for video_key, is_public in nzsl_cooked_keys_dict.items():
             f_obj.write(f"{video_key}, {str(is_public)}\n")
 
-if DEBUG:
-    # We used the ones we recorded on the last non-DEBUG run
-    with open(NZSL_COOKED_KEYS_FILE, "r") as f_obj:
-        for line in f_obj.readlines():
-            video_key, is_public = line.strip().split(", ")
-            nzsl_cooked_keys_dict[video_key] = is_public
 
-# From the ones present, get all their ACL information
+# From the keys present in NZSL, get all their ACL information
 print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...")
 for video_key, is_public in nzsl_cooked_keys_dict.items():
     video_key = video_key.strip()
@@ -145,8 +148,6 @@ for video_key, is_public in nzsl_cooked_keys_dict.items():
     print(f"Public: {is_public}")
     result = subprocess.run(
         [AWS, "s3api", "get-object-acl", "--output", "text", "--bucket", AWS_S3_BUCKET, "--key", video_key],
-                            env=new_env, shell=False, check=True,
-                            capture_output=True, text=True)
+        env=new_env, shell=False, check=True,
+        capture_output=True, text=True)
     print(result.stdout)
-
-
