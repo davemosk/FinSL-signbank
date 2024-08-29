@@ -90,12 +90,12 @@ if args.cached:
 else:
     print("Generating keys from scratch.")
 
-print(f"Mode:          {MODE_STR}")
-print(f"NZSL app:      {NZSL_APP}")
-print(f"AWS S3 bucket: {AWS_S3_BUCKET}")
-print(f"AWS profile:   {new_env['AWS_PROFILE']}")
-print(f"AWSCLIENT:     {AWSCLIENT}")
-print(f"PGCLIENT:      {PGCLIENT}")
+print(f"Mode:        {MODE_STR}")
+print(f"  NZSL app:  {NZSL_APP}")
+print(f"  S3 bucket: {AWS_S3_BUCKET}")
+print(f"AWS profile: {new_env['AWS_PROFILE']}")
+print(f"AWSCLIENT:   {AWSCLIENT}")
+print(f"PGCLIENT:    {PGCLIENT}")
 print(f"DATABASE_URL:\n{DATABASE_URL}")
 
 TMPDIR = "/tmp/nzsl"
