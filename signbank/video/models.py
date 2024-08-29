@@ -48,7 +48,7 @@ class GlossVideoDynamicStorage(import_string(settings.GLOSS_VIDEO_FILE_STORAGE))
 
             return f'{domain}{path}'
 
-    def set_public(self, name, is_public):
+    def set_public_acl(self, name, is_public):
         """ Set the object ACL on the object. This is only supported
         for S3 storage, and is a no-op for local file storage
         """
@@ -60,8 +60,6 @@ class GlossVideoDynamicStorage(import_string(settings.GLOSS_VIDEO_FILE_STORAGE))
             Bucket=self.bucket.name,
             Key=name
         )
-
-
 
 
 class GlossVideo(models.Model):
@@ -247,7 +245,7 @@ class GlossVideo(models.Model):
     def set_public(self, is_public):
         self.is_public = is_public
         self.save()
-        self.videofile.storage.set_public(self.videofile.name, is_public)
+        self.videofile.storage.set_public_acl(self.videofile.name, is_public)
 
         True
 
