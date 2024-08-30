@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Permissions required:
-#  heroku cli - access to app
+#  psql - access to heroku app's postgres
 #  aws s3 - NZSL IAM access
 #  s3:GetObjectAcl permissions or READ_ACP access to the object
 #  https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object-acl.html
@@ -9,6 +9,7 @@
 import os
 import subprocess
 import argparse
+from pprint import pprint
 
 # TODO
 # We are using external apps just for the moment.
@@ -106,22 +107,28 @@ except OSError as err:
     exit()
 NZSL_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_raw_keys.txt"
 NZSL_COOKED_KEYS_FILE = f"{TMPDIR}/nzsl_cooked_keys.txt"
-COOKED_DELIMITER = ", "
+CSV_DELIMITER = ", "
 S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 S3_BUCKET_ERROR_KEYS_FILE = f"{TMPDIR}/s3_bucket_error_keys.csv"
 S3_BUCKET_CONTENTS_FILE = f"{TMPDIR}/s3_bucket_contents.csv"
 S3_KEYS_NOT_IN_NZSL_FILE = f"{TMPDIR}/s3_keys_not_in_nzsl.csv"
+ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
 
 nzsl_raw_keys_dict = {}
 nzsl_cooked_keys_dict = {}
 s3_keys_not_in_nzsl_list = []
 
+# TODO This will replace everything
+all_keys_dict = {}
+
 if args.cached:
+    print("NOT READY!")
+    exit()
     # Pull all info from existing files
     try:
         with open(NZSL_COOKED_KEYS_FILE, "r") as f_obj:
             for line in f_obj.readlines():
-                video_key, is_public = line.strip().split(COOKED_DELIMITER)
+                video_key, is_public = line.strip().split(CSV_DELIMITER)
                 nzsl_cooked_keys_dict[video_key] = is_public
     except FileNotFoundError:
         print(f"File not found: {NZSL_COOKED_KEYS_FILE}")
@@ -143,6 +150,7 @@ else:
         S3_BUCKET_ERROR_KEYS_FILE,
         S3_BUCKET_CONTENTS_FILE,
         S3_KEYS_NOT_IN_NZSL_FILE,
+        ALL_KEYS_FILE
     ):
         f = open(p, "a")
         f.truncate()
@@ -160,26 +168,26 @@ else:
             stdout=f_obj,
         )
 
-    # Separate out just the keys (also strips newlines)
-    # Put them in an in-memory list
+    # Separate out just the key (also strip newline) from date, time, size, key
+    # Put the keys in an in-memory list
     with open(S3_BUCKET_RAW_KEYS_FILE, "r") as f_obj:
         s3_bucket_raw_keys_list = [line.split()[3] for line in f_obj]
     print(f"{len(s3_bucket_raw_keys_list)} rows retrieved: {S3_BUCKET_RAW_KEYS_FILE}")
 
-    # Write the keys back to the file
+    # Write the keys back to the file, for cleanliness
     with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
         for line in s3_bucket_raw_keys_list:
             f_obj.write(f"{line}\n")
 
-    # Get the video file keys from NZSL Signbank
-    print(f"Getting raw video file keys from NZSL Signbank ({NZSL_APP}) ...")
+    # Get the video files info from NZSL Signbank
+    print(f"Getting raw list of video file info from NZSL Signbank ({NZSL_APP}) ...")
     with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
         result = subprocess.run(
             [
                 PGCLIENT,
                 "-t",
                 "-c",
-                "select videofile, is_public from video_glossvideo",
+                "select id as db_id, gloss_id, is_public, videofile from video_glossvideo",
                 f"{DATABASE_URL}",
             ],
             env=new_env,
@@ -193,40 +201,63 @@ else:
     print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_RAW_KEYS_FILE}")
 
     # Separate out the NZSL key columns
-    # Write them to a dictionary so we can do fast operations on them
+    # Write them to a dictionary, so we can do fast operations on them
     for rawl in nzsl_raw_keys_list:
         rawl = rawl.strip()
         if not rawl:
             continue
         columns = rawl.split("|")
-        video_key = columns[0].strip()
-        is_public = columns[1].strip().lower() == "t"
-        nzsl_raw_keys_dict[video_key] = is_public
+        db_id = columns[0].strip()
+        gloss_id = columns[1].strip()
+        is_public = columns[2].strip().lower() == "t"
+        # 'videofile' data is also the key for S3
+        video_key = columns[3].strip()
+        # Each dictionary entry is all of these values
+        nzsl_raw_keys_dict[video_key] = [db_id, gloss_id, is_public]
 
     # Get the s3 keys present and absent from our NZSL keys
     print("Getting S3 keys present and absent from NZSL Signbank ...")
+    nkeys_present = 0
+    nkeys_absent = 0
     for video_key in s3_bucket_raw_keys_list:
         if video_key in nzsl_raw_keys_dict:
+            nkeys_present += 1
+            # Add 'Present' column to start
+            all_keys_dict[video_key] = [True] + nzsl_raw_keys_dict[video_key]
             nzsl_cooked_keys_dict[video_key] = nzsl_raw_keys_dict[video_key]
         else:
+            nkeys_absent += 1
             s3_keys_not_in_nzsl_list.append(video_key)
-    print(f"PRESENT: {len(nzsl_cooked_keys_dict)} keys")
-    print(f"ABSENT: {len(s3_keys_not_in_nzsl_list)} keys")
+            # Add 'Present' (absent) column to start
+            all_keys_dict[video_key] = [False, "", "", ""]
+    print(f"PRESENT: {nkeys_present} keys")
+    print(f"ABSENT: {nkeys_absent} keys")
 
     # Write the "cooked" (i.e. present) keys back to a file
     with open(NZSL_COOKED_KEYS_FILE, "w") as f_obj:
         for video_key, is_public in nzsl_cooked_keys_dict.items():
-            f_obj.write(f"{video_key}{COOKED_DELIMITER}{str(is_public)}\n")
+            f_obj.write(f"{video_key}{CSV_DELIMITER}{str(is_public)}\n")
 
     # Write the absent keys back to a file
     with open(S3_KEYS_NOT_IN_NZSL_FILE, "w") as f_obj:
         for video_key in s3_keys_not_in_nzsl_list:
             f_obj.write(f"{video_key}\n")
 
+    # Write all keys back to a file
+    with open(ALL_KEYS_FILE, "w") as f_obj:
+        for video_key, item_list in all_keys_dict.items():
+            outstr = f"{video_key}{CSV_DELIMITER}{CSV_DELIMITER.join(map(str, item_list))}\n"
+            f_obj.write(outstr)
+
 # From the keys present in NZSL, get all their ACL information
 print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...")
-for video_key, is_public in nzsl_cooked_keys_dict.items():
-    video_key = video_key.strip()
+for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items():
+    if not is_present:
+        continue
+
+    print("HUMPHREY")
+    print(video_key)
+
     result = subprocess.run(
         [
             AWSCLIENT,
