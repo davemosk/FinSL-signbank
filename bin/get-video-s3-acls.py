@@ -255,7 +255,6 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
     if not is_present:
         continue
 
-    print("HUMPHREY")
     print(video_key)
 
     result = subprocess.run(
@@ -276,6 +275,8 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
         capture_output=True,
         text=True,
     )
-    print(f"Key:    {video_key}")
-    print(f"Public: {is_public}")
+    print(f"Key:      {video_key}")
+    print(f"Public:   {is_public}")
+    print(f"db_id:    {db_id}")
+    print(f"gloss_id: {gloss_id}")
     print(result.stdout)
