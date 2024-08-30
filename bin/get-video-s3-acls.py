@@ -9,6 +9,7 @@
 import os
 import subprocess
 import argparse
+import json
 from pprint import pprint
 
 # TODO
@@ -203,8 +204,8 @@ else:
         nzsl_raw_keys_list = f_obj.readlines()
     print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_POSTGRES_RAW_KEYS_FILE}")
 
-    # Separate out the NZSL key columns
-    # Write them to a dictionary, so we can do fast operations on them
+    # Separate out the NZSL db columns
+    # Write them to a dictionary, so we can do fast operations
     for rawl in nzsl_raw_keys_list:
         rawl = rawl.strip()
         if not rawl:
@@ -215,7 +216,7 @@ else:
         is_public = columns[2].strip().lower() == "t"
         # 'videofile' data is also the key for S3
         video_key = columns[3].strip()
-        # Each dictionary entry is all of these values
+        # Each dictionary slot contains these values
         nzsl_raw_keys_dict[video_key] = [db_id, gloss_id, is_public]
 
     # Get the s3 keys present and absent from our NZSL keys
@@ -244,15 +245,13 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
     if not is_present:
         continue
 
-    print(video_key)
-
     result = subprocess.run(
         [
             AWSCLIENT,
             "s3api",
             "get-object-acl",
             "--output",
-            "text",
+            "json",
             "--bucket",
             AWS_S3_BUCKET,
             "--key",
@@ -268,4 +267,6 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
     print(f"Public:   {is_public}")
     print(f"db_id:    {db_id}")
     print(f"gloss_id: {gloss_id}")
-    print(result.stdout)
+
+    # Still figuring out how to make this into canned ACLS, shouldn't be hard
+    pprint(json.loads(result.stdout))
