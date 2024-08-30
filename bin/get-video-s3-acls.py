@@ -107,7 +107,7 @@ except OSError as err:
     exit()
 
 CSV_DELIMITER = ","
-NZSL_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_raw_keys.txt"
+NZSL_POSTGRES_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_postgres_raw_keys.txt"
 S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
 
@@ -118,19 +118,17 @@ nkeys_present = 0
 nkeys_absent = 0
 
 if args.cached:
-    # Pull all info from existing files
+    # Pull all info from existing file
     try:
         with open(ALL_KEYS_FILE, "r") as f_obj:
             for line in f_obj.readlines():
-
-                print(line, end="")
-
                 video_key, is_present_str, db_id_str, gloss_id_str, is_public_str = line.strip().split(CSV_DELIMITER)
 
                 is_present = is_present_str.strip().lower() == "true"
                 if is_present:
                     nkeys_present += 1
                     db_id = int(db_id_str)
+                    # Some don't have gloss_id's
                     try:
                         gloss_id = int(gloss_id_str)
                     except ValueError:
@@ -144,18 +142,15 @@ if args.cached:
 
                 all_keys_dict[video_key] = [is_present, db_id, gloss_id, is_public]
 
-                print(video_key, end=" ")
-                pprint(all_keys_dict[video_key])
-
         print(f"PRESENT: {nkeys_present} keys")
-        print(f"ABSENT: {nkeys_absent} keys")
+        print(f"ABSENT:  {nkeys_absent} keys")
     except FileNotFoundError:
         print(f"File not found: {ALL_KEYS_FILE}")
         exit()
 else:
     # Zero-out files
     for p in (
-        NZSL_RAW_KEYS_FILE,
+        NZSL_POSTGRES_RAW_KEYS_FILE,
         S3_BUCKET_RAW_KEYS_FILE,
         ALL_KEYS_FILE
     ):
@@ -188,7 +183,7 @@ else:
 
     # Get the video files info from NZSL Signbank
     print(f"Getting raw list of video file info from NZSL Signbank ({NZSL_APP}) ...")
-    with open(NZSL_RAW_KEYS_FILE, "w") as f_obj:
+    with open(NZSL_POSTGRES_RAW_KEYS_FILE, "w") as f_obj:
         result = subprocess.run(
             [
                 PGCLIENT,
@@ -203,9 +198,9 @@ else:
             text=True,
             stdout=f_obj,
         )
-    with open(NZSL_RAW_KEYS_FILE, "r") as f_obj:
+    with open(NZSL_POSTGRES_RAW_KEYS_FILE, "r") as f_obj:
         nzsl_raw_keys_list = f_obj.readlines()
-    print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_RAW_KEYS_FILE}")
+    print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_POSTGRES_RAW_KEYS_FILE}")
 
     # Separate out the NZSL key columns
     # Write them to a dictionary, so we can do fast operations on them
@@ -234,7 +229,7 @@ else:
             # Add 'Present' (absent) column to start
             all_keys_dict[video_key] = [False, "", "", ""]
     print(f"PRESENT: {nkeys_present} keys")
-    print(f"ABSENT: {nkeys_absent} keys")
+    print(f"ABSENT:  {nkeys_absent} keys")
 
     # Write all keys back to a file
     with open(ALL_KEYS_FILE, "w") as f_obj:
