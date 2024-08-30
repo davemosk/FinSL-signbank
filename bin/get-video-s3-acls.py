@@ -105,21 +105,15 @@ try:
 except OSError as err:
     print(f"Error creating temporary directory: {TMPDIR} {err}")
     exit()
+
 CSV_DELIMITER = ","
 NZSL_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_raw_keys.txt"
-NZSL_COOKED_KEYS_FILE = f"{TMPDIR}/nzsl_cooked_keys.txt"
 S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
-S3_BUCKET_ERROR_KEYS_FILE = f"{TMPDIR}/s3_bucket_error_keys.csv"
-S3_BUCKET_CONTENTS_FILE = f"{TMPDIR}/s3_bucket_contents.csv"
-S3_KEYS_NOT_IN_NZSL_FILE = f"{TMPDIR}/s3_keys_not_in_nzsl.csv"
 ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
 
 nzsl_raw_keys_dict = {}
-nzsl_cooked_keys_dict = {}
-s3_keys_not_in_nzsl_list = []
-
-# TODO This will replace everything
 all_keys_dict = {}
+
 nkeys_present = 0
 nkeys_absent = 0
 
@@ -158,33 +152,11 @@ if args.cached:
     except FileNotFoundError:
         print(f"File not found: {ALL_KEYS_FILE}")
         exit()
-    """
-    try:
-        with open(NZSL_COOKED_KEYS_FILE, "r") as f_obj:
-            for line in f_obj.readlines():
-                video_key, is_public = line.strip().split(CSV_DELIMITER)
-                nzsl_cooked_keys_dict[video_key] = is_public
-    except FileNotFoundError:
-        print(f"File not found: {NZSL_COOKED_KEYS_FILE}")
-        exit()
-    try:
-        with open(S3_KEYS_NOT_IN_NZSL_FILE, "r") as f_obj:
-            s3_keys_not_in_nzsl_list = [line.strip() for line in f_obj.readlines()]
-    except FileNotFoundError:
-        print(f"File not found: {S3_KEYS_NOT_IN_NZSL_FILE}")
-        exit()
-    print(f"PRESENT: {len(nzsl_cooked_keys_dict)} keys")
-    print(f"ABSENT:  {len(s3_keys_not_in_nzsl_list)} keys")
-        """
 else:
     # Zero-out files
     for p in (
         NZSL_RAW_KEYS_FILE,
-        NZSL_COOKED_KEYS_FILE,
         S3_BUCKET_RAW_KEYS_FILE,
-        S3_BUCKET_ERROR_KEYS_FILE,
-        S3_BUCKET_CONTENTS_FILE,
-        S3_KEYS_NOT_IN_NZSL_FILE,
         ALL_KEYS_FILE
     ):
         f = open(p, "a")
@@ -257,24 +229,12 @@ else:
             nkeys_present += 1
             # Add 'Present' column to start
             all_keys_dict[video_key] = [True] + nzsl_raw_keys_dict[video_key]
-            nzsl_cooked_keys_dict[video_key] = nzsl_raw_keys_dict[video_key]
         else:
             nkeys_absent += 1
-            s3_keys_not_in_nzsl_list.append(video_key)
             # Add 'Present' (absent) column to start
             all_keys_dict[video_key] = [False, "", "", ""]
     print(f"PRESENT: {nkeys_present} keys")
     print(f"ABSENT: {nkeys_absent} keys")
-
-    # Write the "cooked" (i.e. present) keys back to a file
-    with open(NZSL_COOKED_KEYS_FILE, "w") as f_obj:
-        for video_key, is_public in nzsl_cooked_keys_dict.items():
-            f_obj.write(f"{video_key}{CSV_DELIMITER}{str(is_public)}\n")
-
-    # Write the absent keys back to a file
-    with open(S3_KEYS_NOT_IN_NZSL_FILE, "w") as f_obj:
-        for video_key in s3_keys_not_in_nzsl_list:
-            f_obj.write(f"{video_key}\n")
 
     # Write all keys back to a file
     with open(ALL_KEYS_FILE, "w") as f_obj:
