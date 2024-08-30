@@ -105,9 +105,9 @@ try:
 except OSError as err:
     print(f"Error creating temporary directory: {TMPDIR} {err}")
     exit()
+CSV_DELIMITER = ","
 NZSL_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_raw_keys.txt"
 NZSL_COOKED_KEYS_FILE = f"{TMPDIR}/nzsl_cooked_keys.txt"
-CSV_DELIMITER = ", "
 S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 S3_BUCKET_ERROR_KEYS_FILE = f"{TMPDIR}/s3_bucket_error_keys.csv"
 S3_BUCKET_CONTENTS_FILE = f"{TMPDIR}/s3_bucket_contents.csv"
@@ -120,11 +120,45 @@ s3_keys_not_in_nzsl_list = []
 
 # TODO This will replace everything
 all_keys_dict = {}
+nkeys_present = 0
+nkeys_absent = 0
 
 if args.cached:
-    print("NOT READY!")
-    exit()
     # Pull all info from existing files
+    try:
+        with open(ALL_KEYS_FILE, "r") as f_obj:
+            for line in f_obj.readlines():
+
+                print(line, end="")
+
+                video_key, is_present_str, db_id_str, gloss_id_str, is_public_str = line.strip().split(CSV_DELIMITER)
+
+                is_present = is_present_str.strip().lower() == "true"
+                if is_present:
+                    nkeys_present += 1
+                    db_id = int(db_id_str)
+                    try:
+                        gloss_id = int(gloss_id_str)
+                    except ValueError:
+                        gloss_id = None
+                    is_public = is_public_str.strip().lower() == "true"
+                else:
+                    nkeys_absent += 1
+                    db_id = None
+                    gloss_id = None
+                    is_public = None
+
+                all_keys_dict[video_key] = [is_present, db_id, gloss_id, is_public]
+
+                print(video_key, end=" ")
+                pprint(all_keys_dict[video_key])
+
+        print(f"PRESENT: {nkeys_present} keys")
+        print(f"ABSENT: {nkeys_absent} keys")
+    except FileNotFoundError:
+        print(f"File not found: {ALL_KEYS_FILE}")
+        exit()
+    """
     try:
         with open(NZSL_COOKED_KEYS_FILE, "r") as f_obj:
             for line in f_obj.readlines():
@@ -141,6 +175,7 @@ if args.cached:
         exit()
     print(f"PRESENT: {len(nzsl_cooked_keys_dict)} keys")
     print(f"ABSENT:  {len(s3_keys_not_in_nzsl_list)} keys")
+        """
 else:
     # Zero-out files
     for p in (
@@ -217,8 +252,6 @@ else:
 
     # Get the s3 keys present and absent from our NZSL keys
     print("Getting S3 keys present and absent from NZSL Signbank ...")
-    nkeys_present = 0
-    nkeys_absent = 0
     for video_key in s3_bucket_raw_keys_list:
         if video_key in nzsl_raw_keys_dict:
             nkeys_present += 1
