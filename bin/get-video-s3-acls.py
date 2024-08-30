@@ -112,6 +112,7 @@ S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
 
 nzsl_raw_keys_dict = {}
+s3_bucket_raw_keys_list = []
 all_keys_dict = {}
 
 nkeys_present = 0
