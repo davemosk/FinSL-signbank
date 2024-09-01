@@ -242,31 +242,45 @@ else:
 # From the keys present in NZSL, get all their ACL information
 print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...")
 for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items():
-    if not is_present:
-        continue
-
-    result = subprocess.run(
-        [
-            AWSCLIENT,
-            "s3api",
-            "get-object-acl",
-            "--output",
-            "json",
-            "--bucket",
-            AWS_S3_BUCKET,
-            "--key",
-            video_key,
-        ],
-        env=new_env,
-        shell=False,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    canned_acl = ""
+    canned_acl_expected = ""
+    if is_present:
+        canned_acl_expected = "public-read" if is_public else "private"
+        result = subprocess.run(
+            [
+                AWSCLIENT,
+                "s3api",
+                "get-object-acl",
+                "--output",
+                "json",
+                "--bucket",
+                AWS_S3_BUCKET,
+                "--key",
+                video_key,
+            ],
+            env=new_env,
+            shell=False,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        acls_grants_json = json.loads(result.stdout)["Grants"]
+        if len(acls_grants_json) > 1:
+            if acls_grants_json[0]["Permission"] == "FULL_CONTROL" and acls_grants_json[1]["Permission"] == "READ":
+                canned_acl = "public-read"
+            else:
+                canned_acl = "Unknown ACL"
+        else:
+            if acls_grants_json[0]["Permission"] == "FULL_CONTROL":
+                canned_acl = "private"
+            else:
+                canned_acl = "Unknown ACL"
     print(f"Key:      {video_key}")
-    print(f"Public:   {is_public}")
-    print(f"db_id:    {db_id}")
-    print(f"gloss_id: {gloss_id}")
-
-    # Still figuring out how to make this into canned ACLS, shouldn't be hard
-    pprint(json.loads(result.stdout))
+    print(f"Present:  {is_present}")
+    print(f"db_id:    {db_id if is_present else ''}")
+    print(f"gloss_id: {gloss_id if is_present else ''}")
+    print(f"Public:   {is_public if is_present else ''}")
+    print(f"Expected: {canned_acl_expected}")
+    print(f"Got:      {canned_acl}")
+    print(f"Match:    {str(canned_acl_expected == canned_acl) if is_present else ''}")
+    print("--------------------------------------")
