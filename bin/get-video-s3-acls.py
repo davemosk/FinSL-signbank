@@ -124,7 +124,13 @@ if args.cached:
     try:
         with open(ALL_KEYS_FILE, "r") as f_obj:
             for line in f_obj.readlines():
-                video_key, is_present_str, db_id_str, gloss_id_str, is_public_str = line.strip().split(CSV_DELIMITER)
+                (
+                    video_key,
+                    is_present_str,
+                    db_id_str,
+                    gloss_id_str,
+                    is_public_str,
+                ) = line.strip().split(CSV_DELIMITER)
 
                 is_present = is_present_str.strip().lower() == "true"
                 if is_present:
@@ -151,11 +157,7 @@ if args.cached:
         exit()
 else:
     # Zero-out files
-    for p in (
-        NZSL_POSTGRES_RAW_KEYS_FILE,
-        S3_BUCKET_RAW_KEYS_FILE,
-        ALL_KEYS_FILE
-    ):
+    for p in (NZSL_POSTGRES_RAW_KEYS_FILE, S3_BUCKET_RAW_KEYS_FILE, ALL_KEYS_FILE):
         f = open(p, "a")
         f.truncate()
         f.close()
@@ -236,11 +238,17 @@ else:
     # Write all keys back to a file
     with open(ALL_KEYS_FILE, "w") as f_obj:
         for video_key, item_list in all_keys_dict.items():
-            outstr = f"{video_key}{CSV_DELIMITER}{CSV_DELIMITER.join(map(str, item_list))}\n"
+            outstr = (
+                f"{video_key}{CSV_DELIMITER}{CSV_DELIMITER.join(map(str, item_list))}\n"
+            )
             f_obj.write(outstr)
 
 # From the keys present in NZSL, get all their ACL information
 print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...")
+# CSV header
+print(
+    f"Key{CSV_DELIMITER}Present{CSV_DELIMITER}db_id{CSV_DELIMITER}gloss_id{CSV_DELIMITER}Public{CSV_DELIMITER}Expected{CSV_DELIMITER}Got{CSV_DELIMITER}Match"
+)
 for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items():
     canned_acl = ""
     canned_acl_expected = ""
@@ -266,7 +274,10 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
         )
         acls_grants_json = json.loads(result.stdout)["Grants"]
         if len(acls_grants_json) > 1:
-            if acls_grants_json[0]["Permission"] == "FULL_CONTROL" and acls_grants_json[1]["Permission"] == "READ":
+            if (
+                acls_grants_json[0]["Permission"] == "FULL_CONTROL"
+                and acls_grants_json[1]["Permission"] == "READ"
+            ):
                 canned_acl = "public-read"
             else:
                 canned_acl = "Unknown ACL"
@@ -275,7 +286,8 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
                 canned_acl = "private"
             else:
                 canned_acl = "Unknown ACL"
-    print(f"Key:      {video_key}")
+    # CSV columns
+    print(f"Key:      {video_key}", end=CSV_DELIMITER)
     print(f"Present:  {is_present}")
     print(f"db_id:    {db_id if is_present else ''}")
     print(f"gloss_id: {gloss_id if is_present else ''}")
