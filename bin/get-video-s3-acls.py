@@ -286,13 +286,13 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
                 canned_acl = "private"
             else:
                 canned_acl = "Unknown ACL"
+
     # CSV columns
-    print(f"Key:      {video_key}", end=CSV_DELIMITER)
-    print(f"Present:  {is_present}")
-    print(f"db_id:    {db_id if is_present else ''}")
-    print(f"gloss_id: {gloss_id if is_present else ''}")
-    print(f"Public:   {is_public if is_present else ''}")
-    print(f"Expected: {canned_acl_expected}")
-    print(f"Got:      {canned_acl}")
-    print(f"Match:    {str(canned_acl_expected == canned_acl) if is_present else ''}")
-    print("--------------------------------------")
+    print(f"{video_key}", end=CSV_DELIMITER)
+    print(f"{is_present}", end=CSV_DELIMITER)
+    print(f"{db_id if is_present else ''}", end=CSV_DELIMITER)
+    print(f"{gloss_id if is_present else ''}", end=CSV_DELIMITER)
+    print(f"{is_public if is_present else ''}", end=CSV_DELIMITER)
+    print(f"{canned_acl_expected}", end=CSV_DELIMITER)
+    print(f"{canned_acl}", end=CSV_DELIMITER)
+    print(f"{str(canned_acl_expected == canned_acl) if is_present else ''}")
