@@ -10,7 +10,6 @@ import os
 import subprocess
 import argparse
 import json
-from pprint import pprint
 
 # TODO
 # We are using external apps just for the moment.
