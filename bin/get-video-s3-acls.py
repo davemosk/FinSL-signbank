@@ -20,25 +20,20 @@ PGCLIENT = "/usr/bin/psql"
 
 # NZSL: Is there a database url defined in the environment?
 DATABASE_URL = os.getenv("DATABASE_URL", None)
+if not DATABASE_URL:
+    print("You must define DATABASE_URL in the environment.", file=sys.stderr)
+    exit()
 
 # AWS: Is there an AWS_PROFILE defined in the environment?
 AWS_PROFILE = os.getenv("AWS_PROFILE", None)
 if not AWS_PROFILE:
-    print("You must define AWS_PROFILE in the environment. Eg. AWS_PROFILE='nzsl'")
+    print("You must define AWS_PROFILE in the environment. Eg. AWS_PROFILE='nzsl'", file=sys.stderr)
     exit()
 
 parser = argparse.ArgumentParser(
-    description="You must define, in the environment: AWS_PROFILE"
+    description="You must define, in the environment: AWS_PROFILE, DATABASE_URL"
 )
 
-# Positional arguments
-if DATABASE_URL:
-    print("DATABASE_URL defined in environment", file=sys.stderr)
-else:
-    parser.add_argument(
-        "dburl",
-        help=f"(REQUIRED) Database url (Overridden by DATABASE_URL environment variable)",
-    )
 # Optional arguments
 parser.add_argument(
     "--production",
@@ -84,9 +79,6 @@ new_env = os.environ.copy()
 AWSCLIENT = args.awsclient
 PGCLIENT = args.pgclient
 
-if not DATABASE_URL:
-    DATABASE_URL = args.dburl
-
 if args.cached:
     print(
         "Using the video keys we recorded on the last non-cached run.", file=sys.stderr
@@ -100,7 +92,7 @@ print(f"  S3 bucket: {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWS profile: {new_env['AWS_PROFILE']}", file=sys.stderr)
 print(f"AWSCLIENT:   {AWSCLIENT}", file=sys.stderr)
 print(f"PGCLIENT:    {PGCLIENT}", file=sys.stderr)
-print(f"DATABASE_URL:\n{DATABASE_URL}", file=sys.stderr)
+print(f"DATABASE_URL:\n{new_env['DATABASE_URL']}", file=sys.stderr)
 
 TMPDIR = "/tmp/nzsl"
 try:
