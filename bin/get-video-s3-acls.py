@@ -255,6 +255,7 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
     canned_acl_expected = ""
     raw_acl = ""
     if is_present:
+        # See signbank/video/models.py, line 59, in function set_public_acl()
         canned_acl_expected = "public-read" if is_public else "private"
         result = subprocess.run(
             [
