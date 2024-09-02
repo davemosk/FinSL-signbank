@@ -36,11 +36,10 @@ parser = argparse.ArgumentParser(
 
 # Optional arguments
 parser.add_argument(
-    "--production",
-    default=False,
+    "--mode",
+    default="uat",
     required=False,
-    action="store_true",
-    help="Run in PRODUCTION mode, instead of STAGING (default: %(default)s)",
+    help="Mode to run in, eg 'production, 'uat', etc (default: '%(default)s')",
 )
 parser.add_argument(
     "--cached",
@@ -64,14 +63,8 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-if args.production:
-    MODE_STR = "PRODUCTION"
-    NZSL_APP = "nzsl-signbank-production"
-    AWS_S3_BUCKET = "nzsl-signbank-media-production"
-else:
-    MODE_STR = "STAGING"
-    NZSL_APP = "nzsl-signbank-uat"
-    AWS_S3_BUCKET = "nzsl-signbank-media-uat"
+NZSL_APP = f"nzsl-signbank-{args.mode}"
+AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
 
 # Get the environment
 new_env = os.environ.copy()
@@ -86,7 +79,7 @@ if args.cached:
 else:
     print("Generating keys from scratch.", file=sys.stderr)
 
-print(f"Mode:        {MODE_STR}", file=sys.stderr)
+print(f"Mode:        {args.mode}", file=sys.stderr)
 print(f"  NZSL app:  {NZSL_APP}", file=sys.stderr)
 print(f"  S3 bucket: {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWS profile: {new_env['AWS_PROFILE']}", file=sys.stderr)
