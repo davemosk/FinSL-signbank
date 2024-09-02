@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 import subprocess
 import argparse
 import json
@@ -26,7 +27,7 @@ parser = argparse.ArgumentParser(
 )
 # Positional arguments
 if DATABASE_URL:
-    print("DATABASE_URL defined in environment")
+    print("DATABASE_URL defined in environment", file=sys.stderr)
 else:
     parser.add_argument(
         "dburl",
@@ -87,23 +88,23 @@ if not DATABASE_URL:
     DATABASE_URL = args.dburl
 
 if args.cached:
-    print("Using the video keys we recorded on the last non-cached run.")
+    print("Using the video keys we recorded on the last non-cached run.", file=sys.stderr)
 else:
-    print("Generating keys from scratch.")
+    print("Generating keys from scratch.", file=sys.stderr)
 
-print(f"Mode:        {MODE_STR}")
-print(f"  NZSL app:  {NZSL_APP}")
-print(f"  S3 bucket: {AWS_S3_BUCKET}")
-print(f"AWS profile: {new_env['AWS_PROFILE']}")
-print(f"AWSCLIENT:   {AWSCLIENT}")
-print(f"PGCLIENT:    {PGCLIENT}")
-print(f"DATABASE_URL:\n{DATABASE_URL}")
+print(f"Mode:        {MODE_STR}", file=sys.stderr)
+print(f"  NZSL app:  {NZSL_APP}", file=sys.stderr)
+print(f"  S3 bucket: {AWS_S3_BUCKET}", file=sys.stderr)
+print(f"AWS profile: {new_env['AWS_PROFILE']}", file=sys.stderr)
+print(f"AWSCLIENT:   {AWSCLIENT}", file=sys.stderr)
+print(f"PGCLIENT:    {PGCLIENT}", file=sys.stderr)
+print(f"DATABASE_URL:\n{DATABASE_URL}", file=sys.stderr)
 
 TMPDIR = "/tmp/nzsl"
 try:
     os.makedirs(TMPDIR, exist_ok=True)
 except OSError as err:
-    print(f"Error creating temporary directory: {TMPDIR} {err}")
+    print(f"Error creating temporary directory: {TMPDIR} {err}", file=sys.stderr)
     exit()
 
 CSV_DELIMITER = ","
@@ -149,10 +150,10 @@ if args.cached:
 
                 all_keys_dict[video_key] = [is_present, db_id, gloss_id, is_public]
 
-        print(f"PRESENT: {nkeys_present} keys")
-        print(f"ABSENT:  {nkeys_absent} keys")
+        print(f"PRESENT: {nkeys_present} keys", file=sys.stderr)
+        print(f"ABSENT:  {nkeys_absent} keys", file=sys.stderr)
     except FileNotFoundError:
-        print(f"File not found: {ALL_KEYS_FILE}")
+        print(f"File not found: {ALL_KEYS_FILE}", file=sys.stderr)
         exit()
 else:
     # Zero-out files
@@ -162,7 +163,7 @@ else:
         f.close()
 
     # Get all keys from AWS S3
-    print(f"Getting raw AWS S3 keys recursively ({AWS_S3_BUCKET}) ...")
+    print(f"Getting raw AWS S3 keys recursively ({AWS_S3_BUCKET}) ...", file=sys.stderr)
     with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
         result = subprocess.run(
             [AWSCLIENT, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
@@ -177,7 +178,7 @@ else:
     # Put the keys in an in-memory list
     with open(S3_BUCKET_RAW_KEYS_FILE, "r") as f_obj:
         s3_bucket_raw_keys_list = [line.split()[3] for line in f_obj]
-    print(f"{len(s3_bucket_raw_keys_list)} rows retrieved: {S3_BUCKET_RAW_KEYS_FILE}")
+    print(f"{len(s3_bucket_raw_keys_list)} rows retrieved: {S3_BUCKET_RAW_KEYS_FILE}", file=sys.stderr)
 
     # Write the keys back to the file, for cleanliness
     with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
@@ -185,7 +186,7 @@ else:
             f_obj.write(f"{line}\n")
 
     # Get the video files info from NZSL Signbank
-    print(f"Getting raw list of video file info from NZSL Signbank ({NZSL_APP}) ...")
+    print(f"Getting raw list of video file info from NZSL Signbank ({NZSL_APP}) ...", file=sys.stderr)
     with open(NZSL_POSTGRES_RAW_KEYS_FILE, "w") as f_obj:
         result = subprocess.run(
             [
@@ -203,7 +204,7 @@ else:
         )
     with open(NZSL_POSTGRES_RAW_KEYS_FILE, "r") as f_obj:
         nzsl_raw_keys_list = f_obj.readlines()
-    print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_POSTGRES_RAW_KEYS_FILE}")
+    print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_POSTGRES_RAW_KEYS_FILE}", file=sys.stderr)
 
     # Separate out the NZSL db columns
     # Write them to a dictionary, so we can do fast operations
@@ -221,7 +222,7 @@ else:
         nzsl_raw_keys_dict[video_key] = [db_id, gloss_id, is_public]
 
     # Get the s3 keys present and absent from our NZSL keys
-    print("Getting S3 keys present and absent from NZSL Signbank ...")
+    print("Getting S3 keys present and absent from NZSL Signbank ...", file=sys.stderr)
     for video_key in s3_bucket_raw_keys_list:
         if video_key in nzsl_raw_keys_dict:
             nkeys_present += 1
@@ -231,8 +232,8 @@ else:
             nkeys_absent += 1
             # Add 'Present' (absent) column to start
             all_keys_dict[video_key] = [False, "", "", ""]
-    print(f"PRESENT: {nkeys_present} keys")
-    print(f"ABSENT:  {nkeys_absent} keys")
+    print(f"PRESENT: {nkeys_present} keys", file=sys.stderr)
+    print(f"ABSENT:  {nkeys_absent} keys", file=sys.stderr)
 
     # Write all keys back to a file
     with open(ALL_KEYS_FILE, "w") as f_obj:
@@ -243,7 +244,7 @@ else:
             f_obj.write(outstr)
 
 # From the keys present in NZSL, get all their ACL information
-print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...")
+print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 # CSV header
 print(
     f"Key{CSV_DELIMITER}Present{CSV_DELIMITER}db_id{CSV_DELIMITER}gloss_id{CSV_DELIMITER}Public{CSV_DELIMITER}Expected{CSV_DELIMITER}Got{CSV_DELIMITER}Match"
