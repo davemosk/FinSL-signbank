@@ -258,7 +258,8 @@ else:
 print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 # CSV header
 print(
-    f"Key{CSV_DELIMITER}Present{CSV_DELIMITER}db_id{CSV_DELIMITER}gloss_id{CSV_DELIMITER}Public{CSV_DELIMITER}Expected{CSV_DELIMITER}Got{CSV_DELIMITER}Match"
+    f"Key{CSV_DELIMITER}Present{CSV_DELIMITER}db_id{CSV_DELIMITER}gloss_id{CSV_DELIMITER}"
+    "Public{CSV_DELIMITER}Expected{CSV_DELIMITER}Got{CSV_DELIMITER}Match"
 )
 for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items():
     canned_acl = ""
