@@ -21,16 +21,10 @@ PGCLIENT = "/usr/bin/psql"
 # NZSL: Is there a database url defined in the environment?
 DATABASE_URL = os.getenv("DATABASE_URL", None)
 
-# AWS: Is there an AWS_PROFILE defined in the environment?
-AWS_PROFILE = os.getenv("AWS_PROFILE", None)
-if not AWS_PROFILE:
-    print("You must define AWS_PROFILE in the environment. Eg. AWS_PROFILE='nzsl'")
-    exit()
-
 parser = argparse.ArgumentParser(
-    description="You must define, in the environment: AWS_PROFILE"
+    description="You must have a configured AWSCLIENT profile to use this app. See the --awsprofile "
+    "argument."
 )
-
 # Positional arguments
 if DATABASE_URL:
     print("DATABASE_URL defined in environment", file=sys.stderr)
@@ -40,6 +34,12 @@ else:
         help=f"(REQUIRED) Database url (Overridden by DATABASE_URL environment variable)",
     )
 # Optional arguments
+parser.add_argument(
+    "--awsprofile",
+    default="nzsl",
+    required=False,
+    help=f"AWS configured profile to use (default: '%(default)s')",
+)
 parser.add_argument(
     "--production",
     default=False,
@@ -78,8 +78,8 @@ else:
     NZSL_APP = "nzsl-signbank-uat"
     AWS_S3_BUCKET = "nzsl-signbank-media-uat"
 
-# Get the environment
 new_env = os.environ.copy()
+new_env["AWS_PROFILE"] = args.awsprofile
 
 AWSCLIENT = args.awsclient
 PGCLIENT = args.pgclient
