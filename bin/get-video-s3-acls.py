@@ -88,7 +88,9 @@ if not DATABASE_URL:
     DATABASE_URL = args.dburl
 
 if args.cached:
-    print("Using the video keys we recorded on the last non-cached run.", file=sys.stderr)
+    print(
+        "Using the video keys we recorded on the last non-cached run.", file=sys.stderr
+    )
 else:
     print("Generating keys from scratch.", file=sys.stderr)
 
@@ -178,7 +180,10 @@ else:
     # Put the keys in an in-memory list
     with open(S3_BUCKET_RAW_KEYS_FILE, "r") as f_obj:
         s3_bucket_raw_keys_list = [line.split()[3] for line in f_obj]
-    print(f"{len(s3_bucket_raw_keys_list)} rows retrieved: {S3_BUCKET_RAW_KEYS_FILE}", file=sys.stderr)
+    print(
+        f"{len(s3_bucket_raw_keys_list)} rows retrieved: {S3_BUCKET_RAW_KEYS_FILE}",
+        file=sys.stderr,
+    )
 
     # Write the keys back to the file, for cleanliness
     with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
@@ -186,7 +191,10 @@ else:
             f_obj.write(f"{line}\n")
 
     # Get the video files info from NZSL Signbank
-    print(f"Getting raw list of video file info from NZSL Signbank ({NZSL_APP}) ...", file=sys.stderr)
+    print(
+        f"Getting raw list of video file info from NZSL Signbank ({NZSL_APP}) ...",
+        file=sys.stderr,
+    )
     with open(NZSL_POSTGRES_RAW_KEYS_FILE, "w") as f_obj:
         result = subprocess.run(
             [
@@ -204,7 +212,10 @@ else:
         )
     with open(NZSL_POSTGRES_RAW_KEYS_FILE, "r") as f_obj:
         nzsl_raw_keys_list = f_obj.readlines()
-    print(f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_POSTGRES_RAW_KEYS_FILE}", file=sys.stderr)
+    print(
+        f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_POSTGRES_RAW_KEYS_FILE}",
+        file=sys.stderr,
+    )
 
     # Separate out the NZSL db columns
     # Write them to a dictionary, so we can do fast operations
