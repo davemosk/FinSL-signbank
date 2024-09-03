@@ -11,23 +11,20 @@ import subprocess
 import argparse
 import json
 
-# TODO
-# We are using external apps just for the moment.
-# These will be removed for native libraries.
-AWSCLIENT = "/usr/local/bin/aws"
-PGCLIENT = "/usr/bin/psql"
-
-# NZSL: Is there a database url defined in the environment?
+# Globals
 DATABASE_URL = os.getenv("DATABASE_URL", None)
 if not DATABASE_URL:
     print("You must define DATABASE_URL in the environment.", file=sys.stderr)
     exit()
+NEW_ENV = os.environ.copy()
+CSV_DELIMITER = ","
+nzsl_raw_keys_dict = {}
+s3_bucket_raw_keys_list = []
+all_keys_dict = {}
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE environment variable., DATABASE_URL"
 )
-
-# Optional arguments
 parser.add_argument(
     "--mode",
     default="uat",
@@ -44,63 +41,49 @@ parser.add_argument(
 )
 parser.add_argument(
     "--pgclient",
-    default=PGCLIENT,
+    default="/usr/bin/psql",
     required=False,
     help=f"Postgres client path (default: %(default)s)",
 )
 parser.add_argument(
     "--awsclient",
-    default=AWSCLIENT,
+    default="/usr/local/bin/aws",
     required=False,
     help=f"AWS client path (default: %(default)s)",
 )
 args = parser.parse_args()
 
-AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
 AWSCLIENT = args.awsclient
 PGCLIENT = args.pgclient
+AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
 
-# Get the environment
-new_env = os.environ.copy()
-
-if args.cached:
-    print(
-        "Using the video keys we recorded on the last non-cached run.", file=sys.stderr
-    )
-else:
-    print("Generating keys from scratch.", file=sys.stderr)
-
-print(f"Mode:        {args.mode}", file=sys.stderr)
-print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
-if "AWS_PROFILE" in new_env:
-    print(f"AWS profile: {new_env['AWS_PROFILE']}", file=sys.stderr)
-print(f"AWSCLIENT:   {AWSCLIENT}", file=sys.stderr)
-print(f"PGCLIENT:    {PGCLIENT}", file=sys.stderr)
-print(f"DATABASE_URL:\n{new_env['DATABASE_URL']}", file=sys.stderr)
-
+# Files
 TMPDIR = "/tmp/nzsl"
 try:
     os.makedirs(TMPDIR, exist_ok=True)
 except OSError as err:
     print(f"Error creating temporary directory: {TMPDIR} {err}", file=sys.stderr)
     exit()
-
-CSV_DELIMITER = ","
 NZSL_POSTGRES_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_postgres_raw_keys.txt"
 S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
 
-nzsl_raw_keys_dict = {}
-s3_bucket_raw_keys_list = []
-all_keys_dict = {}
+# Truncate files, creating them if necessary
+def init_files(files_list):
+    # Zero-out files
+    for p in files_list:
+        f = open(p, "a")
+        f.truncate()
+        f.close()
 
-nkeys_present = 0
-nkeys_absent = 0
 
-if args.cached:
-    # Pull all info from existing file
+# Pull all info from existing file
+def get_keys_from_cache_file(cache_file):
+    nkeys_present = 0
+    nkeys_absent = 0
+    this_all_keys_dict = {}
     try:
-        with open(ALL_KEYS_FILE, "r") as f_obj:
+        with open(cache_file, "r") as f_obj:
             for line in f_obj.readlines():
                 (
                     video_key,
@@ -126,26 +109,25 @@ if args.cached:
                     gloss_id = None
                     is_public = None
 
-                all_keys_dict[video_key] = [is_present, db_id, gloss_id, is_public]
+                this_all_keys_dict[video_key] = [is_present, db_id, gloss_id, is_public]
 
         print(f"PRESENT: {nkeys_present} keys", file=sys.stderr)
         print(f"ABSENT:  {nkeys_absent} keys", file=sys.stderr)
-    except FileNotFoundError:
-        print(f"File not found: {ALL_KEYS_FILE}", file=sys.stderr)
-        exit()
-else:
-    # Zero-out files
-    for p in (NZSL_POSTGRES_RAW_KEYS_FILE, S3_BUCKET_RAW_KEYS_FILE, ALL_KEYS_FILE):
-        f = open(p, "a")
-        f.truncate()
-        f.close()
 
-    # Get all keys from AWS S3
-    print(f"Getting raw AWS S3 keys recursively ({AWS_S3_BUCKET}) ...", file=sys.stderr)
-    with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
+        return this_all_keys_dict
+
+    except FileNotFoundError:
+        print(f"File not found: {cache_file}", file=sys.stderr)
+        exit()
+
+
+# Get all keys from AWS S3
+def get_keys_from_s3(s3_bucket, keys_file):
+    print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
+    with open(keys_file, "w") as f_obj:
         result = subprocess.run(
-            [AWSCLIENT, "s3", "ls", f"s3://{AWS_S3_BUCKET}", "--recursive"],
-            env=new_env,
+            [AWSCLIENT, "s3", "ls", f"s3://{s3_bucket}", "--recursive"],
+            env=NEW_ENV,
             shell=False,
             check=True,
             text=True,
@@ -154,24 +136,29 @@ else:
 
     # Separate out just the key (also strip newline) from date, time, size, key
     # Put the keys in an in-memory list
-    with open(S3_BUCKET_RAW_KEYS_FILE, "r") as f_obj:
-        s3_bucket_raw_keys_list = [line.split()[3] for line in f_obj]
+    with open(keys_file, "r") as f_obj:
+        this_s3_bucket_raw_keys_list = [line.split()[3] for line in f_obj]
     print(
-        f"{len(s3_bucket_raw_keys_list)} rows retrieved: {S3_BUCKET_RAW_KEYS_FILE}",
+        f"{len(this_s3_bucket_raw_keys_list)} rows retrieved: {keys_file}",
         file=sys.stderr,
     )
 
     # Write the keys back to the file, for cleanliness
-    with open(S3_BUCKET_RAW_KEYS_FILE, "w") as f_obj:
-        for line in s3_bucket_raw_keys_list:
+    with open(keys_file, "w") as f_obj:
+        for line in this_s3_bucket_raw_keys_list:
             f_obj.write(f"{line}\n")
 
-    # Get the video files info from NZSL Signbank
+    return this_s3_bucket_raw_keys_list
+
+
+# Get the video files info from NZSL Signbank
+def get_keys_from_nzsl(keys_file):
+    this_nzsl_raw_keys_dict = {}
     print(
         f"Getting raw list of video file info from NZSL Signbank ...",
         file=sys.stderr,
     )
-    with open(NZSL_POSTGRES_RAW_KEYS_FILE, "w") as f_obj:
+    with open(keys_file, "w") as f_obj:
         result = subprocess.run(
             [
                 PGCLIENT,
@@ -180,16 +167,16 @@ else:
                 "select id as db_id, gloss_id, is_public, videofile from video_glossvideo",
                 f"{DATABASE_URL}",
             ],
-            env=new_env,
+            env=NEW_ENV,
             shell=False,
             check=True,
             text=True,
             stdout=f_obj,
         )
-    with open(NZSL_POSTGRES_RAW_KEYS_FILE, "r") as f_obj:
+    with open(keys_file, "r") as f_obj:
         nzsl_raw_keys_list = f_obj.readlines()
     print(
-        f"{len(nzsl_raw_keys_list)} rows retrieved: {NZSL_POSTGRES_RAW_KEYS_FILE}",
+        f"{len(nzsl_raw_keys_list)} rows retrieved: {keys_file}",
         file=sys.stderr,
     )
 
@@ -206,88 +193,131 @@ else:
         # 'videofile' data is also the key for S3
         video_key = columns[3].strip()
         # Each dictionary slot contains these values
-        nzsl_raw_keys_dict[video_key] = [db_id, gloss_id, is_public]
+        this_nzsl_raw_keys_dict[video_key] = [db_id, gloss_id, is_public]
 
-    # Get the s3 keys present and absent from our NZSL keys
+    return this_nzsl_raw_keys_dict
+
+
+# Get the s3 keys present and absent from our NZSL keys
+def create_all_keys_dict(
+    this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict, all_keys_file
+):
     print("Getting S3 keys present and absent from NZSL Signbank ...", file=sys.stderr)
-    for video_key in s3_bucket_raw_keys_list:
-        if video_key in nzsl_raw_keys_dict:
+    nkeys_present = 0
+    nkeys_absent = 0
+    this_all_keys_dict = {}
+    for video_key in this_s3_bucket_raw_keys_list:
+        if video_key in this_nzsl_raw_keys_dict:
             nkeys_present += 1
             # Add 'Present' column to start
-            all_keys_dict[video_key] = [True] + nzsl_raw_keys_dict[video_key]
+            this_all_keys_dict[video_key] = [True] + this_nzsl_raw_keys_dict[video_key]
         else:
             nkeys_absent += 1
             # Add 'Present' (absent) column to start
-            all_keys_dict[video_key] = [False, "", "", ""]
+            this_all_keys_dict[video_key] = [False, "", "", ""]
     print(f"PRESENT: {nkeys_present} keys", file=sys.stderr)
     print(f"ABSENT:  {nkeys_absent} keys", file=sys.stderr)
 
     # Write all keys back to a file
-    with open(ALL_KEYS_FILE, "w") as f_obj:
-        for video_key, item_list in all_keys_dict.items():
+    with open(all_keys_file, "w") as f_obj:
+        for video_key, item_list in this_all_keys_dict.items():
             outstr = (
                 f"{video_key}{CSV_DELIMITER}{CSV_DELIMITER.join(map(str, item_list))}\n"
             )
             f_obj.write(outstr)
 
+    return this_all_keys_dict
+
+
 # From the keys present in NZSL, get all their ACL information
-print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...", file=sys.stderr)
+def output_csv(this_all_keys_dict):
+    print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 
-# CSV header
-csv_header_list = [
-    "Video S3 Key",
-    "Postgres ID",
-    "Gloss ID",
-    "Signbank Public",
-    "Expected S3 Canned ACL",
-    "Actual S3 Canned ACL",
-]
-print(CSV_DELIMITER.join(csv_header_list))
+    # CSV header
+    csv_header_list = [
+        "Video S3 Key",
+        "Postgres ID",
+        "Gloss ID",
+        "Signbank Public",
+        "Expected S3 Canned ACL",
+        "Actual S3 Canned ACL",
+    ]
+    print(CSV_DELIMITER.join(csv_header_list))
 
-for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items():
-    canned_acl = ""
-    canned_acl_expected = ""
-    raw_acl = ""
-    if is_present:
-        # See signbank/video/models.py, line 59, in function set_public_acl()
-        canned_acl_expected = "public-read" if is_public else "private"
-        result = subprocess.run(
-            [
-                AWSCLIENT,
-                "s3api",
-                "get-object-acl",
-                "--output",
-                "json",
-                "--bucket",
-                AWS_S3_BUCKET,
-                "--key",
-                video_key,
-            ],
-            env=new_env,
-            shell=False,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        acls_grants_json = json.loads(result.stdout)["Grants"]
-        if len(acls_grants_json) > 1:
-            if (
-                acls_grants_json[0]["Permission"] == "FULL_CONTROL"
-                and acls_grants_json[1]["Permission"] == "READ"
-            ):
-                canned_acl = "public-read"
+    for video_key, [
+        is_present,
+        db_id,
+        gloss_id,
+        is_public,
+    ] in this_all_keys_dict.items():
+        canned_acl = ""
+        canned_acl_expected = ""
+        raw_acl = ""
+        if is_present:
+            # See signbank/video/models.py, line 59, in function set_public_acl()
+            canned_acl_expected = "public-read" if is_public else "private"
+            result = subprocess.run(
+                [
+                    AWSCLIENT,
+                    "s3api",
+                    "get-object-acl",
+                    "--output",
+                    "json",
+                    "--bucket",
+                    AWS_S3_BUCKET,
+                    "--key",
+                    video_key,
+                ],
+                env=NEW_ENV,
+                shell=False,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            acls_grants_json = json.loads(result.stdout)["Grants"]
+            if len(acls_grants_json) > 1:
+                if (
+                    acls_grants_json[0]["Permission"] == "FULL_CONTROL"
+                    and acls_grants_json[1]["Permission"] == "READ"
+                ):
+                    canned_acl = "public-read"
+                else:
+                    canned_acl = "Unknown ACL"
             else:
-                canned_acl = "Unknown ACL"
-        else:
-            if acls_grants_json[0]["Permission"] == "FULL_CONTROL":
-                canned_acl = "private"
-            else:
-                canned_acl = "Unknown ACL"
+                if acls_grants_json[0]["Permission"] == "FULL_CONTROL":
+                    canned_acl = "private"
+                else:
+                    canned_acl = "Unknown ACL"
 
-    # CSV columns
-    print(f"{video_key}", end=CSV_DELIMITER)
-    print(f"{db_id if is_present else ''}", end=CSV_DELIMITER)
-    print(f"{gloss_id if is_present else ''}", end=CSV_DELIMITER)
-    print(f"{is_public if is_present else ''}", end=CSV_DELIMITER)
-    print(f"{canned_acl_expected}", end=CSV_DELIMITER)
-    print(f"{canned_acl}")
+        # CSV columns
+        print(f"{video_key}", end=CSV_DELIMITER)
+        print(f"{db_id if is_present else ''}", end=CSV_DELIMITER)
+        print(f"{gloss_id if is_present else ''}", end=CSV_DELIMITER)
+        print(f"{is_public if is_present else ''}", end=CSV_DELIMITER)
+        print(f"{canned_acl_expected}", end=CSV_DELIMITER)
+        print(f"{canned_acl}")
+
+
+print(f"Mode:        {args.mode}", file=sys.stderr)
+print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
+if "AWS_PROFILE" in NEW_ENV:
+    print(f"AWS profile: {NEW_ENV['AWS_PROFILE']}", file=sys.stderr)
+print(f"AWSCLIENT:   {AWSCLIENT}", file=sys.stderr)
+print(f"PGCLIENT:    {PGCLIENT}", file=sys.stderr)
+print(f"DATABASE_URL:\n{NEW_ENV['DATABASE_URL']}", file=sys.stderr)
+
+if args.cached:
+    print(
+        "Using the video keys we recorded on the last non-cached run.", file=sys.stderr
+    )
+    all_keys_dict = get_keys_from_cache_file(ALL_KEYS_FILE)
+else:
+    print("Generating keys from scratch.", file=sys.stderr)
+    init_files([NZSL_POSTGRES_RAW_KEYS_FILE, S3_BUCKET_RAW_KEYS_FILE, ALL_KEYS_FILE])
+    s3_bucket_raw_keys_list = get_keys_from_s3(AWS_S3_BUCKET, S3_BUCKET_RAW_KEYS_FILE)
+    nzsl_raw_keys_dict = get_keys_from_nzsl(NZSL_POSTGRES_RAW_KEYS_FILE)
+    all_keys_dict = create_all_keys_dict(
+        s3_bucket_raw_keys_list, nzsl_raw_keys_dict, ALL_KEYS_FILE
+    )
+
+output_csv(all_keys_dict)
