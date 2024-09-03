@@ -57,7 +57,6 @@ parser.add_argument(
 args = parser.parse_args()
 
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
-AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
 AWSCLIENT = args.awsclient
 PGCLIENT = args.pgclient
 
