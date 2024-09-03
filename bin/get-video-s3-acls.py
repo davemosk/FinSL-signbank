@@ -73,7 +73,8 @@ else:
 
 print(f"Mode:        {args.mode}", file=sys.stderr)
 print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
-print(f"AWS profile: {new_env['AWS_PROFILE']}", file=sys.stderr)
+if "AWS_PROFILE" in new_env:
+    print(f"AWS profile: {new_env['AWS_PROFILE']}", file=sys.stderr)
 print(f"AWSCLIENT:   {AWSCLIENT}", file=sys.stderr)
 print(f"PGCLIENT:    {PGCLIENT}", file=sys.stderr)
 print(f"DATABASE_URL:\n{new_env['DATABASE_URL']}", file=sys.stderr)
