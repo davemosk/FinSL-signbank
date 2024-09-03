@@ -248,7 +248,7 @@ print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 print(
     f"Video S3 Key{CSV_DELIMITER}Present in Signbank?{CSV_DELIMITER}Postgres ID{CSV_DELIMITER}Gloss ID{CSV_DELIMITER}"
     f"Signbank is_public?{CSV_DELIMITER}Expected S3 Canned ACL{CSV_DELIMITER}Actual S3 Canned ACL"
-    f"{CSV_DELIMITER}Correct Canned ACL?{CSV_DELIMITER}Raw ACL data"
+    f"{CSV_DELIMITER}Correct Canned ACL?"
 )
 for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items():
     canned_acl = ""
@@ -275,7 +275,6 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
             capture_output=True,
             text=True,
         )
-        raw_acl = result.stdout.replace("\n", " ")
         acls_grants_json = json.loads(result.stdout)["Grants"]
         if len(acls_grants_json) > 1:
             if (
@@ -299,5 +298,4 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
     print(f"{is_public if is_present else ''}", end=CSV_DELIMITER)
     print(f"{canned_acl_expected}", end=CSV_DELIMITER)
     print(f"{canned_acl}", end=CSV_DELIMITER)
-    print(f"{str(canned_acl_expected == canned_acl) if is_present else ''}", end=CSV_DELIMITER)
-    print(f"{raw_acl}")
+    print(f"{str(canned_acl_expected == canned_acl) if is_present else ''}")
