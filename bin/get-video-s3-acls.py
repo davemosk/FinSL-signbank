@@ -11,16 +11,6 @@ import subprocess
 import argparse
 import json
 
-# Globals
-DATABASE_URL = os.getenv("DATABASE_URL", None)
-if not DATABASE_URL:
-    print("You must define DATABASE_URL in the environment.", file=sys.stderr)
-    exit()
-NEW_ENV = os.environ.copy()
-CSV_DELIMITER = ","
-nzsl_raw_keys_dict = {}
-s3_bucket_raw_keys_list = []
-all_keys_dict = {}
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE environment variable., DATABASE_URL"
@@ -53,9 +43,21 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+# Globals
 AWSCLIENT = args.awsclient
 PGCLIENT = args.pgclient
+DATABASE_URL = os.getenv("DATABASE_URL", None)
+if not DATABASE_URL:
+    print("You must define DATABASE_URL in the environment.", file=sys.stderr)
+    exit()
+NEW_ENV = os.environ.copy()
+CSV_DELIMITER = ","
+
+# Vars
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
+nzsl_raw_keys_dict = {}
+s3_bucket_raw_keys_list = []
+all_keys_dict = {}
 
 # Files
 TMPDIR = "/tmp/nzsl"
@@ -68,9 +70,9 @@ NZSL_POSTGRES_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_postgres_raw_keys.txt"
 S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
 
+
 # Truncate files, creating them if necessary
 def init_files(files_list):
-    # Zero-out files
     for p in files_list:
         f = open(p, "a")
         f.truncate()
@@ -122,10 +124,10 @@ def get_keys_from_cache_file(cache_file):
 
 
 # Get all keys from AWS S3
-def get_keys_from_s3(s3_bucket, keys_file):
+def get_s3_bucket_raw_keys_list(s3_bucket, keys_file):
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
     with open(keys_file, "w") as f_obj:
-        result = subprocess.run(
+        subprocess.run(
             [AWSCLIENT, "s3", "ls", f"s3://{s3_bucket}", "--recursive"],
             env=NEW_ENV,
             shell=False,
@@ -152,14 +154,14 @@ def get_keys_from_s3(s3_bucket, keys_file):
 
 
 # Get the video files info from NZSL Signbank
-def get_keys_from_nzsl(keys_file):
+def get_nzsl_raw_keys_dict(keys_file):
     this_nzsl_raw_keys_dict = {}
     print(
         f"Getting raw list of video file info from NZSL Signbank ...",
         file=sys.stderr,
     )
     with open(keys_file, "w") as f_obj:
-        result = subprocess.run(
+        subprocess.run(
             [
                 PGCLIENT,
                 "-t",
@@ -314,8 +316,8 @@ if args.cached:
 else:
     print("Generating keys from scratch.", file=sys.stderr)
     init_files([NZSL_POSTGRES_RAW_KEYS_FILE, S3_BUCKET_RAW_KEYS_FILE, ALL_KEYS_FILE])
-    s3_bucket_raw_keys_list = get_keys_from_s3(AWS_S3_BUCKET, S3_BUCKET_RAW_KEYS_FILE)
-    nzsl_raw_keys_dict = get_keys_from_nzsl(NZSL_POSTGRES_RAW_KEYS_FILE)
+    s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list(AWS_S3_BUCKET, S3_BUCKET_RAW_KEYS_FILE)
+    nzsl_raw_keys_dict = get_nzsl_raw_keys_dict(NZSL_POSTGRES_RAW_KEYS_FILE)
     all_keys_dict = create_all_keys_dict(
         s3_bucket_raw_keys_list, nzsl_raw_keys_dict, ALL_KEYS_FILE
     )
