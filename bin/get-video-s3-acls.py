@@ -246,9 +246,8 @@ else:
 print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 # CSV header
 print(
-    f"Video S3 Key{CSV_DELIMITER}Present in Signbank?{CSV_DELIMITER}Postgres ID{CSV_DELIMITER}Gloss ID{CSV_DELIMITER}"
+    f"Video S3 Key{CSV_DELIMITER}Postgres ID{CSV_DELIMITER}Gloss ID{CSV_DELIMITER}"
     f"Signbank is_public?{CSV_DELIMITER}Expected S3 Canned ACL{CSV_DELIMITER}Actual S3 Canned ACL"
-    f"{CSV_DELIMITER}Correct Canned ACL?"
 )
 for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items():
     canned_acl = ""
@@ -292,10 +291,8 @@ for video_key, [is_present, db_id, gloss_id, is_public] in all_keys_dict.items()
 
     # CSV columns
     print(f"{video_key}", end=CSV_DELIMITER)
-    print(f"{is_present}", end=CSV_DELIMITER)
     print(f"{db_id if is_present else ''}", end=CSV_DELIMITER)
     print(f"{gloss_id if is_present else ''}", end=CSV_DELIMITER)
     print(f"{is_public if is_present else ''}", end=CSV_DELIMITER)
     print(f"{canned_acl_expected}", end=CSV_DELIMITER)
-    print(f"{canned_acl}", end=CSV_DELIMITER)
-    print(f"{str(canned_acl_expected == canned_acl) if is_present else ''}")
+    print(f"{canned_acl}")
