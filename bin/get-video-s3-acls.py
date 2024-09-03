@@ -11,9 +11,9 @@ import subprocess
 import argparse
 import json
 
-
 parser = argparse.ArgumentParser(
-    description="You must setup: An AWS auth means, eg. AWS_PROFILE environment variable., DATABASE_URL"
+    description="You must setup: An AWS auth means, eg. AWS_PROFILE environment variable."
+    "Postgres access details, eg. DATABASE_URL"
 )
 parser.add_argument(
     "--mode",
@@ -47,9 +47,6 @@ args = parser.parse_args()
 AWSCLIENT = args.awsclient
 PGCLIENT = args.pgclient
 DATABASE_URL = os.getenv("DATABASE_URL", None)
-if not DATABASE_URL:
-    print("You must define DATABASE_URL in the environment.", file=sys.stderr)
-    exit()
 NEW_ENV = os.environ.copy()
 CSV_DELIMITER = ","
 
@@ -316,7 +313,9 @@ if args.cached:
 else:
     print("Generating keys from scratch.", file=sys.stderr)
     init_files([NZSL_POSTGRES_RAW_KEYS_FILE, S3_BUCKET_RAW_KEYS_FILE, ALL_KEYS_FILE])
-    s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list(AWS_S3_BUCKET, S3_BUCKET_RAW_KEYS_FILE)
+    s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list(
+        AWS_S3_BUCKET, S3_BUCKET_RAW_KEYS_FILE
+    )
     nzsl_raw_keys_dict = get_nzsl_raw_keys_dict(NZSL_POSTGRES_RAW_KEYS_FILE)
     all_keys_dict = create_all_keys_dict(
         s3_bucket_raw_keys_list, nzsl_raw_keys_dict, ALL_KEYS_FILE
