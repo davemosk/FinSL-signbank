@@ -23,17 +23,8 @@ if not DATABASE_URL:
     print("You must define DATABASE_URL in the environment.", file=sys.stderr)
     exit()
 
-# AWS: Is there an AWS_PROFILE defined in the environment?
-AWS_PROFILE = os.getenv("AWS_PROFILE", None)
-if not AWS_PROFILE:
-    print(
-        "You must define AWS_PROFILE in the environment. Eg. AWS_PROFILE='nzsl'",
-        file=sys.stderr,
-    )
-    exit()
-
 parser = argparse.ArgumentParser(
-    description="You must define, in the environment: AWS_PROFILE, DATABASE_URL"
+    description="You must setup: An AWS auth means, eg. AWS_PROFILE environment variable., DATABASE_URL"
 )
 
 # Optional arguments
