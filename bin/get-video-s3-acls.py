@@ -5,7 +5,6 @@
 #  s3:GetObjectAcl permissions or READ_ACP access to the object
 #  https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object-acl.html
 
-
 import os
 import sys
 import subprocess
@@ -66,7 +65,6 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-NZSL_APP = f"nzsl-signbank-{args.mode}"
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
 
 # Get the environment
@@ -83,8 +81,7 @@ else:
     print("Generating keys from scratch.", file=sys.stderr)
 
 print(f"Mode:        {args.mode}", file=sys.stderr)
-print(f"  NZSL app:  {NZSL_APP}", file=sys.stderr)
-print(f"  S3 bucket: {AWS_S3_BUCKET}", file=sys.stderr)
+print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWS profile: {new_env['AWS_PROFILE']}", file=sys.stderr)
 print(f"AWSCLIENT:   {AWSCLIENT}", file=sys.stderr)
 print(f"PGCLIENT:    {PGCLIENT}", file=sys.stderr)
@@ -180,7 +177,7 @@ else:
 
     # Get the video files info from NZSL Signbank
     print(
-        f"Getting raw list of video file info from NZSL Signbank ({NZSL_APP}) ...",
+        f"Getting raw list of video file info from NZSL Signbank ...",
         file=sys.stderr,
     )
     with open(NZSL_POSTGRES_RAW_KEYS_FILE, "w") as f_obj:
