@@ -8,3 +8,4 @@ ignore:
   - GHSA-w3h3-4rj7-4ph4
   - GHSA-248v-346w-9cwc # Certifi removes GLOBALTRUST root certificate (https://github.com/advisories/GHSA-248v-346w-9cwc)
   - GHSA-g92j-qhmh-64v2 # Sentry's Python SDK unintentionally exposes environment variables to subprocesses (https://github.com/advisories/GHSA-g92j-qhmh-64v2)
+  - GHSA-9mvj-f7w8-pvh2 # Bootstrap Cross-Site Scripting (XSS) vulnerability (https://github.com/advisories/GHSA-9mvj-f7w8-pvh2)
