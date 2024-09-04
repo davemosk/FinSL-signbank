@@ -55,7 +55,7 @@ try:
 except OSError as err:
     print(f"Error creating temporary directory: {TMPDIR} {err}", file=sys.stderr)
     exit()
-NZSL_POSTGRES_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_postgres_raw_keys.txt"
+NZSL_POSTGRES_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_postgres_raw_keys.csv"
 S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
 
@@ -154,12 +154,13 @@ def get_nzsl_raw_keys_dict(keys_file=NZSL_POSTGRES_RAW_KEYS_FILE):
         file=sys.stderr,
     )
     with open(keys_file, "w") as f_obj:
+        # In theory postgres COPY could output directly to our file, but subprocess.run throws an error
         subprocess.run(
             [
                 PGCLIENT,
-                "-t",
                 "-c",
-                "select id as db_id, gloss_id, is_public, videofile from video_glossvideo",
+                "COPY (SELECT id AS db_id, gloss_id, is_public, videofile FROM video_glossvideo) "
+                "TO STDOUT WITH (FORMAT CSV)",
                 f"{DATABASE_URL}",
             ],
             env=os.environ,
@@ -168,6 +169,7 @@ def get_nzsl_raw_keys_dict(keys_file=NZSL_POSTGRES_RAW_KEYS_FILE):
             text=True,
             stdout=f_obj,
         )
+
     with open(keys_file, "r") as f_obj:
         nzsl_raw_keys_list = f_obj.readlines()
     print(
@@ -181,14 +183,8 @@ def get_nzsl_raw_keys_dict(keys_file=NZSL_POSTGRES_RAW_KEYS_FILE):
         rawl = rawl.strip()
         if not rawl:
             continue
-        columns = rawl.split("|")
-        db_id = columns[0].strip()
-        gloss_id = columns[1].strip()
-        is_public = columns[2].strip().lower() == "t"
-        # 'videofile' data is also the key for S3
-        video_key = columns[3].strip()
-        # Each dictionary slot contains these values
-        this_nzsl_raw_keys_dict[video_key] = [db_id, gloss_id, is_public]
+        [db_id, gloss_id, is_public, video_key] = rawl.split(",")
+        this_nzsl_raw_keys_dict[video_key] = [db_id, gloss_id, is_public.lower() == "t"]
 
     return this_nzsl_raw_keys_dict
 
