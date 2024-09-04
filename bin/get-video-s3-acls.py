@@ -12,7 +12,7 @@ import argparse
 import json
 
 parser = argparse.ArgumentParser(
-    description="You must setup: An AWS auth means, eg. AWS_PROFILE environment variable."
+    description="You must setup: An AWS auth means, eg. AWS_PROFILE environment variable. "
     "Postgres access details, eg. DATABASE_URL"
 )
 parser.add_argument(
