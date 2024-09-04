@@ -251,52 +251,53 @@ def output_csv(this_all_keys_dict):
         gloss_id,
         is_public,
     ] in this_all_keys_dict.items():
-        canned_acl = ""
-        canned_acl_expected = ""
-        raw_acl = ""
-        if is_present:
-            # See signbank/video/models.py, line 59, in function set_public_acl()
-            canned_acl_expected = "public-read" if is_public else "private"
-            result = subprocess.run(
-                [
-                    AWSCLIENT,
-                    "s3api",
-                    "get-object-acl",
-                    "--output",
-                    "json",
-                    "--bucket",
-                    AWS_S3_BUCKET,
-                    "--key",
-                    video_key,
-                ],
-                env=NEW_ENV,
-                shell=False,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            acls_grants_json = json.loads(result.stdout)["Grants"]
-            if len(acls_grants_json) > 1:
-                if (
-                    acls_grants_json[0]["Permission"] == "FULL_CONTROL"
-                    and acls_grants_json[1]["Permission"] == "READ"
-                ):
-                    canned_acl = "public-read"
-                else:
-                    canned_acl = "Unknown ACL"
-            else:
-                if acls_grants_json[0]["Permission"] == "FULL_CONTROL":
-                    canned_acl = "private"
-                else:
-                    canned_acl = "Unknown ACL"
+
+        if not is_present:
+            print(f"{video_key},,,,,")
+            continue
+
+        # See signbank/video/models.py, line 59, in function set_public_acl()
+        canned_acl_expected = "public-read" if is_public else "private"
+        result = subprocess.run(
+            [
+                AWSCLIENT,
+                "s3api",
+                "get-object-acl",
+                "--output",
+                "json",
+                "--bucket",
+                AWS_S3_BUCKET,
+                "--key",
+                video_key,
+            ],
+            env=NEW_ENV,
+            shell=False,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        canned_acl = "unknown"
+        acls_grants_json = json.loads(result.stdout)["Grants"]
+        if len(acls_grants_json) > 1:
+            if (
+                acls_grants_json[0]["Permission"] == "FULL_CONTROL"
+                and acls_grants_json[1]["Permission"] == "READ"
+            ):
+                canned_acl = "public-read"
+        else:
+            if acls_grants_json[0]["Permission"] == "FULL_CONTROL":
+                canned_acl = "private"
 
         # CSV columns
-        print(f"{video_key}", end=CSV_DELIMITER)
-        print(f"{db_id if is_present else ''}", end=CSV_DELIMITER)
-        print(f"{gloss_id if is_present else ''}", end=CSV_DELIMITER)
-        print(f"{is_public if is_present else ''}", end=CSV_DELIMITER)
-        print(f"{canned_acl_expected}", end=CSV_DELIMITER)
-        print(f"{canned_acl}")
+        csv_column_list = [
+            f"{video_key}",
+            f"{db_id}",
+            f"{gloss_id}",
+            f"{is_public}",
+            f"{canned_acl_expected}",
+            f"{canned_acl}",
+        ]
+        print(CSV_DELIMITER.join(csv_column_list))
 
 
 print(f"Mode:        {args.mode}", file=sys.stderr)
@@ -305,7 +306,8 @@ if "AWS_PROFILE" in NEW_ENV:
     print(f"AWS profile: {NEW_ENV['AWS_PROFILE']}", file=sys.stderr)
 print(f"AWSCLIENT:   {AWSCLIENT}", file=sys.stderr)
 print(f"PGCLIENT:    {PGCLIENT}", file=sys.stderr)
-print(f"DATABASE_URL:\n{NEW_ENV['DATABASE_URL']}", file=sys.stderr)
+if "DATABASE_URL" in NEW_ENV:
+    print(f"DATABASE_URL:\n{NEW_ENV['DATABASE_URL']}", file=sys.stderr)
 
 if args.cached:
     print(
