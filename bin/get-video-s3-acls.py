@@ -80,43 +80,38 @@ def get_keys_from_cache_file(cache_file=ALL_KEYS_FILE):
     nkeys_present = 0
     nkeys_absent = 0
     this_all_keys_dict = {}
-    try:
-        with open(cache_file, "r") as f_obj:
-            for line in f_obj.readlines():
-                (
-                    video_key,
-                    is_present_str,
-                    db_id_str,
-                    gloss_id_str,
-                    is_public_str,
-                ) = line.strip().split(CSV_DELIMITER)
+    with open(cache_file, "r") as f_obj:
+        for line in f_obj.readlines():
+            (
+                video_key,
+                is_present_str,
+                db_id_str,
+                gloss_id_str,
+                is_public_str,
+            ) = line.strip().split(CSV_DELIMITER)
 
-                is_present = is_present_str.strip().lower() == "true"
-                if is_present:
-                    nkeys_present += 1
-                    db_id = int(db_id_str)
-                    # Some don't have gloss_id's
-                    try:
-                        gloss_id = int(gloss_id_str)
-                    except ValueError:
-                        gloss_id = None
-                    is_public = is_public_str.strip().lower() == "true"
-                else:
-                    nkeys_absent += 1
-                    db_id = None
+            is_present = is_present_str.strip().lower() == "true"
+            if is_present:
+                nkeys_present += 1
+                db_id = int(db_id_str)
+                # Some don't have gloss_id's
+                try:
+                    gloss_id = int(gloss_id_str)
+                except ValueError:
                     gloss_id = None
-                    is_public = None
+                is_public = is_public_str.strip().lower() == "true"
+            else:
+                nkeys_absent += 1
+                db_id = None
+                gloss_id = None
+                is_public = None
 
-                this_all_keys_dict[video_key] = [is_present, db_id, gloss_id, is_public]
+            this_all_keys_dict[video_key] = [is_present, db_id, gloss_id, is_public]
 
         print(f"PRESENT: {nkeys_present} keys", file=sys.stderr)
         print(f"ABSENT:  {nkeys_absent} keys", file=sys.stderr)
 
         return this_all_keys_dict
-
-    except FileNotFoundError:
-        print(f"File not found: {cache_file}", file=sys.stderr)
-        exit()
 
 
 # Get all keys from AWS S3
