@@ -302,10 +302,10 @@ def output_csv(this_all_keys_dict):
 
 print(f"Mode:        {args.mode}", file=sys.stderr)
 print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
-if "AWS_PROFILE" in NEW_ENV:
-    print(f"AWS profile: {NEW_ENV['AWS_PROFILE']}", file=sys.stderr)
 print(f"AWSCLIENT:   {AWSCLIENT}", file=sys.stderr)
 print(f"PGCLIENT:    {PGCLIENT}", file=sys.stderr)
+if "AWS_PROFILE" in NEW_ENV:
+    print(f"AWS profile: {NEW_ENV['AWS_PROFILE']}", file=sys.stderr)
 if "DATABASE_URL" in NEW_ENV:
     print(f"DATABASE_URL:\n{NEW_ENV['DATABASE_URL']}", file=sys.stderr)
 
