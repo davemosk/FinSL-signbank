@@ -121,7 +121,7 @@ def get_keys_from_cache_file(cache_file=ALL_KEYS_FILE):
 
 
 # Get all keys from AWS S3
-def get_s3_bucket_raw_keys_list(s3_bucket, keys_file=S3_BUCKET_RAW_KEYS_FILE):
+def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET, keys_file=S3_BUCKET_RAW_KEYS_FILE):
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
     with open(keys_file, "w") as f_obj:
         subprocess.run(
@@ -313,7 +313,7 @@ if args.cached:
 else:
     print("Generating keys from scratch.", file=sys.stderr)
     init_files()
-    s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list(AWS_S3_BUCKET)
+    s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list()
     nzsl_raw_keys_dict = get_nzsl_raw_keys_dict()
     all_keys_dict = create_all_keys_dict(
         s3_bucket_raw_keys_list, nzsl_raw_keys_dict
