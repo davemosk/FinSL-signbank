@@ -47,7 +47,6 @@ args = parser.parse_args()
 AWSCLIENT = args.awsclient
 PGCLIENT = args.pgclient
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-NEW_ENV = os.environ.copy()
 CSV_DELIMITER = ","
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
 TMPDIR = "/tmp/nzsl"
@@ -128,7 +127,7 @@ def get_s3_bucket_raw_keys_list(
     with open(keys_file, "w") as f_obj:
         subprocess.run(
             [AWSCLIENT, "s3", "ls", f"s3://{s3_bucket}", "--recursive"],
-            env=NEW_ENV,
+            env=os.environ,
             shell=False,
             check=True,
             text=True,
@@ -168,7 +167,7 @@ def get_nzsl_raw_keys_dict(keys_file=NZSL_POSTGRES_RAW_KEYS_FILE):
                 "select id as db_id, gloss_id, is_public, videofile from video_glossvideo",
                 f"{DATABASE_URL}",
             ],
-            env=NEW_ENV,
+            env=os.environ,
             shell=False,
             check=True,
             text=True,
@@ -270,7 +269,7 @@ def output_csv(this_all_keys_dict):
                 "--key",
                 video_key,
             ],
-            env=NEW_ENV,
+            env=os.environ,
             shell=False,
             check=True,
             capture_output=True,
@@ -304,8 +303,8 @@ print(f"Mode:        {args.mode}", file=sys.stderr)
 print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWSCLIENT:   {AWSCLIENT}", file=sys.stderr)
 print(f"PGCLIENT:    {PGCLIENT}", file=sys.stderr)
-if "AWS_PROFILE" in NEW_ENV:
-    print(f"AWS profile: {NEW_ENV['AWS_PROFILE']}", file=sys.stderr)
+if "AWS_PROFILE" in os.environ:
+    print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
 
 if args.cached:
     print(
