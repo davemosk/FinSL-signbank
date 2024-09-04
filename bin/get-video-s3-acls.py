@@ -49,14 +49,7 @@ PGCLIENT = args.pgclient
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 NEW_ENV = os.environ.copy()
 CSV_DELIMITER = ","
-
-# Vars
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
-nzsl_raw_keys_dict = {}
-s3_bucket_raw_keys_list = []
-all_keys_dict = {}
-
-# Files
 TMPDIR = "/tmp/nzsl"
 try:
     os.makedirs(TMPDIR, exist_ok=True)
@@ -67,6 +60,10 @@ NZSL_POSTGRES_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_postgres_raw_keys.txt"
 S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
 
+# Vars
+nzsl_raw_keys_dict = {}
+s3_bucket_raw_keys_list = []
+all_keys_dict = {}
 
 # Truncate files, creating them if necessary
 def init_files(files_list=(NZSL_POSTGRES_RAW_KEYS_FILE, S3_BUCKET_RAW_KEYS_FILE, ALL_KEYS_FILE)):
