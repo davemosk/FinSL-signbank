@@ -12,8 +12,8 @@ import argparse
 import json
 
 parser = argparse.ArgumentParser(
-    description="You must setup: An AWS auth means, eg. AWS_PROFILE environment variable. "
-    "Postgres access details, eg. DATABASE_URL"
+    description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
+    "Postgres access details, eg. DATABASE_URL env var."
 )
 parser.add_argument(
     "--mode",
@@ -46,7 +46,7 @@ args = parser.parse_args()
 # Globals
 AWSCLIENT = args.awsclient
 PGCLIENT = args.pgclient
-DATABASE_URL = os.getenv("DATABASE_URL", None)
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 NEW_ENV = os.environ.copy()
 CSV_DELIMITER = ","
 
