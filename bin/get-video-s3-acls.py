@@ -69,7 +69,7 @@ ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
 
 
 # Truncate files, creating them if necessary
-def init_files(files_list):
+def init_files(files_list=(NZSL_POSTGRES_RAW_KEYS_FILE, S3_BUCKET_RAW_KEYS_FILE, ALL_KEYS_FILE)):
     for p in files_list:
         f = open(p, "a")
         f.truncate()
@@ -77,7 +77,7 @@ def init_files(files_list):
 
 
 # Pull all info from existing file
-def get_keys_from_cache_file(cache_file):
+def get_keys_from_cache_file(cache_file=ALL_KEYS_FILE):
     nkeys_present = 0
     nkeys_absent = 0
     this_all_keys_dict = {}
@@ -121,7 +121,7 @@ def get_keys_from_cache_file(cache_file):
 
 
 # Get all keys from AWS S3
-def get_s3_bucket_raw_keys_list(s3_bucket, keys_file):
+def get_s3_bucket_raw_keys_list(s3_bucket, keys_file=S3_BUCKET_RAW_KEYS_FILE):
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
     with open(keys_file, "w") as f_obj:
         subprocess.run(
@@ -151,7 +151,7 @@ def get_s3_bucket_raw_keys_list(s3_bucket, keys_file):
 
 
 # Get the video files info from NZSL Signbank
-def get_nzsl_raw_keys_dict(keys_file):
+def get_nzsl_raw_keys_dict(keys_file=NZSL_POSTGRES_RAW_KEYS_FILE):
     this_nzsl_raw_keys_dict = {}
     print(
         f"Getting raw list of video file info from NZSL Signbank ...",
@@ -199,7 +199,7 @@ def get_nzsl_raw_keys_dict(keys_file):
 
 # Get the s3 keys present and absent from our NZSL keys
 def create_all_keys_dict(
-    this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict, all_keys_file
+    this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict, all_keys_file=ALL_KEYS_FILE
 ):
     print("Getting S3 keys present and absent from NZSL Signbank ...", file=sys.stderr)
     nkeys_present = 0
@@ -309,16 +309,14 @@ if args.cached:
     print(
         "Using the video keys we recorded on the last non-cached run.", file=sys.stderr
     )
-    all_keys_dict = get_keys_from_cache_file(ALL_KEYS_FILE)
+    all_keys_dict = get_keys_from_cache_file()
 else:
     print("Generating keys from scratch.", file=sys.stderr)
-    init_files([NZSL_POSTGRES_RAW_KEYS_FILE, S3_BUCKET_RAW_KEYS_FILE, ALL_KEYS_FILE])
-    s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list(
-        AWS_S3_BUCKET, S3_BUCKET_RAW_KEYS_FILE
-    )
-    nzsl_raw_keys_dict = get_nzsl_raw_keys_dict(NZSL_POSTGRES_RAW_KEYS_FILE)
+    init_files()
+    s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list(AWS_S3_BUCKET)
+    nzsl_raw_keys_dict = get_nzsl_raw_keys_dict()
     all_keys_dict = create_all_keys_dict(
-        s3_bucket_raw_keys_list, nzsl_raw_keys_dict, ALL_KEYS_FILE
+        s3_bucket_raw_keys_list, nzsl_raw_keys_dict
     )
 
 output_csv(all_keys_dict)
