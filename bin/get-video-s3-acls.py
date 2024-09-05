@@ -10,6 +10,7 @@ import sys
 import subprocess
 import argparse
 import json
+import re
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -121,7 +122,15 @@ def get_s3_bucket_raw_keys_list(
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
     with open(keys_file, "w") as f_obj:
         subprocess.run(
-            [AWSCLIENT, "s3", "ls", f"s3://{s3_bucket}", "--recursive"],
+            [
+                AWSCLIENT,
+                "s3",
+                "ls",
+                f"s3://{s3_bucket}",
+                "--recursive",
+                "--output",
+                "json",
+            ],
             env=os.environ,
             shell=False,
             check=True,
@@ -132,7 +141,9 @@ def get_s3_bucket_raw_keys_list(
     # Separate out just the key (also strip newline) from date, time, size, key
     # Put the keys in an in-memory list
     with open(keys_file, "r") as f_obj:
-        this_s3_bucket_raw_keys_list = [line.split()[3] for line in f_obj]
+        this_s3_bucket_raw_keys_list = [
+            re.split(r"\s+", line, 3)[3].strip() for line in f_obj
+        ]
     print(
         f"{len(this_s3_bucket_raw_keys_list)} rows retrieved: {keys_file}",
         file=sys.stderr,
@@ -242,24 +253,22 @@ def output_csv(this_all_keys_dict):
         is_public,
     ] in this_all_keys_dict.items():
 
-        if not is_present:
-            print(f"{video_key},,,,,")
-            continue
-
         # See signbank/video/models.py, line 59, in function set_public_acl()
         canned_acl_expected = "public-read" if is_public else "private"
+        run_array = [
+            AWSCLIENT,
+            "s3api",
+            "get-object-acl",
+            "--output",
+            "json",
+            "--bucket",
+            AWS_S3_BUCKET,
+            "--key",
+            video_key,
+        ]
+
         result = subprocess.run(
-            [
-                AWSCLIENT,
-                "s3api",
-                "get-object-acl",
-                "--output",
-                "json",
-                "--bucket",
-                AWS_S3_BUCKET,
-                "--key",
-                video_key,
-            ],
+            run_array,
             env=os.environ,
             shell=False,
             check=True,
@@ -277,6 +286,10 @@ def output_csv(this_all_keys_dict):
         else:
             if acls_grants_json[0]["Permission"] == "FULL_CONTROL":
                 canned_acl = "private"
+
+        if not is_present:
+            print(f"{video_key},,,,,{canned_acl}")
+            continue
 
         # CSV columns
         csv_column_list = [
