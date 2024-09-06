@@ -27,17 +27,17 @@ parser.add_argument(
     default=False,
     required=False,
     action="store_true",
-    help="Use keys generated on a previous non-cached run (default: %(default)s) "
-    "(Don't mix PRODUCTION and STAGING!)",
+    help="Use video keys generated on a previous non-cached run (default: %(default)s) "
+    "(Do not mix production and staging!)",
 )
 parser.add_argument(
-    "--pgclient",
+    "--pgcli",
     default="/usr/bin/psql",
     required=False,
     help=f"Postgres client path (default: %(default)s)",
 )
 parser.add_argument(
-    "--awsclient",
+    "--awscli",
     default="/usr/local/bin/aws",
     required=False,
     help=f"AWS client path (default: %(default)s)",
@@ -45,8 +45,8 @@ parser.add_argument(
 args = parser.parse_args()
 
 # Globals
-AWSCLIENT = args.awsclient
-PGCLIENT = args.pgclient
+AWSCLI = args.awscli
+PGCLI = args.pgcli
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 CSV_DELIMITER = ","
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
@@ -116,7 +116,7 @@ def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
     result = subprocess.run(
         [
-            AWSCLIENT,
+            AWSCLI,
             "s3",
             "ls",
             f"s3://{s3_bucket}",
@@ -151,7 +151,7 @@ def get_nzsl_raw_keys_dict():
     )
     result = subprocess.run(
         [
-            PGCLIENT,
+            PGCLI,
             "-c",
             "COPY (SELECT id AS db_id, gloss_id, is_public, videofile FROM video_glossvideo) "
             "TO STDOUT WITH (FORMAT CSV)",
@@ -195,6 +195,7 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
             nkeys_absent += 1
             # Add 'Present' (absent) column to start
             this_all_keys_dict[video_key] = [False, "", "", ""]
+
     print(f"PRESENT: {nkeys_present} keys", file=sys.stderr)
     print(f"ABSENT:  {nkeys_absent} keys", file=sys.stderr)
 
@@ -234,7 +235,7 @@ def output_csv(this_all_keys_dict):
         # See signbank/video/models.py, line 59, in function set_public_acl()
         canned_acl_expected = "public-read" if is_public else "private"
         run_array = [
-            AWSCLIENT,
+            AWSCLI,
             "s3api",
             "get-object-acl",
             "--output",
@@ -280,10 +281,10 @@ def output_csv(this_all_keys_dict):
         print(CSV_DELIMITER.join(csv_column_list))
 
 
-print(f"Mode:        {args.mode}", file=sys.stderr)
-print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
-print(f"AWSCLIENT:   {AWSCLIENT}", file=sys.stderr)
-print(f"PGCLIENT:    {PGCLIENT}", file=sys.stderr)
+print(f"Mode:      {args.mode}", file=sys.stderr)
+print(f"S3 bucket: {AWS_S3_BUCKET}", file=sys.stderr)
+print(f"AWSCLI:    {AWSCLI}", file=sys.stderr)
+print(f"PGCLI:     {PGCLI}", file=sys.stderr)
 if "AWS_PROFILE" in os.environ:
     print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
 
