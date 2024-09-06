@@ -57,7 +57,6 @@ except OSError as err:
     print(f"Error creating temporary directory: {TMPDIR} {err}", file=sys.stderr)
     exit()
 NZSL_POSTGRES_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_postgres_raw_keys.csv"
-S3_BUCKET_RAW_KEYS_FILE = f"{TMPDIR}/s3_bucket_raw_keys.txt"
 ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
 
 # Vars
@@ -68,7 +67,7 @@ all_keys_dict = {}
 
 # Truncate files, creating them if necessary
 def init_files(
-    files_list=(NZSL_POSTGRES_RAW_KEYS_FILE, S3_BUCKET_RAW_KEYS_FILE, ALL_KEYS_FILE)
+    files_list=(NZSL_POSTGRES_RAW_KEYS_FILE, ALL_KEYS_FILE)
 ):
     for p in files_list:
         f = open(p, "a")
@@ -117,42 +116,32 @@ def get_keys_from_cache_file(cache_file=ALL_KEYS_FILE):
 
 # Get all keys from AWS S3
 def get_s3_bucket_raw_keys_list(
-    s3_bucket=AWS_S3_BUCKET, keys_file=S3_BUCKET_RAW_KEYS_FILE
+    s3_bucket=AWS_S3_BUCKET
 ):
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
-    with open(keys_file, "w") as f_obj:
-        subprocess.run(
-            [
-                AWSCLIENT,
-                "s3",
-                "ls",
-                f"s3://{s3_bucket}",
-                "--recursive",
-                "--output",
-                "json",
-            ],
-            env=os.environ,
-            shell=False,
-            check=True,
-            text=True,
-            stdout=f_obj,
-        )
-
-    # Separate out just the key (also strip newline) from date, time, size, key
-    # Put the keys in an in-memory list
-    with open(keys_file, "r") as f_obj:
-        this_s3_bucket_raw_keys_list = [
-            re.split(r"\s+", line, 3)[3].strip() for line in f_obj
-        ]
-    print(
-        f"{len(this_s3_bucket_raw_keys_list)} rows retrieved: {keys_file}",
-        file=sys.stderr,
+    result = subprocess.run(
+        [
+            AWSCLIENT,
+            "s3",
+            "ls",
+            f"s3://{s3_bucket}",
+            "--recursive",
+        ],
+        env=os.environ,
+        capture_output=True,
+        check=True,
+        text=True,
     )
 
-    # Write the keys back to the file, for cleanliness
-    with open(keys_file, "w") as f_obj:
-        for line in this_s3_bucket_raw_keys_list:
-            f_obj.write(f"{line}\n")
+    # Separate out just the key from date, time, size, key
+    this_s3_bucket_raw_keys_list = []
+    for line in result.stdout.split('\n'):
+        if line:
+            this_s3_bucket_raw_keys_list.append(re.split(r"\s+", line, 3)[3])
+    print(
+        f"{len(this_s3_bucket_raw_keys_list)} rows retrieved",
+        file=sys.stderr,
+    )
 
     return this_s3_bucket_raw_keys_list
 
@@ -266,7 +255,6 @@ def output_csv(this_all_keys_dict):
             "--key",
             video_key,
         ]
-
         result = subprocess.run(
             run_array,
             env=os.environ,
