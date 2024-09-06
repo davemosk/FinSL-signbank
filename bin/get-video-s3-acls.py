@@ -56,8 +56,7 @@ try:
 except OSError as err:
     print(f"Error creating temporary directory: {TMPDIR} {err}", file=sys.stderr)
     exit()
-NZSL_POSTGRES_RAW_KEYS_FILE = f"{TMPDIR}/nzsl_postgres_raw_keys.csv"
-ALL_KEYS_FILE = f"{TMPDIR}/all_keys.csv"
+ALL_KEYS_CACHE_FILE = f"{TMPDIR}/all_keys_cache.csv"
 
 # Vars
 nzsl_raw_keys_dict = {}
@@ -66,17 +65,15 @@ all_keys_dict = {}
 
 
 # Truncate files, creating them if necessary
-def init_files(
-    files_list=(NZSL_POSTGRES_RAW_KEYS_FILE, ALL_KEYS_FILE)
-):
+def init_files(files_list=(ALL_KEYS_CACHE_FILE,)):
     for p in files_list:
         f = open(p, "a")
         f.truncate()
         f.close()
 
 
-# Pull all info from existing file
-def get_keys_from_cache_file(cache_file=ALL_KEYS_FILE):
+# Pull all info from existing cache file
+def get_keys_from_cache_file(cache_file=ALL_KEYS_CACHE_FILE):
     nkeys_present = 0
     nkeys_absent = 0
     this_all_keys_dict = {}
@@ -115,9 +112,7 @@ def get_keys_from_cache_file(cache_file=ALL_KEYS_FILE):
 
 
 # Get all keys from AWS S3
-def get_s3_bucket_raw_keys_list(
-    s3_bucket=AWS_S3_BUCKET
-):
+def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
     result = subprocess.run(
         [
@@ -135,9 +130,10 @@ def get_s3_bucket_raw_keys_list(
 
     # Separate out just the key from date, time, size, key
     this_s3_bucket_raw_keys_list = []
-    for line in result.stdout.split('\n'):
+    for line in result.stdout.split("\n"):
         if line:
             this_s3_bucket_raw_keys_list.append(re.split(r"\s+", line, 3)[3])
+
     print(
         f"{len(this_s3_bucket_raw_keys_list)} rows retrieved",
         file=sys.stderr,
@@ -147,52 +143,45 @@ def get_s3_bucket_raw_keys_list(
 
 
 # Get the video files info from NZSL Signbank
-def get_nzsl_raw_keys_dict(keys_file=NZSL_POSTGRES_RAW_KEYS_FILE):
+def get_nzsl_raw_keys_dict():
     this_nzsl_raw_keys_dict = {}
     print(
         f"Getting raw list of video file info from NZSL Signbank ...",
         file=sys.stderr,
     )
-    with open(keys_file, "w") as f_obj:
-        # In theory postgres COPY could output directly to our file, but subprocess.run throws an error
-        subprocess.run(
-            [
-                PGCLIENT,
-                "-c",
-                "COPY (SELECT id AS db_id, gloss_id, is_public, videofile FROM video_glossvideo) "
-                "TO STDOUT WITH (FORMAT CSV)",
-                f"{DATABASE_URL}",
-            ],
-            env=os.environ,
-            shell=False,
-            check=True,
-            text=True,
-            stdout=f_obj,
-        )
-
-    with open(keys_file, "r") as f_obj:
-        nzsl_raw_keys_list = f_obj.readlines()
-    print(
-        f"{len(nzsl_raw_keys_list)} rows retrieved: {keys_file}",
-        file=sys.stderr,
+    result = subprocess.run(
+        [
+            PGCLIENT,
+            "-c",
+            "COPY (SELECT id AS db_id, gloss_id, is_public, videofile FROM video_glossvideo) "
+            "TO STDOUT WITH (FORMAT CSV)",
+            f"{DATABASE_URL}",
+        ],
+        env=os.environ,
+        capture_output=True,
+        check=True,
+        text=True,
     )
 
     # Separate out the NZSL db columns
     # Write them to a dictionary, so we can do fast operations
-    for rawl in nzsl_raw_keys_list:
+    for rawl in result.stdout.split("\n"):
         rawl = rawl.strip()
         if not rawl:
             continue
         [db_id, gloss_id, is_public, video_key] = rawl.split(",")
         this_nzsl_raw_keys_dict[video_key] = [db_id, gloss_id, is_public.lower() == "t"]
 
+    print(
+        f"{len(this_nzsl_raw_keys_dict)} rows retrieved",
+        file=sys.stderr,
+    )
+
     return this_nzsl_raw_keys_dict
 
 
 # Get the s3 keys present and absent from our NZSL keys
-def create_all_keys_dict(
-    this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict, all_keys_file=ALL_KEYS_FILE
-):
+def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
     print("Getting S3 keys present and absent from NZSL Signbank ...", file=sys.stderr)
     nkeys_present = 0
     nkeys_absent = 0
@@ -209,8 +198,8 @@ def create_all_keys_dict(
     print(f"PRESENT: {nkeys_present} keys", file=sys.stderr)
     print(f"ABSENT:  {nkeys_absent} keys", file=sys.stderr)
 
-    # Write all keys back to a file
-    with open(all_keys_file, "w") as f_obj:
+    # Write all keys back to a cache file
+    with open(ALL_KEYS_CACHE_FILE, "w") as f_obj:
         for video_key, item_list in this_all_keys_dict.items():
             outstr = (
                 f"{video_key}{CSV_DELIMITER}{CSV_DELIMITER.join(map(str, item_list))}\n"
@@ -299,12 +288,10 @@ if "AWS_PROFILE" in os.environ:
     print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
 
 if args.cached:
-    print(
-        "Using the video keys we recorded on the last non-cached run.", file=sys.stderr
-    )
+    print(f"Using video keys from cache file ({ALL_KEYS_CACHE_FILE}).", file=sys.stderr)
     all_keys_dict = get_keys_from_cache_file()
 else:
-    print("Generating keys from scratch.", file=sys.stderr)
+    print("Generating video keys from scratch.", file=sys.stderr)
     init_files()
     s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list()
     nzsl_raw_keys_dict = get_nzsl_raw_keys_dict()
