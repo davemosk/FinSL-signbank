@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S python3 -u
+# Bang line above passes '-u' to python, for unbuffered output
 # Permissions required:
 #  psql - access to heroku app's postgres
 #  aws s3 - NZSL IAM access
