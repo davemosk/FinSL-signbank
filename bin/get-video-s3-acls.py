@@ -73,11 +73,11 @@ def init_files(files_list=(ALL_KEYS_CACHE_FILE,)):
 
 
 # Pull all info from existing cache file
-def get_keys_from_cache_file(cache_file=ALL_KEYS_CACHE_FILE):
+def get_keys_from_cache_file():
     nkeys_present = 0
     nkeys_absent = 0
     this_all_keys_dict = {}
-    with open(cache_file, "r") as f_obj:
+    with open(ALL_KEYS_CACHE_FILE, "r") as f_obj:
         for line in f_obj.readlines():
             (
                 video_key,
