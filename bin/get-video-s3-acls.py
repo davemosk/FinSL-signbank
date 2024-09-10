@@ -186,27 +186,27 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
     print("Getting S3 keys present and absent from NZSL Signbank ...", file=sys.stderr)
     nkeys_present = 0
     nkeys_absent = 0
+    item_list = []
     this_all_keys_dict = {}
-    for video_key in this_s3_bucket_raw_keys_list:
-        if video_key in this_nzsl_raw_keys_dict:
-            nkeys_present += 1
-            # Add 'Present' column to start
-            this_all_keys_dict[video_key] = [True] + this_nzsl_raw_keys_dict[video_key]
-        else:
-            nkeys_absent += 1
-            # Add 'Present' (absent) column to start
-            this_all_keys_dict[video_key] = [False, "", "", ""]
+    with open(ALL_KEYS_CACHE_FILE, "w") as cache_file:
+        for video_key in this_s3_bucket_raw_keys_list:
+            if video_key in this_nzsl_raw_keys_dict:
+                nkeys_present += 1
+                # Add 'Present' column to start
+                item_list = [True] + this_nzsl_raw_keys_dict[video_key]
+            else:
+                nkeys_absent += 1
+                # Add 'Present' (absent) column to start
+                item_list = [False, "", "", ""]
+            this_all_keys_dict[video_key] = item_list
+
+            # Write all keys back to a cache file
+            cache_file.write(
+                f"{video_key}{CSV_DELIMITER}{CSV_DELIMITER.join(map(str, item_list))}\n"
+            )
 
     print(f"PRESENT: {nkeys_present} keys", file=sys.stderr)
     print(f"ABSENT:  {nkeys_absent} keys", file=sys.stderr)
-
-    # Write all keys back to a cache file
-    with open(ALL_KEYS_CACHE_FILE, "w") as f_obj:
-        for video_key, item_list in this_all_keys_dict.items():
-            outstr = (
-                f"{video_key}{CSV_DELIMITER}{CSV_DELIMITER.join(map(str, item_list))}\n"
-            )
-            f_obj.write(outstr)
 
     return this_all_keys_dict
 
