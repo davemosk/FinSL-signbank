@@ -186,7 +186,6 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
     print("Getting S3 keys present and absent from NZSL Signbank ...", file=sys.stderr)
     nkeys_present = 0
     nkeys_absent = 0
-    item_list = []
     this_all_keys_dict = {}
     with open(ALL_KEYS_CACHE_FILE, "w") as cache_file:
         for video_key in this_s3_bucket_raw_keys_list:
