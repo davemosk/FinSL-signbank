@@ -18,10 +18,10 @@ parser = argparse.ArgumentParser(
     "Postgres access details, eg. DATABASE_URL env var."
 )
 parser.add_argument(
-    "--mode",
+    "--env",
     default="uat",
     required=False,
-    help="Mode to run in, eg 'production, 'uat', etc (default: '%(default)s')",
+    help="Environment to run against, eg 'production, 'uat', etc (default: '%(default)s')",
 )
 parser.add_argument(
     "--cached",
@@ -50,7 +50,7 @@ AWSCLI = args.awscli
 PGCLI = args.pgcli
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 CSV_DELIMITER = ","
-AWS_S3_BUCKET = f"nzsl-signbank-media-{args.mode}"
+AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
 TMPDIR = "/tmp/nzsl"
 try:
     os.makedirs(TMPDIR, exist_ok=True)
@@ -282,7 +282,7 @@ def output_csv(this_all_keys_dict):
         print(CSV_DELIMITER.join(csv_column_list))
 
 
-print(f"Mode:      {args.mode}", file=sys.stderr)
+print(f"Mode:      {args.env}", file=sys.stderr)
 print(f"S3 bucket: {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWSCLI:    {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:     {PGCLI}", file=sys.stderr)
