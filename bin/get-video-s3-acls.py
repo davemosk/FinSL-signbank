@@ -211,20 +211,76 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
     return this_all_keys_dict
 
 
+def build_csv_header():
+    return CSV_DELIMITER.join(
+        [
+            "Video S3 Key",
+            "Postgres ID",
+            "Gloss ID",
+            "Signbank Public",
+            "Expected S3 Canned ACL",
+            "Actual S3 Canned ACL",
+        ]
+    )
+
+
+def build_csv_row(
+    video_key, is_present=False, db_id=None, gloss_id=None, is_public=False
+):
+
+    run_array = [
+        AWSCLI,
+        "s3api",
+        "get-object-acl",
+        "--output",
+        "json",
+        "--bucket",
+        AWS_S3_BUCKET,
+        "--key",
+        video_key,
+    ]
+    result = subprocess.run(
+        run_array,
+        env=os.environ,
+        shell=False,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    canned_acl = "unknown"
+    acls_grants_json = json.loads(result.stdout)["Grants"]
+    if len(acls_grants_json) > 1:
+        if (
+            acls_grants_json[0]["Permission"] == "FULL_CONTROL"
+            and acls_grants_json[1]["Permission"] == "READ"
+        ):
+            canned_acl = "public-read"
+    elif acls_grants_json[0]["Permission"] == "FULL_CONTROL":
+        canned_acl = "private"
+
+    # See signbank/video/models.py, line 59, in function set_public_acl()
+    if is_present:
+        canned_acl_expected = "public-read" if is_public else "private"
+    else:
+        canned_acl_expected = ""
+
+    return CSV_DELIMITER.join(
+        [
+            f"{video_key}",
+            f"{db_id}",
+            f"{gloss_id}",
+            f"{is_public}",
+            f"{canned_acl_expected}",
+            f"{canned_acl}",
+        ]
+    )
+
+
 # From the keys present in NZSL, get all their ACL information
 def output_csv(this_all_keys_dict):
     print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 
-    # CSV header
-    csv_header_list = [
-        "Video S3 Key",
-        "Postgres ID",
-        "Gloss ID",
-        "Signbank Public",
-        "Expected S3 Canned ACL",
-        "Actual S3 Canned ACL",
-    ]
-    print(CSV_DELIMITER.join(csv_header_list))
+    print(build_csv_header())
 
     for video_key, [
         is_present,
@@ -233,52 +289,15 @@ def output_csv(this_all_keys_dict):
         is_public,
     ] in this_all_keys_dict.items():
 
-        # See signbank/video/models.py, line 59, in function set_public_acl()
-        canned_acl_expected = "public-read" if is_public else "private"
-        run_array = [
-            AWSCLI,
-            "s3api",
-            "get-object-acl",
-            "--output",
-            "json",
-            "--bucket",
-            AWS_S3_BUCKET,
-            "--key",
-            video_key,
-        ]
-        result = subprocess.run(
-            run_array,
-            env=os.environ,
-            shell=False,
-            check=True,
-            capture_output=True,
-            text=True,
+        print(
+            build_csv_row(
+                video_key,
+                is_present,
+                db_id,
+                gloss_id,
+                is_public,
+            )
         )
-        canned_acl = "unknown"
-        acls_grants_json = json.loads(result.stdout)["Grants"]
-        if len(acls_grants_json) > 1:
-            if (
-                acls_grants_json[0]["Permission"] == "FULL_CONTROL"
-                and acls_grants_json[1]["Permission"] == "READ"
-            ):
-                canned_acl = "public-read"
-        elif acls_grants_json[0]["Permission"] == "FULL_CONTROL":
-            canned_acl = "private"
-
-        if not is_present:
-            print(f"{video_key},,,,,{canned_acl}")
-            continue
-
-        # CSV columns
-        csv_column_list = [
-            f"{video_key}",
-            f"{db_id}",
-            f"{gloss_id}",
-            f"{is_public}",
-            f"{canned_acl_expected}",
-            f"{canned_acl}",
-        ]
-        print(CSV_DELIMITER.join(csv_column_list))
 
 
 print(f"Mode:      {args.env}", file=sys.stderr)
