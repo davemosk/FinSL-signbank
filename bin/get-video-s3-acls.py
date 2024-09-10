@@ -262,9 +262,8 @@ def output_csv(this_all_keys_dict):
                 and acls_grants_json[1]["Permission"] == "READ"
             ):
                 canned_acl = "public-read"
-        else:
-            if acls_grants_json[0]["Permission"] == "FULL_CONTROL":
-                canned_acl = "private"
+        elif acls_grants_json[0]["Permission"] == "FULL_CONTROL":
+            canned_acl = "private"
 
         if not is_present:
             print(f"{video_key},,,,,{canned_acl}")
