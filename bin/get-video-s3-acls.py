@@ -17,6 +17,14 @@ parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
     "Postgres access details, eg. DATABASE_URL env var."
 )
+# This debug will be removed
+parser.add_argument(
+    "--debug",
+    default=False,
+    required=False,
+    action="store_true",
+    help="Turn on some debug actions (default: %(default)s) "
+)
 parser.add_argument(
     "--env",
     default="uat",
@@ -181,31 +189,51 @@ def get_nzsl_raw_keys_dict():
     return this_nzsl_raw_keys_dict
 
 
-# Get the s3 keys present and absent from our NZSL keys
+# Get the s3 keys present and absent from our NZSL keys, to dictionary:
+#   video_key(str) -> in_nzsl(bool), in_s3(bool), db_id(int), gloss_id(int), is_public(bool)
 def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
-    print("Getting S3 keys present and absent from NZSL Signbank ...", file=sys.stderr)
-    nkeys_present = 0
-    nkeys_absent = 0
+    print(
+        "Getting keys present and absent across NZSL Signbank and S3 ...",
+        file=sys.stderr,
+    )
     this_all_keys_dict = {}
     with open(ALL_KEYS_CACHE_FILE, "w") as cache_file:
+
+        # Debug, we inject fake keys: grep for 'This_'
+        if args.debug:
+            this_nzsl_raw_keys_dict["This_key_is_in_both"] = [0, 1, True]
+            this_s3_bucket_raw_keys_list.append("This_key_is_in_both")
+            this_nzsl_raw_keys_dict["This_nzsl_key_is_not_in_s3"] = [0, 1, True]
+            this_s3_bucket_raw_keys_list.append("This_s3_key_is_not_in_nzsl")
+
+        # Find S3 keys that are present in NZSL, or absent
         for video_key in this_s3_bucket_raw_keys_list:
             if video_key in this_nzsl_raw_keys_dict:
-                nkeys_present += 1
-                # Add 'Present' column to start
-                item_list = [True] + this_nzsl_raw_keys_dict[video_key]
+                if args.debug:
+                    print(f"'{video_key}' in BOTH NZSL and S3")
+                # NZSL PRESENT, S3 PRESENT
+                this_all_keys_dict[video_key] = [True, True] + this_nzsl_raw_keys_dict[
+                    video_key
+                ]
             else:
-                nkeys_absent += 1
-                # Add 'Present' (absent) column to start
-                item_list = [False, "", "", ""]
-            this_all_keys_dict[video_key] = item_list
+                if args.debug:
+                    print(f"'{video_key}' NOT in NZSL, but in S3")
+                # NZSL Absent, S3 PRESENT
+                this_all_keys_dict[video_key] = [False, True, "", "", ""]
 
-            # Write all keys back to a cache file
+        # Find NZSL keys that are absent from S3 (present handled already above)
+        for video_key, item_list in this_nzsl_raw_keys_dict.items():
+            if video_key not in this_s3_bucket_raw_keys_list:
+                if args.debug:
+                    print(f"'{video_key}' in NZSL, but NOT in S3")
+                # NZSL PRESENT, S3 Absent
+                this_all_keys_dict[video_key] = [True, False] + item_list
+
+        # Write all keys back to a cache file
+        for video_key, item_list in this_all_keys_dict.items():
             cache_file.write(
                 f"{video_key}{CSV_DELIMITER}{CSV_DELIMITER.join(map(str, item_list))}\n"
             )
-
-    print(f"PRESENT: {nkeys_present} keys", file=sys.stderr)
-    print(f"ABSENT:  {nkeys_absent} keys", file=sys.stderr)
 
     return this_all_keys_dict
 
@@ -308,12 +336,17 @@ if "AWS_PROFILE" in os.environ:
 
 if args.cached:
     print(f"Using video keys from cache file ({ALL_KEYS_CACHE_FILE}).", file=sys.stderr)
-    all_keys_dict = get_keys_from_cache_file()
+    print("We are not yet worthy.")
+    exit()
+    # all_keys_dict = get_keys_from_cache_file()
 else:
     print("Generating video keys from scratch.", file=sys.stderr)
     init_files()
     s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list()
     nzsl_raw_keys_dict = get_nzsl_raw_keys_dict()
     all_keys_dict = create_all_keys_dict(s3_bucket_raw_keys_list, nzsl_raw_keys_dict)
+
+print("DEBUG EXIT")
+exit()
 
 output_csv(all_keys_dict)
