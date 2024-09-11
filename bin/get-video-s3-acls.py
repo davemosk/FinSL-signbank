@@ -43,6 +43,12 @@ parser.add_argument(
     required=False,
     help=f"AWS client path (default: %(default)s)",
 )
+parser.add_argument(
+    "--tmpdir",
+    default="/tmp/nzsl",
+    required=False,
+    help=f"Temp dir path (default: %(default)s)",
+)
 args = parser.parse_args()
 
 # Globals
@@ -51,7 +57,7 @@ PGCLI = args.pgcli
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 CSV_DELIMITER = ","
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
-TMPDIR = "/tmp/nzsl"
+TMPDIR = args.tmpdir
 try:
     os.makedirs(TMPDIR, exist_ok=True)
 except OSError as err:
