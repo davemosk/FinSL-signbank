@@ -104,7 +104,13 @@ def get_keys_from_cache_file():
 
             key_in_s3 = key_in_s3_str.strip().lower() == "true"
 
-            this_all_keys_dict[video_key] = [key_in_nzsl, key_in_s3, db_id, gloss_id, is_public]
+            this_all_keys_dict[video_key] = [
+                key_in_nzsl,
+                key_in_s3,
+                db_id,
+                gloss_id,
+                is_public,
+            ]
 
         return this_all_keys_dict
 
@@ -228,25 +234,46 @@ def build_csv_header():
 
 
 def build_csv_row(
-    video_key, key_in_nzsl=False, key_in_s3=False, db_id=None, gloss_id=None, is_public=False
+    video_key,
+    key_in_nzsl=False,
+    key_in_s3=False,
+    db_id=None,
+    gloss_id=None,
+    is_public=False,
 ):
 
-    if not key_in_s3:
-        return
+    # See signbank/video/models.py, line 59, in function set_public_acl()
+    if key_in_nzsl:
+        canned_acl_expected = "public-read" if is_public else "private"
+    else:
+        canned_acl_expected = ""
 
-    run_array = [
-        AWSCLI,
-        "s3api",
-        "get-object-acl",
-        "--output",
-        "json",
-        "--bucket",
-        AWS_S3_BUCKET,
-        "--key",
-        video_key,
-    ]
+    # If key not in S3, just return its NZSL info
+    if not key_in_s3:
+        return CSV_DELIMITER.join(
+            [
+                f"{video_key}",
+                f"{db_id}",
+                f"{gloss_id}",
+                f"{is_public}",
+                f"{canned_acl_expected}",
+                "",
+            ]
+        )
+
+    # Get S3 object's ACL
     result = subprocess.run(
-        run_array,
+        [
+            AWSCLI,
+            "s3api",
+            "get-object-acl",
+            "--output",
+            "json",
+            "--bucket",
+            AWS_S3_BUCKET,
+            "--key",
+            video_key,
+        ],
         env=os.environ,
         shell=False,
         check=True,
@@ -263,12 +290,6 @@ def build_csv_row(
             canned_acl = "public-read"
     elif acls_grants_json[0]["Permission"] == "FULL_CONTROL":
         canned_acl = "private"
-
-    # See signbank/video/models.py, line 59, in function set_public_acl()
-    if key_in_nzsl:
-        canned_acl_expected = "public-read" if is_public else "private"
-    else:
-        canned_acl_expected = ""
 
     return CSV_DELIMITER.join(
         [
