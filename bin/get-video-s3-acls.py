@@ -52,10 +52,10 @@ parser.add_argument(
 args = parser.parse_args()
 
 # Globals
+CSV_DELIMITER = ","
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 AWSCLI = args.awscli
 PGCLI = args.pgcli
-DATABASE_URL = os.getenv("DATABASE_URL", "")
-CSV_DELIMITER = ","
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
 TMPDIR = args.tmpdir
 try:
@@ -82,8 +82,8 @@ def init_files(files_list=(ALL_KEYS_CACHE_FILE,)):
 # Pull all info from existing cache file
 def get_keys_from_cache_file():
     this_all_keys_dict = {}
-    with open(ALL_KEYS_CACHE_FILE, "r") as f_obj:
-        for line in f_obj.readlines():
+    with open(ALL_KEYS_CACHE_FILE, "r") as cache_file:
+        for line in cache_file.readlines():
             (
                 video_key,
                 key_in_nzsl_str,
@@ -97,12 +97,12 @@ def get_keys_from_cache_file():
             key_in_nzsl = key_in_nzsl_str.strip().lower() == "true"
             if key_in_nzsl:
                 db_id = int(db_id_str)
+                is_public = is_public_str.strip().lower() == "true"
                 # Some don't have gloss_id's
                 try:
                     gloss_id = int(gloss_id_str)
                 except ValueError:
                     gloss_id = None
-                is_public = is_public_str.strip().lower() == "true"
             else:
                 db_id = ""
                 gloss_id = ""
@@ -154,11 +154,11 @@ def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
 
 # Get the video files info from NZSL Signbank
 def get_nzsl_raw_keys_dict():
-    this_nzsl_raw_keys_dict = {}
     print(
         f"Getting raw list of video file info from NZSL Signbank ...",
         file=sys.stderr,
     )
+    this_nzsl_raw_keys_dict = {}
     result = subprocess.run(
         [
             PGCLI,
@@ -190,7 +190,7 @@ def get_nzsl_raw_keys_dict():
     return this_nzsl_raw_keys_dict
 
 
-# Get the s3 keys present and absent from our NZSL keys, to dictionary:
+# Get the keys present and absent across NZSL Signbank and S3, to dictionary:
 #   video_key(str) -> in_nzsl(bool), in_s3(bool), db_id(int), gloss_id(int), is_public(bool)
 def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
     print(
