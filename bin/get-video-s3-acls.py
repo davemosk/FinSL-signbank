@@ -79,6 +79,21 @@ def init_files(files_list=(ALL_KEYS_CACHE_FILE,)):
         f.close()
 
 
+# DICTIONARY and CACHE FILE format
+# This is used at several points
+# Essentially video_key + in_nzsl + in_s3 + nzsl_raw_keys_dict
+#   video_key(str) ->
+#       in_nzsl(bool),
+#       in_s3(bool),
+#       gloss_id(int),
+#       gloss_idgloss(str),
+#       created_at(str),
+#       gloss_public(bool),
+#       video_public(bool)
+#       video_id(int)
+# TODO For cache file format maybe move the video key to the end of the row, for consistency
+
+
 # Pull all info from existing cache file
 def get_keys_from_cache_file():
     this_all_keys_dict = {}
@@ -88,34 +103,40 @@ def get_keys_from_cache_file():
                 video_key,
                 key_in_nzsl_str,
                 key_in_s3_str,
-                db_id_str,
                 gloss_id_str,
-                is_public_str,
+                gloss_idgloss,
+                created_at,
+                gloss_public_str,
+                video_public_str,
+                video_id_str,
             ) = line.strip().split(CSV_DELIMITER)
 
             # If possible, get NZSL db info
             key_in_nzsl = key_in_nzsl_str.strip().lower() == "true"
             if key_in_nzsl:
-                db_id = int(db_id_str)
-                is_public = is_public_str.strip().lower() == "true"
+                video_id = int(video_id_str)
+                gloss_public = gloss_public_str.strip().lower() == "true"
+                video_public = video_public_str.strip().lower() == "true"
                 # Some don't have gloss_id's
                 try:
                     gloss_id = int(gloss_id_str)
                 except ValueError:
                     gloss_id = None
             else:
-                db_id = ""
                 gloss_id = ""
-                is_public = ""
+                video_id = ""
+                gloss_public = ""
+                video_public = ""
 
             key_in_s3 = key_in_s3_str.strip().lower() == "true"
 
             this_all_keys_dict[video_key] = [
                 key_in_nzsl,
                 key_in_s3,
-                db_id,
+                video_id,
                 gloss_id,
-                is_public,
+                gloss_public,
+                video_public,
             ]
 
         return this_all_keys_dict
@@ -159,12 +180,23 @@ def get_nzsl_raw_keys_dict():
         file=sys.stderr,
     )
     this_nzsl_raw_keys_dict = {}
+    # Column renaming is purely for readability
+    # We use a specific delimiter because columns might contain commas
     result = subprocess.run(
         [
             PGCLI,
             "-c",
-            "COPY (SELECT id AS db_id, gloss_id, is_public, videofile FROM video_glossvideo) "
-            "TO STDOUT WITH (FORMAT CSV)",
+            "COPY ("
+            "SELECT "
+            "dg.id AS gloss_id, "
+            "dg.idgloss AS gloss_idgloss, "
+            "dg.created_at, "
+            "dg.published AS gloss_public, "
+            "vg.is_public AS video_public, "
+            "vg.id AS video_id, "
+            "vg.videofile AS video_key "
+            "FROM dictionary_gloss AS dg JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id"
+            ") TO STDOUT WITH DELIMITER AS '|'",
             f"{DATABASE_URL}",
         ],
         env=os.environ,
@@ -173,14 +205,33 @@ def get_nzsl_raw_keys_dict():
         text=True,
     )
 
-    # Separate out the NZSL db columns
+    from pprint import pprint
+
+    # Separate the NZSL db columns
     # Write them to a dictionary, so we can do fast operations
     for rawl in result.stdout.split("\n"):
         rawl = rawl.strip()
+        print(f">>>{rawl}<<<")
+        pprint(rawl.split(","))
         if not rawl:
             continue
-        [db_id, gloss_id, is_public, video_key] = rawl.split(",")
-        this_nzsl_raw_keys_dict[video_key] = [db_id, gloss_id, is_public.lower() == "t"]
+        [
+            gloss_id,
+            gloss_idgloss,
+            created_at,
+            gloss_public,
+            video_public,
+            video_id,
+            video_key,
+        ] = rawl.split("|")
+        this_nzsl_raw_keys_dict[video_key] = [
+            gloss_id,
+            gloss_idgloss,
+            created_at,
+            gloss_public.lower() == "t",
+            video_public.lower() == "t",
+            video_id,
+        ]
 
     print(
         f"{len(this_nzsl_raw_keys_dict)} rows retrieved",
@@ -190,8 +241,8 @@ def get_nzsl_raw_keys_dict():
     return this_nzsl_raw_keys_dict
 
 
-# Get the keys present and absent across NZSL Signbank and S3, to dictionary:
-#   video_key(str) -> in_nzsl(bool), in_s3(bool), db_id(int), gloss_id(int), is_public(bool)
+# Get the keys present and absent across NZSL Signbank and S3, to dictionary
+# See DICTIONARY and CACHE FILE format
 def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
     print(
         "Getting keys present and absent across NZSL Signbank and S3 ...",
@@ -209,7 +260,7 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
                 ]
             else:
                 # NZSL Absent, S3 PRESENT
-                this_all_keys_dict[video_key] = [False, True, "", "", ""]
+                this_all_keys_dict[video_key] = [False, True, "", "", "", "", "", ""]
 
         # Find NZSL keys that are absent from S3 (present handled already above)
         for video_key, item_list in this_nzsl_raw_keys_dict.items():
@@ -229,28 +280,34 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
 def build_csv_header():
     return CSV_DELIMITER.join(
         [
-            "Video S3 Key",
-            "Postgres ID",
             "Gloss ID",
-            "Signbank Public",
-            "Expected S3 Canned ACL",
-            "Actual S3 Canned ACL",
+            "Gloss",
+            "Created at",
+            "Gloss public",
+            "Vido public",
+            "Video ID",
+            "Video key",
+            "Expected Canned ACL",
+            "Actual Canned ACL",
         ]
     )
 
 
 def build_csv_row(
-    video_key,
     key_in_nzsl=False,
     key_in_s3=False,
-    db_id=None,
     gloss_id=None,
-    is_public=False,
+    gloss_idgloss=None,
+    created_at=None,
+    gloss_public=False,
+    video_public=False,
+    video_id=None,
+    video_key=None,
 ):
 
     # See signbank/video/models.py, line 59, in function set_public_acl()
     if key_in_nzsl:
-        canned_acl_expected = "public-read" if is_public else "private"
+        canned_acl_expected = "public-read" if video_public else "private"
     else:
         canned_acl_expected = ""
 
@@ -258,10 +315,13 @@ def build_csv_row(
     if not key_in_s3:
         return CSV_DELIMITER.join(
             [
-                f"{video_key}",
-                f"{db_id}",
                 f"{gloss_id}",
-                f"{is_public}",
+                f"{gloss_idgloss}",
+                f"{created_at}",
+                f"{gloss_public}",
+                f"{video_public}",
+                f"{video_id}",
+                f"{video_key}",
                 f"{canned_acl_expected}",
                 "",
             ]
@@ -299,10 +359,13 @@ def build_csv_row(
 
     return CSV_DELIMITER.join(
         [
-            f"{video_key}",
-            f"{db_id}",
             f"{gloss_id}",
-            f"{is_public}",
+            f"{gloss_idgloss}",
+            f"{created_at}",
+            f"{gloss_public}",
+            f"{video_public}",
+            f"{video_id}",
+            f"{video_key}",
             f"{canned_acl_expected}",
             f"{canned_acl}",
         ]
@@ -314,23 +377,28 @@ def output_csv(this_all_keys_dict):
     print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 
     print(build_csv_header())
-
     for video_key, [
         key_in_nzsl,
         key_in_s3,
-        db_id,
         gloss_id,
-        is_public,
+        gloss_idgloss,
+        created_at,
+        gloss_public,
+        video_public,
+        video_id,
     ] in this_all_keys_dict.items():
 
         print(
             build_csv_row(
-                video_key,
                 key_in_nzsl,
                 key_in_s3,
-                db_id,
                 gloss_id,
-                is_public,
+                gloss_idgloss,
+                created_at,
+                gloss_public,
+                video_public,
+                video_id,
+                video_key,
             )
         )
 
