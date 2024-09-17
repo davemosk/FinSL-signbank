@@ -211,8 +211,6 @@ def get_nzsl_raw_keys_dict():
     # Write them to a dictionary, so we can do fast operations
     for rawl in result.stdout.split("\n"):
         rawl = rawl.strip()
-        print(f">>>{rawl}<<<")
-        pprint(rawl.split(","))
         if not rawl:
             continue
         [
@@ -407,6 +405,7 @@ print(f"Mode:      {args.env}", file=sys.stderr)
 print(f"S3 bucket: {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWSCLI:    {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:     {PGCLI}", file=sys.stderr)
+print(f"TMPDIR:    {TMPDIR}", file=sys.stderr)
 if "AWS_PROFILE" in os.environ:
     print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
 
