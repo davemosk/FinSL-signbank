@@ -111,24 +111,22 @@ def get_keys_from_cache_file():
                 video_id_str,
             ) = line.strip().split(CSV_DELIMITER)
 
-            # If possible, get NZSL db info
             key_in_nzsl = key_in_nzsl_str.strip().lower() == "true"
+            key_in_s3 = key_in_s3_str.strip().lower() == "true"
             if key_in_nzsl:
                 video_id = int(video_id_str)
-                gloss_public = gloss_public_str.strip().lower() == "true"
-                video_public = video_public_str.strip().lower() == "true"
-                # Some don't have gloss_id's
+                # Some have no gloss_id
                 try:
                     gloss_id = int(gloss_id_str)
                 except ValueError:
                     gloss_id = None
+                gloss_public = gloss_public_str.strip().lower() == "true"
+                video_public = video_public_str.strip().lower() == "true"
             else:
-                gloss_id = ""
                 video_id = ""
+                gloss_id = ""
                 gloss_public = ""
                 video_public = ""
-
-            key_in_s3 = key_in_s3_str.strip().lower() == "true"
 
             this_all_keys_dict[video_key] = [
                 key_in_nzsl,
@@ -181,7 +179,7 @@ def get_nzsl_raw_keys_dict():
     )
     this_nzsl_raw_keys_dict = {}
     # Column renaming is purely for readability
-    # We use a specific delimiter because columns might contain commas
+    # Special delimiter because columns might contain commas
     result = subprocess.run(
         [
             PGCLI,
