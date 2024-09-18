@@ -282,7 +282,7 @@ def build_csv_header():
             "Gloss",
             "Created at",
             "Gloss public",
-            "Vido public",
+            "Video public",
             "Video ID",
             "Video key",
             "Expected Canned ACL",
