@@ -205,8 +205,6 @@ def get_nzsl_raw_keys_dict():
         text=True,
     )
 
-    from pprint import pprint
-
     # Separate the NZSL db columns
     # Write them to a dictionary, so we can do fast operations
     for rawl in result.stdout.split("\n"):
