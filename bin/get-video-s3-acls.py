@@ -62,50 +62,6 @@ nzsl_raw_keys_dict = {}
 s3_bucket_raw_keys_list = []
 all_keys_dict = {}
 
-# DICTIONARY format
-# This is used at several points
-# Essentially video_key + in_nzsl + in_s3 + nzsl_raw_keys_dict
-#   video_key(str) ->
-#       in_nzsl(bool),
-#       in_s3(bool),
-#       gloss_id(int),
-#       gloss_idgloss(str),
-#       created_at(str),
-#       gloss_public(bool),
-#       video_public(bool)
-#       video_id(int)
-
-
-# Get all keys from AWS S3
-def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
-    print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
-    result = subprocess.run(
-        [
-            AWSCLI,
-            "s3",
-            "ls",
-            f"s3://{s3_bucket}",
-            "--recursive",
-        ],
-        env=os.environ,
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    # Separate out just the key from date, time, size, key
-    this_s3_bucket_raw_keys_list = []
-    for line in result.stdout.split("\n"):
-        if line:
-            this_s3_bucket_raw_keys_list.append(re.split(r"\s+", line, 3)[3])
-
-    print(
-        f"{len(this_s3_bucket_raw_keys_list)} rows retrieved",
-        file=sys.stderr,
-    )
-
-    return this_s3_bucket_raw_keys_list
-
 
 # Get the video files info from NZSL Signbank
 def get_nzsl_raw_keys_dict():
@@ -169,6 +125,37 @@ def get_nzsl_raw_keys_dict():
     )
 
     return this_nzsl_raw_keys_dict
+
+
+# Get all keys from AWS S3
+def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
+    print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
+    result = subprocess.run(
+        [
+            AWSCLI,
+            "s3",
+            "ls",
+            f"s3://{s3_bucket}",
+            "--recursive",
+        ],
+        env=os.environ,
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+
+    # Separate out just the key from date, time, size, key
+    this_s3_bucket_raw_keys_list = []
+    for line in result.stdout.split("\n"):
+        if line:
+            this_s3_bucket_raw_keys_list.append(re.split(r"\s+", line, 3)[3])
+
+    print(
+        f"{len(this_s3_bucket_raw_keys_list)} rows retrieved",
+        file=sys.stderr,
+    )
+
+    return this_s3_bucket_raw_keys_list
 
 
 # Get the keys present and absent across NZSL Signbank and S3, to dictionary
