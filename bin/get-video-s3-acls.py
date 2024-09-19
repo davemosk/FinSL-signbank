@@ -255,7 +255,7 @@ def build_csv_row(
     video_public=False,
 ):
 
-    # See signbank/video/models.py, line 59, in function set_public_acl()
+    # See signbank/video/models.py, line 59, function set_public_acl()
     if key_in_nzsl:
         canned_acl_expected = "public-read" if video_public else "private"
     else:
@@ -306,6 +306,9 @@ def build_csv_row(
             canned_acl = "public-read"
     elif acls_grants_json[0]["Permission"] == "FULL_CONTROL":
         canned_acl = "private"
+
+    # TODO Get S3 object's LastModified date/time
+    # ---
 
     return CSV_DELIMITER.join(
         [
