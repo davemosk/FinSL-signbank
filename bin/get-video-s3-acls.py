@@ -112,12 +112,12 @@ def get_nzsl_raw_keys_dict():
         ] = rawl.split("|")
 
         this_nzsl_raw_keys_dict[video_key] = [
-            gloss_id,
             gloss_idgloss.replace(CSV_DELIMITER, ""),
             gloss_created_at,
+            gloss_id,
+            video_id,
             gloss_public.lower() == "t",
             video_public.lower() == "t",
-            video_id,
         ]
 
     print(
@@ -173,55 +173,55 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
 
             # Split out for readability
             [
-                gloss_id,
                 gloss_idgloss,
                 gloss_created_at,
+                gloss_id,
+                video_id,
                 gloss_public,
                 video_public,
-                video_id,
             ] = this_nzsl_raw_keys_dict[video_key]
 
             this_all_keys_dict[video_key] = [
                 True,  # NZSL PRESENT
                 True,  # S3 PRESENT
-                gloss_id,
                 gloss_idgloss,
                 gloss_created_at,
+                gloss_id,
+                video_id,
                 gloss_public,
                 video_public,
-                video_id,
             ]
         else:
             this_all_keys_dict[video_key] = [
                 False,  # NZSL Absent
                 True,  # S3 PRESENT
-                "",  # gloss_id
                 "",  # gloss_idgloss,
                 "",  # gloss_created_at,
+                "",  # gloss_id
+                "",  # video_id,
                 "",  # gloss_public,
                 "",  # video_public,
-                "",  # video_id,
             ]
 
     # Find NZSL keys that are absent from S3 (present handled above)
     for video_key, [
-        gloss_id,
         gloss_idgloss,
         gloss_created_at,
+        gloss_id,
+        video_id,
         gloss_public,
         video_public,
-        video_id,
     ] in this_nzsl_raw_keys_dict.items():
         if video_key not in this_s3_bucket_raw_keys_list:
             this_all_keys_dict[video_key] = [
                 True,  # NZSL PRESENT
                 False,  # S3 Absent
-                gloss_id,
                 gloss_idgloss,
                 gloss_created_at,
+                gloss_id,
+                video_id,
                 gloss_public,
                 video_public,
-                video_id,
             ]
 
     return this_all_keys_dict
@@ -230,15 +230,15 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
 def build_csv_header():
     return CSV_DELIMITER.join(
         [
-            "Gloss ID",
+            "Video key",
             "Gloss",
             "Gloss created at",
-            "Gloss public",
-            "Video public",
-            "Video ID",
-            "Video key",
             "Expected Canned ACL",
             "Actual Canned ACL",
+            "Gloss ID",
+            "Video ID",
+            "Gloss public",
+            "Video public",
         ]
     )
 
@@ -246,13 +246,13 @@ def build_csv_header():
 def build_csv_row(
     key_in_nzsl=False,
     key_in_s3=False,
-    gloss_id=None,
+    video_key=None,
     gloss_idgloss=None,
     gloss_created_at=None,
+    gloss_id=None,
+    video_id=None,
     gloss_public=False,
     video_public=False,
-    video_id=None,
-    video_key=None,
 ):
 
     # See signbank/video/models.py, line 59, in function set_public_acl()
@@ -265,15 +265,15 @@ def build_csv_row(
     if not key_in_s3:
         return CSV_DELIMITER.join(
             [
-                f"{gloss_id}",
+                f"{video_key}",
                 f"{gloss_idgloss}",
                 f"{gloss_created_at}",
+                f"{canned_acl_expected}",
+                "",  # Actual Canned ACL
+                f"{gloss_id}",
+                f"{video_id}",
                 f"{gloss_public}",
                 f"{video_public}",
-                f"{video_id}",
-                f"{video_key}",
-                f"{canned_acl_expected}",
-                "",
             ]
         )
 
@@ -309,15 +309,15 @@ def build_csv_row(
 
     return CSV_DELIMITER.join(
         [
-            f"{gloss_id}",
+            f"{video_key}",
             f"{gloss_idgloss}",
             f"{gloss_created_at}",
-            f"{gloss_public}",
-            f"{video_public}",
-            f"{video_id}",
-            f"{video_key}",
             f"{canned_acl_expected}",
             f"{canned_acl}",
+            f"{gloss_id}",
+            f"{video_id}",
+            f"{gloss_public}",
+            f"{video_public}",
         ]
     )
 
@@ -331,25 +331,25 @@ def output_csv(this_all_keys_dict):
     for video_key, [
         key_in_nzsl,
         key_in_s3,
-        gloss_id,
         gloss_idgloss,
         gloss_created_at,
+        gloss_id,
+        video_id,
         gloss_public,
         video_public,
-        video_id,
     ] in this_all_keys_dict.items():
 
         print(
             build_csv_row(
                 key_in_nzsl,
                 key_in_s3,
-                gloss_id,
+                video_key,
                 gloss_idgloss,
                 gloss_created_at,
+                gloss_id,
+                video_id,
                 gloss_public,
                 video_public,
-                video_id,
-                video_key,
             )
         )
 
