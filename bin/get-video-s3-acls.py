@@ -172,7 +172,6 @@ def get_nzsl_raw_keys_dict():
 
 
 # Get the keys present and absent across NZSL Signbank and S3, to dictionary
-# See DICTIONARY and CACHE FILE format
 def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
     print(
         "Getting keys present and absent across NZSL Signbank and S3 ...",
@@ -183,19 +182,60 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
     # Find S3 keys that are present in NZSL, or absent
     for video_key in this_s3_bucket_raw_keys_list:
         if video_key in this_nzsl_raw_keys_dict:
-            # NZSL PRESENT, S3 PRESENT
-            this_all_keys_dict[video_key] = [True, True] + this_nzsl_raw_keys_dict[
-                video_key
+
+            # This is split out purely for human readability
+            [
+                gloss_id,
+                gloss_idgloss,
+                created_at,
+                gloss_public,
+                video_public,
+                video_id,
+            ] = this_nzsl_raw_keys_dict[video_key]
+            this_all_keys_dict[video_key] = [
+                True,   # NZSL PRESENT
+                True,   # S3 PRESENT
+                gloss_id,
+                gloss_idgloss,
+                created_at,
+                gloss_public,
+                video_public,
+                video_id,
             ]
         else:
-            # NZSL Absent, S3 PRESENT
-            this_all_keys_dict[video_key] = [False, True, "", "", "", "", "", ""]
+            this_all_keys_dict[video_key] = [
+                False,  # NZSL Absent
+                True,   # S3 PRESENT
+                "",     # gloss_id
+                "",     # gloss_idgloss,
+                "",     # created_at,
+                "",     # gloss_public,
+                "",     # video_public,
+                ""      # video_id,
+            ]
 
     # Find NZSL keys that are absent from S3 (present handled already above)
-    for video_key, item_list in this_nzsl_raw_keys_dict.items():
+    for (video_key,
+         [
+             gloss_id,
+             gloss_idgloss,
+             created_at,
+             gloss_public,
+             video_public,
+             video_id,
+         ]
+         ) in this_nzsl_raw_keys_dict.items():
         if video_key not in this_s3_bucket_raw_keys_list:
-            # NZSL PRESENT, S3 Absent
-            this_all_keys_dict[video_key] = [True, False] + item_list
+            this_all_keys_dict[video_key] = [
+                True,   # NZSL PRESENT
+                False,  # S3 Absent
+                gloss_id,
+                gloss_idgloss,
+                created_at,
+                gloss_public,
+                video_public,
+                video_id,
+            ]
 
     return this_all_keys_dict
 
