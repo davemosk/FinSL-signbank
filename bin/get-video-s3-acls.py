@@ -70,7 +70,7 @@ def get_nzsl_raw_keys_dict():
         file=sys.stderr,
     )
     this_nzsl_raw_keys_dict = {}
-    # Column renaming is purely for readability
+    # Column renaming is for readability
     # Special delimiter because columns might contain commas
     result = subprocess.run(
         [
@@ -110,6 +110,7 @@ def get_nzsl_raw_keys_dict():
             video_id,
             video_key,
         ] = rawl.split("|")
+
         this_nzsl_raw_keys_dict[video_key] = [
             gloss_id,
             gloss_idgloss.replace(CSV_DELIMITER, ""),
@@ -170,7 +171,7 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
     for video_key in this_s3_bucket_raw_keys_list:
         if video_key in this_nzsl_raw_keys_dict:
 
-            # This is split out purely for human readability
+            # Split out for readability
             [
                 gloss_id,
                 gloss_idgloss,
@@ -179,9 +180,10 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
                 video_public,
                 video_id,
             ] = this_nzsl_raw_keys_dict[video_key]
+
             this_all_keys_dict[video_key] = [
-                True,   # NZSL PRESENT
-                True,   # S3 PRESENT
+                True,  # NZSL PRESENT
+                True,  # S3 PRESENT
                 gloss_id,
                 gloss_idgloss,
                 gloss_created_at,
@@ -192,29 +194,27 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
         else:
             this_all_keys_dict[video_key] = [
                 False,  # NZSL Absent
-                True,   # S3 PRESENT
-                "",     # gloss_id
-                "",     # gloss_idgloss,
-                "",     # gloss_created_at,
-                "",     # gloss_public,
-                "",     # video_public,
-                ""      # video_id,
+                True,  # S3 PRESENT
+                "",  # gloss_id
+                "",  # gloss_idgloss,
+                "",  # gloss_created_at,
+                "",  # gloss_public,
+                "",  # video_public,
+                "",  # video_id,
             ]
 
-    # Find NZSL keys that are absent from S3 (present handled already above)
-    for (video_key,
-         [
-             gloss_id,
-             gloss_idgloss,
-             gloss_created_at,
-             gloss_public,
-             video_public,
-             video_id,
-         ]
-         ) in this_nzsl_raw_keys_dict.items():
+    # Find NZSL keys that are absent from S3 (present handled above)
+    for video_key, [
+        gloss_id,
+        gloss_idgloss,
+        gloss_created_at,
+        gloss_public,
+        video_public,
+        video_id,
+    ] in this_nzsl_raw_keys_dict.items():
         if video_key not in this_s3_bucket_raw_keys_list:
             this_all_keys_dict[video_key] = [
-                True,   # NZSL PRESENT
+                True,  # NZSL PRESENT
                 False,  # S3 Absent
                 gloss_id,
                 gloss_idgloss,
