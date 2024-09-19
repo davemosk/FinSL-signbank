@@ -91,6 +91,7 @@ def init_files(files_list=(ALL_KEYS_CACHE_FILE,)):
 #       gloss_public(bool),
 #       video_public(bool)
 #       video_id(int)
+# TODO For cache file format maybe move the video key to the end of the row, for consistency
 
 
 # Pull all info from existing cache file
@@ -99,6 +100,7 @@ def get_keys_from_cache_file():
     with open(ALL_KEYS_CACHE_FILE, "r") as cache_file:
         for line in cache_file.readlines():
             (
+                video_key,
                 key_in_nzsl_str,
                 key_in_s3_str,
                 gloss_id_str,
@@ -107,7 +109,6 @@ def get_keys_from_cache_file():
                 gloss_public_str,
                 video_public_str,
                 video_id_str,
-                video_key,
             ) = line.strip().split(CSV_DELIMITER)
 
             key_in_nzsl = key_in_nzsl_str.strip().lower() == "true"
@@ -137,69 +138,6 @@ def get_keys_from_cache_file():
             ]
 
         return this_all_keys_dict
-
-
-# Get the video files info from NZSL Signbank
-def get_nzsl_raw_keys_dict():
-    print(
-        f"Getting raw list of video file info from NZSL Signbank ...",
-        file=sys.stderr,
-    )
-    this_nzsl_raw_keys_dict = {}
-    # Column renaming is purely for readability
-    result = subprocess.run(
-        [
-            PGCLI,
-            "-c",
-            "COPY ("
-            "SELECT "
-            "dg.id AS gloss_id, "
-            "dg.idgloss AS gloss_idgloss, "
-            "dg.created_at, "
-            "dg.published AS gloss_public, "
-            "vg.is_public AS video_public, "
-            "vg.id AS video_id, "
-            "vg.videofile AS video_key "
-            "FROM dictionary_gloss AS dg JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id "
-            ") TO STDOUT WITH (FORMAT CSV, DELIMITER '|') ",
-            f"{DATABASE_URL}",
-        ],
-        env=os.environ,
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    # Separate the NZSL db columns
-    # Write them to a dictionary, so we can do fast operations
-    for rawl in result.stdout.split("\n"):
-        rawl = rawl.strip()
-        if not rawl:
-            continue
-        [
-            gloss_id,
-            gloss_idgloss,
-            created_at,
-            gloss_public,
-            video_public,
-            video_id,
-            video_key,
-        ] = rawl.split("|")
-        this_nzsl_raw_keys_dict[video_key] = [
-            gloss_id,
-            gloss_idgloss.replace(CSV_DELIMITER, ""),
-            created_at,
-            gloss_public.lower() == "t",
-            video_public.lower() == "t",
-            video_id,
-        ]
-
-    print(
-        f"{len(this_nzsl_raw_keys_dict)} rows retrieved",
-        file=sys.stderr,
-    )
-
-    return this_nzsl_raw_keys_dict
 
 
 # Get all keys from AWS S3
@@ -233,6 +171,70 @@ def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
     return this_s3_bucket_raw_keys_list
 
 
+# Get the video files info from NZSL Signbank
+def get_nzsl_raw_keys_dict():
+    print(
+        f"Getting raw list of video file info from NZSL Signbank ...",
+        file=sys.stderr,
+    )
+    this_nzsl_raw_keys_dict = {}
+    # Column renaming is purely for readability
+    # Special delimiter because columns might contain commas
+    result = subprocess.run(
+        [
+            PGCLI,
+            "-c",
+            "COPY ("
+            "SELECT "
+            "dg.id AS gloss_id, "
+            "dg.idgloss AS gloss_idgloss, "
+            "dg.created_at, "
+            "dg.published AS gloss_public, "
+            "vg.is_public AS video_public, "
+            "vg.id AS video_id, "
+            "vg.videofile AS video_key "
+            "FROM dictionary_gloss AS dg JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id"
+            ") TO STDOUT WITH DELIMITER AS '|'",
+            f"{DATABASE_URL}",
+        ],
+        env=os.environ,
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+
+    # Separate the NZSL db columns
+    # Write them to a dictionary, so we can do fast operations
+    for rawl in result.stdout.split("\n"):
+        rawl = rawl.strip()
+        if not rawl:
+            continue
+        [
+            gloss_id,
+            gloss_idgloss,
+            created_at,
+            gloss_public,
+            video_public,
+            video_id,
+            video_key,
+        ] = rawl.split("|")
+        this_nzsl_raw_keys_dict[video_key] = [
+            gloss_id,
+            gloss_idgloss,
+            created_at,
+            gloss_public.lower() == "t",
+            video_public.lower() == "t",
+            video_id,
+        ]
+
+    print(
+        f"{len(this_nzsl_raw_keys_dict)} rows retrieved",
+        file=sys.stderr,
+    )
+
+    return this_nzsl_raw_keys_dict
+
+
 # Get the keys present and absent across NZSL Signbank and S3, to dictionary
 # See DICTIONARY and CACHE FILE format
 def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
@@ -263,7 +265,7 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
         # Write all keys back to a cache file
         for video_key, item_list in this_all_keys_dict.items():
             cache_file.write(
-                f"{CSV_DELIMITER.join(map(str, item_list))}{CSV_DELIMITER}{video_key}\n"
+                f"{video_key}{CSV_DELIMITER}{CSV_DELIMITER.join(map(str, item_list))}\n"
             )
 
     return this_all_keys_dict
@@ -409,8 +411,8 @@ if args.cached:
 else:
     print("Generating video keys from scratch.", file=sys.stderr)
     init_files()
-    nzsl_raw_keys_dict = get_nzsl_raw_keys_dict()
     s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list()
+    nzsl_raw_keys_dict = get_nzsl_raw_keys_dict()
     all_keys_dict = create_all_keys_dict(s3_bucket_raw_keys_list, nzsl_raw_keys_dict)
 
 output_csv(all_keys_dict)
