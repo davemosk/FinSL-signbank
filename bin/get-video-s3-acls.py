@@ -80,7 +80,7 @@ def get_nzsl_raw_keys_dict():
             "SELECT "
             "dg.id AS gloss_id, "
             "dg.idgloss AS gloss_idgloss, "
-            "dg.created_at, "
+            "dg.created_at AS gloss_created_at, "
             "dg.published AS gloss_public, "
             "vg.is_public AS video_public, "
             "vg.id AS video_id, "
@@ -104,7 +104,7 @@ def get_nzsl_raw_keys_dict():
         [
             gloss_id,
             gloss_idgloss,
-            created_at,
+            gloss_created_at,
             gloss_public,
             video_public,
             video_id,
@@ -113,7 +113,7 @@ def get_nzsl_raw_keys_dict():
         this_nzsl_raw_keys_dict[video_key] = [
             gloss_id,
             gloss_idgloss.replace(CSV_DELIMITER, ""),
-            created_at,
+            gloss_created_at,
             gloss_public.lower() == "t",
             video_public.lower() == "t",
             video_id,
@@ -174,7 +174,7 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
             [
                 gloss_id,
                 gloss_idgloss,
-                created_at,
+                gloss_created_at,
                 gloss_public,
                 video_public,
                 video_id,
@@ -184,7 +184,7 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
                 True,   # S3 PRESENT
                 gloss_id,
                 gloss_idgloss,
-                created_at,
+                gloss_created_at,
                 gloss_public,
                 video_public,
                 video_id,
@@ -195,7 +195,7 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
                 True,   # S3 PRESENT
                 "",     # gloss_id
                 "",     # gloss_idgloss,
-                "",     # created_at,
+                "",     # gloss_created_at,
                 "",     # gloss_public,
                 "",     # video_public,
                 ""      # video_id,
@@ -206,7 +206,7 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
          [
              gloss_id,
              gloss_idgloss,
-             created_at,
+             gloss_created_at,
              gloss_public,
              video_public,
              video_id,
@@ -218,7 +218,7 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
                 False,  # S3 Absent
                 gloss_id,
                 gloss_idgloss,
-                created_at,
+                gloss_created_at,
                 gloss_public,
                 video_public,
                 video_id,
@@ -232,7 +232,7 @@ def build_csv_header():
         [
             "Gloss ID",
             "Gloss",
-            "Created at",
+            "Gloss created at",
             "Gloss public",
             "Video public",
             "Video ID",
@@ -248,7 +248,7 @@ def build_csv_row(
     key_in_s3=False,
     gloss_id=None,
     gloss_idgloss=None,
-    created_at=None,
+    gloss_created_at=None,
     gloss_public=False,
     video_public=False,
     video_id=None,
@@ -267,7 +267,7 @@ def build_csv_row(
             [
                 f"{gloss_id}",
                 f"{gloss_idgloss}",
-                f"{created_at}",
+                f"{gloss_created_at}",
                 f"{gloss_public}",
                 f"{video_public}",
                 f"{video_id}",
@@ -311,7 +311,7 @@ def build_csv_row(
         [
             f"{gloss_id}",
             f"{gloss_idgloss}",
-            f"{created_at}",
+            f"{gloss_created_at}",
             f"{gloss_public}",
             f"{video_public}",
             f"{video_id}",
@@ -333,7 +333,7 @@ def output_csv(this_all_keys_dict):
         key_in_s3,
         gloss_id,
         gloss_idgloss,
-        created_at,
+        gloss_created_at,
         gloss_public,
         video_public,
         video_id,
@@ -345,7 +345,7 @@ def output_csv(this_all_keys_dict):
                 key_in_s3,
                 gloss_id,
                 gloss_idgloss,
-                created_at,
+                gloss_created_at,
                 gloss_public,
                 video_public,
                 video_id,
