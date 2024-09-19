@@ -12,6 +12,7 @@ import subprocess
 import argparse
 import json
 import re
+from pprint import pprint
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -22,14 +23,6 @@ parser.add_argument(
     default="uat",
     required=False,
     help="Environment to run against, eg 'production, 'uat', etc (default: '%(default)s')",
-)
-parser.add_argument(
-    "--cached",
-    default=False,
-    required=False,
-    action="store_true",
-    help="Use video keys generated on a previous non-cached run (default: %(default)s) "
-    "(Do not mix production and staging!)",
 )
 parser.add_argument(
     "--pgcli",
@@ -63,23 +56,13 @@ try:
 except OSError as err:
     print(f"Error creating temporary directory: {TMPDIR} {err}", file=sys.stderr)
     exit()
-ALL_KEYS_CACHE_FILE = f"{TMPDIR}/all_keys_cache.csv"
 
 # Vars
 nzsl_raw_keys_dict = {}
 s3_bucket_raw_keys_list = []
 all_keys_dict = {}
 
-
-# Truncate files, creating them if necessary
-def init_files(files_list=(ALL_KEYS_CACHE_FILE,)):
-    for p in files_list:
-        f = open(p, "a")
-        f.truncate()
-        f.close()
-
-
-# DICTIONARY and CACHE FILE format
+# DICTIONARY format
 # This is used at several points
 # Essentially video_key + in_nzsl + in_s3 + nzsl_raw_keys_dict
 #   video_key(str) ->
@@ -91,53 +74,6 @@ def init_files(files_list=(ALL_KEYS_CACHE_FILE,)):
 #       gloss_public(bool),
 #       video_public(bool)
 #       video_id(int)
-# TODO For cache file format maybe move the video key to the end of the row, for consistency
-
-
-# Pull all info from existing cache file
-def get_keys_from_cache_file():
-    this_all_keys_dict = {}
-    with open(ALL_KEYS_CACHE_FILE, "r") as cache_file:
-        for line in cache_file.readlines():
-            (
-                video_key,
-                key_in_nzsl_str,
-                key_in_s3_str,
-                gloss_id_str,
-                gloss_idgloss,
-                created_at,
-                gloss_public_str,
-                video_public_str,
-                video_id_str,
-            ) = line.strip().split(CSV_DELIMITER)
-
-            key_in_nzsl = key_in_nzsl_str.strip().lower() == "true"
-            key_in_s3 = key_in_s3_str.strip().lower() == "true"
-            if key_in_nzsl:
-                video_id = int(video_id_str)
-                # Some have no gloss_id
-                try:
-                    gloss_id = int(gloss_id_str)
-                except ValueError:
-                    gloss_id = None
-                gloss_public = gloss_public_str.strip().lower() == "true"
-                video_public = video_public_str.strip().lower() == "true"
-            else:
-                video_id = ""
-                gloss_id = ""
-                gloss_public = ""
-                video_public = ""
-
-            this_all_keys_dict[video_key] = [
-                key_in_nzsl,
-                key_in_s3,
-                video_id,
-                gloss_id,
-                gloss_public,
-                video_public,
-            ]
-
-        return this_all_keys_dict
 
 
 # Get all keys from AWS S3
@@ -194,7 +130,7 @@ def get_nzsl_raw_keys_dict():
             "vg.id AS video_id, "
             "vg.videofile AS video_key "
             "FROM dictionary_gloss AS dg JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id"
-            ") TO STDOUT WITH DELIMITER AS '|'",
+            ") TO STDOUT WITH (FORMAT CSV, DELIMITER '|')",
             f"{DATABASE_URL}",
         ],
         env=os.environ,
@@ -220,7 +156,7 @@ def get_nzsl_raw_keys_dict():
         ] = rawl.split("|")
         this_nzsl_raw_keys_dict[video_key] = [
             gloss_id,
-            gloss_idgloss,
+            gloss_idgloss.replace(CSV_DELIMITER, ""),
             created_at,
             gloss_public.lower() == "t",
             video_public.lower() == "t",
@@ -243,30 +179,23 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
         file=sys.stderr,
     )
     this_all_keys_dict = {}
-    with open(ALL_KEYS_CACHE_FILE, "w") as cache_file:
 
-        # Find S3 keys that are present in NZSL, or absent
-        for video_key in this_s3_bucket_raw_keys_list:
-            if video_key in this_nzsl_raw_keys_dict:
-                # NZSL PRESENT, S3 PRESENT
-                this_all_keys_dict[video_key] = [True, True] + this_nzsl_raw_keys_dict[
-                    video_key
-                ]
-            else:
-                # NZSL Absent, S3 PRESENT
-                this_all_keys_dict[video_key] = [False, True, "", "", "", "", "", ""]
+    # Find S3 keys that are present in NZSL, or absent
+    for video_key in this_s3_bucket_raw_keys_list:
+        if video_key in this_nzsl_raw_keys_dict:
+            # NZSL PRESENT, S3 PRESENT
+            this_all_keys_dict[video_key] = [True, True] + this_nzsl_raw_keys_dict[
+                video_key
+            ]
+        else:
+            # NZSL Absent, S3 PRESENT
+            this_all_keys_dict[video_key] = [False, True, "", "", "", "", "", ""]
 
-        # Find NZSL keys that are absent from S3 (present handled already above)
-        for video_key, item_list in this_nzsl_raw_keys_dict.items():
-            if video_key not in this_s3_bucket_raw_keys_list:
-                # NZSL PRESENT, S3 Absent
-                this_all_keys_dict[video_key] = [True, False] + item_list
-
-        # Write all keys back to a cache file
-        for video_key, item_list in this_all_keys_dict.items():
-            cache_file.write(
-                f"{video_key}{CSV_DELIMITER}{CSV_DELIMITER.join(map(str, item_list))}\n"
-            )
+    # Find NZSL keys that are absent from S3 (present handled already above)
+    for video_key, item_list in this_nzsl_raw_keys_dict.items():
+        if video_key not in this_s3_bucket_raw_keys_list:
+            # NZSL PRESENT, S3 Absent
+            this_all_keys_dict[video_key] = [True, False] + item_list
 
     return this_all_keys_dict
 
@@ -371,6 +300,7 @@ def output_csv(this_all_keys_dict):
     print(f"Getting ACLs for keys from S3 ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 
     print(build_csv_header())
+
     for video_key, [
         key_in_nzsl,
         key_in_s3,
@@ -405,14 +335,8 @@ print(f"TMPDIR:    {TMPDIR}", file=sys.stderr)
 if "AWS_PROFILE" in os.environ:
     print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
 
-if args.cached:
-    print(f"Using video keys from cache file ({ALL_KEYS_CACHE_FILE}).", file=sys.stderr)
-    all_keys_dict = get_keys_from_cache_file()
-else:
-    print("Generating video keys from scratch.", file=sys.stderr)
-    init_files()
-    s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list()
-    nzsl_raw_keys_dict = get_nzsl_raw_keys_dict()
-    all_keys_dict = create_all_keys_dict(s3_bucket_raw_keys_list, nzsl_raw_keys_dict)
+s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list()
+nzsl_raw_keys_dict = get_nzsl_raw_keys_dict()
+all_keys_dict = create_all_keys_dict(s3_bucket_raw_keys_list, nzsl_raw_keys_dict)
 
 output_csv(all_keys_dict)
