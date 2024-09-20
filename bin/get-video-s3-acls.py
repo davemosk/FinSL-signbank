@@ -230,15 +230,16 @@ def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
 def build_csv_header():
     return CSV_DELIMITER.join(
         [
-            "Video key",
-            "Gloss",
-            "Gloss created at",
-            "Expected Canned ACL",
-            "Actual Canned ACL",
-            "Gloss ID",
-            "Video ID",
-            "Gloss public",
-            "Video public",
+            "S3 Video key",
+            "Sbank Gloss",
+            "Sbank Gloss created at",
+            "S3 LastModified",
+            "S3 Expected Canned ACL",
+            "S3 Actual Canned ACL",
+            "Sbank Gloss ID",
+            "Sbank Video ID",
+            "Sbank Gloss public",
+            "Sbank Video public",
         ]
     )
 
@@ -307,14 +308,35 @@ def build_csv_row(
     elif acls_grants_json[0]["Permission"] == "FULL_CONTROL":
         canned_acl = "private"
 
-    # TODO Get S3 object's LastModified date/time
-    # ---
+    # Get S3 object's LastModified date/time
+    result = subprocess.run(
+        [
+            AWSCLI,
+            "s3api",
+            "get-object-attributes",
+            "--object-attributes",
+            "ObjectParts",
+            "--output",
+            "json",
+            "--bucket",
+            AWS_S3_BUCKET,
+            "--key",
+            video_key,
+        ],
+        env=os.environ,
+        shell=False,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    s3_lastmodified = json.loads(result.stdout)["LastModified"]
 
     return CSV_DELIMITER.join(
         [
             f"{video_key}",
             f"{gloss_idgloss}",
             f"{gloss_created_at}",
+            f"{s3_lastmodified}",
             f"{canned_acl_expected}",
             f"{canned_acl}",
             f"{gloss_id}",
@@ -365,8 +387,10 @@ print(f"TMPDIR:    {TMPDIR}", file=sys.stderr)
 if "AWS_PROFILE" in os.environ:
     print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
 
-s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list()
 nzsl_raw_keys_dict = get_nzsl_raw_keys_dict()
+
+s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list()
+
 all_keys_dict = create_all_keys_dict(s3_bucket_raw_keys_list, nzsl_raw_keys_dict)
 
 output_csv(all_keys_dict)
