@@ -379,7 +379,7 @@ def output_csv(this_all_keys_dict):
         )
 
 
-print(f"Mode:      {args.env}", file=sys.stderr)
+print(f"Env:       {args.env}", file=sys.stderr)
 print(f"S3 bucket: {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWSCLI:    {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:     {PGCLI}", file=sys.stderr)
