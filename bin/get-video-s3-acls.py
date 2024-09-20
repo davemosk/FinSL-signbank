@@ -50,12 +50,6 @@ DATABASE_URL = os.getenv("DATABASE_URL", "")
 AWSCLI = args.awscli
 PGCLI = args.pgcli
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
-TMPDIR = args.tmpdir
-try:
-    os.makedirs(TMPDIR, exist_ok=True)
-except OSError as err:
-    print(f"Error creating temporary directory: {TMPDIR} {err}", file=sys.stderr)
-    exit()
 
 
 # Get the video files info from NZSL Signbank
@@ -379,7 +373,6 @@ print(f"Env:       {args.env}", file=sys.stderr)
 print(f"S3 bucket: {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWSCLI:    {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:     {PGCLI}", file=sys.stderr)
-print(f"TMPDIR:    {TMPDIR}", file=sys.stderr)
 if "AWS_PROFILE" in os.environ:
     print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
 
