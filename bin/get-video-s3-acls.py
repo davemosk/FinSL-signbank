@@ -342,7 +342,7 @@ def build_csv_row(
     )
 
 
-# From the keys present in NZSL, get all their ACL information
+# From the keys present in NZSL, get all their S3 information
 def output_csv(this_all_keys_dict):
     print(f"Getting detailed S3 data for keys ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 
