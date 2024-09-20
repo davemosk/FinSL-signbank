@@ -264,6 +264,7 @@ def build_csv_row(
                 f"{video_key}",
                 f"{gloss_idgloss}",
                 f"{gloss_created_at}",
+                "",  # S3 LastModified
                 f"{canned_acl_expected}",
                 "",  # Actual Canned ACL
                 f"{gloss_id}",
