@@ -57,11 +57,6 @@ except OSError as err:
     print(f"Error creating temporary directory: {TMPDIR} {err}", file=sys.stderr)
     exit()
 
-# Vars
-nzsl_raw_keys_dict = {}
-s3_bucket_raw_keys_list = []
-all_keys_dict = {}
-
 
 # Get the video files info from NZSL Signbank
 def get_nzsl_raw_keys_dict():
@@ -160,7 +155,7 @@ def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
 
 
 # Get the keys present and absent across NZSL Signbank and S3, to dictionary
-def create_all_keys_dict(this_s3_bucket_raw_keys_list, this_nzsl_raw_keys_dict):
+def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
     print(
         "Getting keys present and absent across NZSL Signbank and S3 ...",
         file=sys.stderr,
@@ -387,10 +382,6 @@ print(f"TMPDIR:    {TMPDIR}", file=sys.stderr)
 if "AWS_PROFILE" in os.environ:
     print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
 
-nzsl_raw_keys_dict = get_nzsl_raw_keys_dict()
-
-s3_bucket_raw_keys_list = get_s3_bucket_raw_keys_list()
-
-all_keys_dict = create_all_keys_dict(s3_bucket_raw_keys_list, nzsl_raw_keys_dict)
-
-output_csv(all_keys_dict)
+output_csv(
+    create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
+)
