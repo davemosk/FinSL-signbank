@@ -158,8 +158,8 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
 
     # Find S3 keys that are present in NZSL, or absent
     for video_key in this_s3_bucket_raw_keys_list:
-        if video_key in this_nzsl_raw_keys_dict:
-
+        dict_row = this_nzsl_raw_keys_dict.get(video_key, None)
+        if dict_row:
             # Split out for readability
             [
                 gloss_idgloss,
@@ -168,7 +168,7 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
                 video_id,
                 gloss_public,
                 video_public,
-            ] = this_nzsl_raw_keys_dict[video_key]
+            ] = dict_row
 
             this_all_keys_dict[video_key] = [
                 True,  # NZSL PRESENT
