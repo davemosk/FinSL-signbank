@@ -321,6 +321,32 @@ def build_csv_row(
     )
     s3_lastmodified = json.loads(result.stdout)["LastModified"]
 
+
+    #TODO Logic goes here
+    # We decide what to do
+    # We mark what to do, but we don't actually do it
+    # If we are in 'Go' mode, and there is a previous mark, we do what that mark says
+    # Then we change the mark to past tense
+
+    # Cases
+
+    # Only a Signbank entry, no S3
+    #   - nothing to do, no action, NOOP
+
+    # Only an S3 entry, no Signbank
+    #    - DELETE the S3 entry
+
+    # Both:
+
+    # Private gloss
+    #   - set S3 PRIVATE, that's it
+
+    # Public gloss, video private, S3 public
+    #   - set S3 PRIVATE
+
+    # Public gloss, video public, S3 private
+    #   - set S3 PUBLIC
+
     return CSV_DELIMITER.join(
         [
             f"{video_key}",
