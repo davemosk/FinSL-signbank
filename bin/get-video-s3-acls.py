@@ -18,6 +18,14 @@ parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
     "Postgres access details, eg. DATABASE_URL env var."
 )
+# 'Go' mode, args.do_actions
+parser.add_argument(
+    "--do-actions",
+    action='store_true',
+    default=False,
+    required=False,
+    help="Actually perform Delete objects or change ACLs (DESTRUCTIVE operation)",
+)
 parser.add_argument(
     "--env",
     default="uat",
@@ -183,7 +191,7 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
         else:
             this_all_keys_dict[video_key] = [
                 False,  # NZSL Absent
-                True,  # S3 PRESENT
+                True,   # S3 PRESENT
                 "",  # gloss_idgloss,
                 "",  # gloss_created_at,
                 "",  # gloss_id
@@ -203,7 +211,7 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
     ] in this_nzsl_raw_keys_dict.items():
         if video_key not in this_s3_bucket_raw_keys_list:
             this_all_keys_dict[video_key] = [
-                True,  # NZSL PRESENT
+                True,   # NZSL PRESENT
                 False,  # S3 Absent
                 gloss_idgloss,
                 gloss_created_at,
@@ -229,6 +237,7 @@ def build_csv_header():
             "Sbank Video ID",
             "Sbank Gloss public",
             "Sbank Video public",
+            "Action",
         ]
     )
 
@@ -245,13 +254,29 @@ def build_csv_row(
     video_public=False,
 ):
 
+    action = ""
+    # Cases
+    # In S3     In NZSL     Action
+    #   Is        No          Delete!
+    #   Is        Is          Check ACL
+    #   Not       Is          Review
+    #   (F F impossible)
+
+    if key_in_s3:
+        if key_in_nzsl:
+            action = "Check ACL"
+        else:
+            action = "Delete"
+    else:
+        action = "Review"
+
     # See signbank/video/models.py, line 59, function set_public_acl()
     if key_in_nzsl:
         canned_acl_expected = "public-read" if video_public else "private"
     else:
         canned_acl_expected = ""
 
-    # If key not in S3, just return its NZSL info
+    # If key not in S3, just return its NZSL info and action
     if not key_in_s3:
         return CSV_DELIMITER.join(
             [
@@ -265,6 +290,7 @@ def build_csv_row(
                 f"{video_id}",
                 f"{gloss_public}",
                 f"{video_public}",
+                action,
             ]
         )
 
@@ -321,32 +347,6 @@ def build_csv_row(
     )
     s3_lastmodified = json.loads(result.stdout)["LastModified"]
 
-
-    #TODO Logic goes here
-    # We decide what to do
-    # We mark what to do, but we don't actually do it
-    # If we are in 'Go' mode, and there is a previous mark, we do what that mark says
-    # Then we change the mark to past tense
-
-    # Cases
-
-    # Only a Signbank entry, no S3
-    #   - nothing to do, no action, NOOP
-
-    # Only an S3 entry, no Signbank
-    #    - DELETE the S3 entry
-
-    # Both:
-
-    # Private gloss
-    #   - set S3 PRIVATE, that's it
-
-    # Public gloss, video private, S3 public
-    #   - set S3 PRIVATE
-
-    # Public gloss, video public, S3 private
-    #   - set S3 PUBLIC
-
     return CSV_DELIMITER.join(
         [
             f"{video_key}",
@@ -359,12 +359,14 @@ def build_csv_row(
             f"{video_id}",
             f"{gloss_public}",
             f"{video_public}",
+            action,
         ]
     )
 
 
 # From the keys present in NZSL, get all their S3 information
-def output_csv(this_all_keys_dict):
+# If we are in 'Go' mode, perform actions
+def process_keys(this_all_keys_dict):
     print(f"Getting detailed S3 data for keys ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 
     print(build_csv_header())
@@ -402,6 +404,6 @@ print(f"PGCLI:     {PGCLI}", file=sys.stderr)
 if "AWS_PROFILE" in os.environ:
     print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
 
-output_csv(
+process_keys(
     create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
 )
