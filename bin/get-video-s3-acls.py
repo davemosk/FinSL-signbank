@@ -256,6 +256,70 @@ def get_action(key_in_nzsl, key_in_s3):
     return "Review"
 
 
+# Get S3 object's ACL
+def get_s3_canned_acl(video_key):
+    result = subprocess.run(
+        [
+            AWSCLI,
+            "s3api",
+            "get-object-acl",
+            "--output",
+            "text",
+            "--query",
+            "Grants[*].Permission",
+            "--bucket",
+            AWS_S3_BUCKET,
+            "--key",
+            video_key,
+        ],
+        env=os.environ,
+        shell=False,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    acls_grants = result.stdout.strip().split("\t")
+
+    canned_acl = "unknown"
+    if len(acls_grants) > 1:
+        if (
+            acls_grants[0] == "FULL_CONTROL"
+            and acls_grants[1] == "READ"
+        ):
+            canned_acl = "public-read"
+    elif acls_grants[0] == "FULL_CONTROL":
+        canned_acl = "private"
+
+    return canned_acl
+
+
+# Get S3 object's LastModified date/time
+def get_s3_lastmodified(video_key):
+    result = subprocess.run(
+        [
+            AWSCLI,
+            "s3api",
+            "get-object-attributes",
+            "--object-attributes",
+            "ObjectParts",
+            "--output",
+            "text",
+            "--query",
+            "LastModified",
+            "--bucket",
+            AWS_S3_BUCKET,
+            "--key",
+            video_key,
+        ],
+        env=os.environ,
+        shell=False,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
 def build_csv_row(
     video_key,
     key_in_nzsl=False,
@@ -267,94 +331,27 @@ def build_csv_row(
     gloss_public=False,
     video_public=False,
 ):
-
-    action = get_action(key_in_nzsl, key_in_s3)
-
     # See signbank/video/models.py, line 59, function set_public_acl()
     if key_in_nzsl:
         canned_acl_expected = "public-read" if video_public else "private"
     else:
         canned_acl_expected = ""
 
-    # If key not in S3, just return its NZSL info and action
-    if not key_in_s3:
-        return CSV_DELIMITER.join(
-            [
-                f"{video_key}",
-                f"{gloss_idgloss}",
-                f"{gloss_created_at}",
-                "",  # S3 LastModified
-                f"{canned_acl_expected}",
-                "",  # Actual Canned ACL
-                f"{gloss_id}",
-                f"{video_id}",
-                f"{gloss_public}",
-                f"{video_public}",
-                action,
-            ]
-        )
+    if key_in_s3:
+        lastmodified = get_s3_lastmodified(video_key)
+        canned_acl = get_s3_canned_acl(video_key)
+    else:
+        lastmodified = ""
+        canned_acl = ""
 
-    # Get S3 object's ACL
-    result = subprocess.run(
-        [
-            AWSCLI,
-            "s3api",
-            "get-object-acl",
-            "--output",
-            "json",
-            "--bucket",
-            AWS_S3_BUCKET,
-            "--key",
-            video_key,
-        ],
-        env=os.environ,
-        shell=False,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    canned_acl = "unknown"
-    acls_grants_json = json.loads(result.stdout)["Grants"]
-    if len(acls_grants_json) > 1:
-        if (
-            acls_grants_json[0]["Permission"] == "FULL_CONTROL"
-            and acls_grants_json[1]["Permission"] == "READ"
-        ):
-            canned_acl = "public-read"
-    elif acls_grants_json[0]["Permission"] == "FULL_CONTROL":
-        canned_acl = "private"
-
-    # Get S3 object's LastModified date/time
-    result = subprocess.run(
-        [
-            AWSCLI,
-            "s3api",
-            "get-object-attributes",
-            "--object-attributes",
-            "ObjectParts",
-            "--query",
-            "LastModified",
-            "--output",
-            "json",
-            "--bucket",
-            AWS_S3_BUCKET,
-            "--key",
-            video_key,
-        ],
-        env=os.environ,
-        shell=False,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    s3_lastmodified = result.stdout.strip("\n\"")
+    action = get_action(key_in_nzsl, key_in_s3)
 
     return CSV_DELIMITER.join(
         [
             f"{video_key}",
             f"{gloss_idgloss}",
             f"{gloss_created_at}",
-            f"{s3_lastmodified}",
+            f"{lastmodified}",
             f"{canned_acl_expected}",
             f"{canned_acl}",
             f"{gloss_id}",
