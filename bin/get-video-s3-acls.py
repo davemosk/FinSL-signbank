@@ -332,6 +332,8 @@ def build_csv_row(
             "get-object-attributes",
             "--object-attributes",
             "ObjectParts",
+            "--query",
+            "LastModified",
             "--output",
             "json",
             "--bucket",
@@ -345,7 +347,7 @@ def build_csv_row(
         capture_output=True,
         text=True,
     )
-    s3_lastmodified = json.loads(result.stdout)["LastModified"]
+    s3_lastmodified = result.stdout.strip("\n\"")
 
     return CSV_DELIMITER.join(
         [
