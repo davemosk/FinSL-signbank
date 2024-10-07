@@ -242,6 +242,20 @@ def build_csv_header():
     )
 
 
+# Cases
+# In S3     In NZSL     Action
+#   Is        Not         Delete S3 Object
+#   Is        Is          Update ACL
+#   Not       Is          Review
+def get_action(key_in_nzsl, key_in_s3):
+    if key_in_s3:
+        if key_in_nzsl:
+            return "Update ACL"
+        else:
+            return "Delete S3 Object"
+    return "Review"
+
+
 def build_csv_row(
     video_key,
     key_in_nzsl=False,
@@ -254,21 +268,7 @@ def build_csv_row(
     video_public=False,
 ):
 
-    action = ""
-    # Cases
-    # In S3     In NZSL     Action
-    #   Is        No          Delete!
-    #   Is        Is          Check ACL
-    #   Not       Is          Review
-    #   (F F impossible)
-
-    if key_in_s3:
-        if key_in_nzsl:
-            action = "Check ACL"
-        else:
-            action = "Delete"
-    else:
-        action = "Review"
+    action = get_action(key_in_nzsl, key_in_s3)
 
     # See signbank/video/models.py, line 59, function set_public_acl()
     if key_in_nzsl:
