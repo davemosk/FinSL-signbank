@@ -243,9 +243,9 @@ def build_csv_header():
 
 
 def build_csv_row(
+    video_key,
     key_in_nzsl=False,
     key_in_s3=False,
-    video_key=None,
     gloss_idgloss=None,
     gloss_created_at=None,
     gloss_id=None,
@@ -371,36 +371,14 @@ def process_keys(this_all_keys_dict):
 
     print(build_csv_header())
 
-    for video_key, [
-        key_in_nzsl,
-        key_in_s3,
-        gloss_idgloss,
-        gloss_created_at,
-        gloss_id,
-        video_id,
-        gloss_public,
-        video_public,
-    ] in this_all_keys_dict.items():
-
-        print(
-            build_csv_row(
-                key_in_nzsl,
-                key_in_s3,
-                video_key,
-                gloss_idgloss,
-                gloss_created_at,
-                gloss_id,
-                video_id,
-                gloss_public,
-                video_public,
-            )
-        )
+    for video_key, values in this_all_keys_dict.items():
+        print(build_csv_row(video_key, *values))
 
 
-print(f"Env:       {args.env}", file=sys.stderr)
-print(f"S3 bucket: {AWS_S3_BUCKET}", file=sys.stderr)
-print(f"AWSCLI:    {AWSCLI}", file=sys.stderr)
-print(f"PGCLI:     {PGCLI}", file=sys.stderr)
+print(f"Env:         {args.env}", file=sys.stderr)
+print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
+print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
+print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 if "AWS_PROFILE" in os.environ:
     print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
 
