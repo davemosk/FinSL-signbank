@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser(
 # 'Go' mode, args.do_actions
 parser.add_argument(
     "--do-actions",
-    action='store_true',
+    action="store_true",
     default=False,
     required=False,
     help="Actually perform Delete objects or change ACLs (DESTRUCTIVE operation)",
@@ -191,7 +191,7 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
         else:
             this_all_keys_dict[video_key] = [
                 False,  # NZSL Absent
-                True,   # S3 PRESENT
+                True,  # S3 PRESENT
                 "",  # gloss_idgloss,
                 "",  # gloss_created_at,
                 "",  # gloss_id
@@ -211,7 +211,7 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
     ] in this_nzsl_raw_keys_dict.items():
         if video_key not in this_s3_bucket_raw_keys_list:
             this_all_keys_dict[video_key] = [
-                True,   # NZSL PRESENT
+                True,  # NZSL PRESENT
                 False,  # S3 Absent
                 gloss_idgloss,
                 gloss_created_at,
@@ -379,8 +379,7 @@ print(f"Env:         {args.env}", file=sys.stderr)
 print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
-if "AWS_PROFILE" in os.environ:
-    print(f"AWS profile: {os.environ['AWS_PROFILE']}", file=sys.stderr)
+print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
 
 process_keys(
     create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
