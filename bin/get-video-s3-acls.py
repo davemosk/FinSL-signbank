@@ -60,6 +60,25 @@ PGCLI = args.pgcli
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
 
 
+def pg_cli(cmd):
+    return subprocess.run(
+        [
+            PGCLI,
+            "-c",
+            cmd,
+            f"{DATABASE_URL}",
+        ],
+        env=os.environ,
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+
+
+def aws_cli():
+    pass
+
+
 # Get the video files info from NZSL Signbank
 def get_nzsl_raw_keys_dict():
     print(
@@ -69,10 +88,7 @@ def get_nzsl_raw_keys_dict():
     this_nzsl_raw_keys_dict = {}
     # Column renaming is for readability
     # Special delimiter because columns might contain commas
-    result = subprocess.run(
-        [
-            PGCLI,
-            "-c",
+    result = pg_cli(
             "COPY ("
             "SELECT "
             "dg.id AS gloss_id, "
@@ -84,12 +100,6 @@ def get_nzsl_raw_keys_dict():
             "vg.videofile AS video_key "
             "FROM dictionary_gloss AS dg JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id"
             ") TO STDOUT WITH (FORMAT CSV, DELIMITER '|')",
-            f"{DATABASE_URL}",
-        ],
-        env=os.environ,
-        capture_output=True,
-        check=True,
-        text=True,
     )
 
     # Separate the NZSL db columns
