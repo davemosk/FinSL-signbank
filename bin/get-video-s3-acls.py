@@ -299,9 +299,7 @@ def get_s3_lastmodified(video_key):
     result = aws_cli(
         [
             "s3api",
-            "get-object-attributes",
-            "--object-attributes",
-            "ObjectParts",
+            "head-object",
             "--output",
             "text",
             "--query",
