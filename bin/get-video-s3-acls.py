@@ -283,7 +283,7 @@ def get_s3_canned_acl(video_key):
         ]
     )
     acls_grants = result.stdout.strip().split("\t")
-    
+
     canned_acl = "unknown"
     if len(acls_grants) > 1:
         if acls_grants[0] == "FULL_CONTROL" and acls_grants[1] == "READ":
@@ -296,9 +296,8 @@ def get_s3_canned_acl(video_key):
 
 # Get S3 object's LastModified date/time
 def get_s3_lastmodified(video_key):
-    result = subprocess.run(
+    result = aws_cli(
         [
-            AWSCLI,
             "s3api",
             "get-object-attributes",
             "--object-attributes",
@@ -311,11 +310,7 @@ def get_s3_lastmodified(video_key):
             AWS_S3_BUCKET,
             "--key",
             video_key,
-        ],
-        env=os.environ,
-        check=True,
-        capture_output=True,
-        text=True,
+        ]
     )
     return result.stdout.strip()
 
