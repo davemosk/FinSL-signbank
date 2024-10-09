@@ -233,24 +233,6 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
     return this_all_keys_dict
 
 
-def build_csv_header():
-    return CSV_DELIMITER.join(
-        [
-            "S3 Video key",
-            "Sbank Gloss",
-            "Sbank Gloss created at",
-            "S3 LastModified",
-            "S3 Expected Canned ACL",
-            "S3 Actual Canned ACL",
-            "Sbank Gloss ID",
-            "Sbank Video ID",
-            "Sbank Gloss public",
-            "Sbank Video public",
-            "Action",
-        ]
-    )
-
-
 # Cases
 # In S3     In NZSL     Action
 #   Is        Not         Delete S3 Object
@@ -310,6 +292,24 @@ def get_s3_lastmodified(video_key):
         ]
     )
     return result.stdout.strip()
+
+
+def build_csv_header():
+    return CSV_DELIMITER.join(
+        [
+            "S3 Video key",
+            "Sbank Gloss",
+            "Sbank Gloss created at",
+            "S3 LastModified",
+            "S3 Expected Canned ACL",
+            "S3 Actual Canned ACL",
+            "Sbank Gloss ID",
+            "Sbank Video ID",
+            "Sbank Gloss public",
+            "Sbank Video public",
+            "Action",
+        ]
+    )
 
 
 def build_csv_row(
