@@ -10,7 +10,6 @@ import os
 import sys
 import subprocess
 import argparse
-import json
 import re
 from pprint import pprint
 
