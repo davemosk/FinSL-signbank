@@ -60,14 +60,11 @@ PGCLI = args.pgcli
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
 
 
-def pg_cli(cmd):
+def pg_cli(args_list):
+    if not isinstance(args_list, list):
+        args_list = [args_list]
     return subprocess.run(
-        [
-            PGCLI,
-            "-c",
-            cmd,
-            f"{DATABASE_URL}",
-        ],
+        [PGCLI, "-c"] + args_list + [f"{DATABASE_URL}"],
         env=os.environ,
         capture_output=True,
         check=True,
@@ -75,8 +72,16 @@ def pg_cli(cmd):
     )
 
 
-def aws_cli():
-    pass
+def aws_cli(args_list):
+    if not isinstance(args_list, list):
+        args_list = [args_list]
+    return subprocess.run(
+        [AWSCLI] + args_list,
+        env=os.environ,
+        capture_output=True,
+        check=True,
+        text=True,
+    )
 
 
 # Get the video files info from NZSL Signbank
@@ -89,17 +94,17 @@ def get_nzsl_raw_keys_dict():
     # Column renaming is for readability
     # Special delimiter because columns might contain commas
     result = pg_cli(
-            "COPY ("
-            "SELECT "
-            "dg.id AS gloss_id, "
-            "dg.idgloss AS gloss_idgloss, "
-            "dg.created_at AS gloss_created_at, "
-            "dg.published AS gloss_public, "
-            "vg.is_public AS video_public, "
-            "vg.id AS video_id, "
-            "vg.videofile AS video_key "
-            "FROM dictionary_gloss AS dg JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id"
-            ") TO STDOUT WITH (FORMAT CSV, DELIMITER '|')",
+        "COPY ("
+        "SELECT "
+        "dg.id AS gloss_id, "
+        "dg.idgloss AS gloss_idgloss, "
+        "dg.created_at AS gloss_created_at, "
+        "dg.published AS gloss_public, "
+        "vg.is_public AS video_public, "
+        "vg.id AS video_id, "
+        "vg.videofile AS video_key "
+        "FROM dictionary_gloss AS dg JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id"
+        ") TO STDOUT WITH (FORMAT CSV, DELIMITER '|')",
     )
 
     # Separate the NZSL db columns
@@ -138,18 +143,13 @@ def get_nzsl_raw_keys_dict():
 # Get all keys from AWS S3
 def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
-    result = subprocess.run(
+    result = aws_cli(
         [
-            AWSCLI,
             "s3",
             "ls",
             f"s3://{s3_bucket}",
             "--recursive",
         ],
-        env=os.environ,
-        capture_output=True,
-        check=True,
-        text=True,
     )
 
     # Separate out just the key from date, time, size, key
@@ -268,9 +268,8 @@ def get_action(key_in_nzsl, key_in_s3):
 
 # Get S3 object's ACL
 def get_s3_canned_acl(video_key):
-    result = subprocess.run(
+    result = aws_cli(
         [
-            AWSCLI,
             "s3api",
             "get-object-acl",
             "--output",
@@ -281,20 +280,13 @@ def get_s3_canned_acl(video_key):
             AWS_S3_BUCKET,
             "--key",
             video_key,
-        ],
-        env=os.environ,
-        check=True,
-        capture_output=True,
-        text=True,
+        ]
     )
     acls_grants = result.stdout.strip().split("\t")
-
+    
     canned_acl = "unknown"
     if len(acls_grants) > 1:
-        if (
-            acls_grants[0] == "FULL_CONTROL"
-            and acls_grants[1] == "READ"
-        ):
+        if acls_grants[0] == "FULL_CONTROL" and acls_grants[1] == "READ":
             canned_acl = "public-read"
     elif acls_grants[0] == "FULL_CONTROL":
         canned_acl = "private"
