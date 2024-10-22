@@ -295,7 +295,7 @@ def build_csv_header():
         [
             "Action",
             "S3 Video key",
-            "Sbank Gloss created at",
+            "S3 LastModified",
             "S3 Expected Canned ACL",
             "S3 Actual Canned ACL",
             "Sbank Gloss ID",
@@ -303,7 +303,7 @@ def build_csv_header():
             "Sbank Gloss public",
             "Sbank Video public",
             "Sbank Gloss",
-            "S3 LastModified",
+            "Sbank Gloss created at",
         ]
     )
 
@@ -336,7 +336,7 @@ def build_csv_row(
         [
             action,
             f"{video_key}",
-            f"{gloss_created_at}",
+            f"{lastmodified}",
             f"{canned_acl_expected}",
             f"{canned_acl}",
             f"{gloss_id}",
@@ -344,7 +344,7 @@ def build_csv_row(
             f"{gloss_public}",
             f"{video_public}",
             f"{gloss_idgloss}",
-            f"{lastmodified}",
+            f"{gloss_created_at}",
         ]
     )
 
