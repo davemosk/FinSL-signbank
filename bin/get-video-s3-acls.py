@@ -297,17 +297,17 @@ def get_s3_lastmodified(video_key):
 def build_csv_header():
     return CSV_DELIMITER.join(
         [
+            "Action",
             "S3 Video key",
-            "Sbank Gloss",
             "Sbank Gloss created at",
-            "S3 LastModified",
             "S3 Expected Canned ACL",
             "S3 Actual Canned ACL",
             "Sbank Gloss ID",
             "Sbank Video ID",
             "Sbank Gloss public",
             "Sbank Video public",
-            "Action",
+            "Sbank Gloss",
+            "S3 LastModified",
         ]
     )
 
@@ -340,17 +340,17 @@ def build_csv_row(
 
     return CSV_DELIMITER.join(
         [
+            action,
             f"{video_key}",
-            f"{gloss_idgloss}",
             f"{gloss_created_at}",
-            f"{lastmodified}",
             f"{canned_acl_expected}",
             f"{canned_acl}",
             f"{gloss_id}",
             f"{video_id}",
             f"{gloss_public}",
             f"{video_public}",
-            action,
+            f"{gloss_idgloss}",
+            f"{lastmodified}",
         ]
     )
 
