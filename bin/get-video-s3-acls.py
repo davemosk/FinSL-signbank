@@ -265,14 +265,13 @@ def get_s3_canned_acl(video_key):
     )
     acls_grants = result.stdout.strip().split("\t")
 
-    canned_acl = "unknown"
     if len(acls_grants) > 1:
         if acls_grants[0] == "FULL_CONTROL" and acls_grants[1] == "READ":
-            canned_acl = "public-read"
+            return "public-read"
     elif acls_grants[0] == "FULL_CONTROL":
-        canned_acl = "private"
+        return "private"
 
-    return canned_acl
+    return "unknown"
 
 
 # Get S3 object's LastModified date/time
