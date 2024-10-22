@@ -323,17 +323,15 @@ def build_csv_row(
     video_public=False,
 ):
     # See signbank/video/models.py, line 59, function set_public_acl()
+    canned_acl_expected = ""
     if key_in_nzsl:
         canned_acl_expected = "public-read" if video_public else "private"
-    else:
-        canned_acl_expected = ""
 
+    lastmodified = ""
+    canned_acl = ""
     if key_in_s3:
         lastmodified = get_s3_lastmodified(video_key)
         canned_acl = get_s3_canned_acl(video_key)
-    else:
-        lastmodified = ""
-        canned_acl = ""
 
     action = get_recommended_action(key_in_nzsl, key_in_s3)
 
