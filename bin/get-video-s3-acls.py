@@ -60,8 +60,6 @@ AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
 
 
 def pg_cli(args_list):
-    if not isinstance(args_list, list):
-        args_list = [args_list]
     return subprocess.run(
         [PGCLI, "-c"] + args_list + [f"{DATABASE_URL}"],
         env=os.environ,
@@ -72,8 +70,6 @@ def pg_cli(args_list):
 
 
 def aws_cli(args_list):
-    if not isinstance(args_list, list):
-        args_list = [args_list]
     return subprocess.run(
         [AWSCLI] + args_list,
         env=os.environ,
