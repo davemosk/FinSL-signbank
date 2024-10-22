@@ -88,17 +88,19 @@ def get_nzsl_raw_keys_dict():
     # Column renaming is for readability
     # Special delimiter because columns might contain commas
     result = pg_cli(
-        "COPY ("
-        "SELECT "
-        "dg.id AS gloss_id, "
-        "dg.idgloss AS gloss_idgloss, "
-        "dg.created_at AS gloss_created_at, "
-        "dg.published AS gloss_public, "
-        "vg.is_public AS video_public, "
-        "vg.id AS video_id, "
-        "vg.videofile AS video_key "
-        "FROM dictionary_gloss AS dg JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id"
-        ") TO STDOUT WITH (FORMAT CSV, DELIMITER '|')",
+        [
+            "COPY ("
+            "SELECT "
+            "dg.id AS gloss_id, "
+            "dg.idgloss AS gloss_idgloss, "
+            "dg.created_at AS gloss_created_at, "
+            "dg.published AS gloss_public, "
+            "vg.is_public AS video_public, "
+            "vg.id AS video_id, "
+            "vg.videofile AS video_key "
+            "FROM dictionary_gloss AS dg JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id"
+            ") TO STDOUT WITH (FORMAT CSV, DELIMITER '|')",
+        ]
     )
 
     # Separate the NZSL db columns
