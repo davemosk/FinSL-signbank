@@ -238,7 +238,7 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
 #   Is        Not         Delete S3 Object
 #   Is        Is          Update ACL
 #   Not       Is          Review
-def get_action(key_in_nzsl, key_in_s3):
+def get_recommended_action(key_in_nzsl, key_in_s3):
     if key_in_s3:
         if key_in_nzsl:
             return "Update ACL"
@@ -335,7 +335,7 @@ def build_csv_row(
         lastmodified = ""
         canned_acl = ""
 
-    action = get_action(key_in_nzsl, key_in_s3)
+    action = get_recommended_action(key_in_nzsl, key_in_s3)
 
     return CSV_DELIMITER.join(
         [
