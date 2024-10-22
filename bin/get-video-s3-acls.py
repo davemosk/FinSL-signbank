@@ -11,7 +11,6 @@ import sys
 import subprocess
 import argparse
 import re
-from pprint import pprint
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
