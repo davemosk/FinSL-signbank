@@ -175,58 +175,23 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
     for video_key in this_s3_bucket_raw_keys_list:
         dict_row = this_nzsl_raw_keys_dict.get(video_key, None)
         if dict_row:
-            # Split out for readability
-            [
-                gloss_idgloss,
-                gloss_created_at,
-                gloss_id,
-                video_id,
-                gloss_public,
-                video_public,
-            ] = dict_row
-
             this_all_keys_dict[video_key] = [
                 True,  # NZSL PRESENT
                 True,  # S3 PRESENT
-                gloss_idgloss,
-                gloss_created_at,
-                gloss_id,
-                video_id,
-                gloss_public,
-                video_public,
-            ]
+            ] + dict_row
         else:
             this_all_keys_dict[video_key] = [
                 False,  # NZSL Absent
                 True,  # S3 PRESENT
-                "",  # gloss_idgloss,
-                "",  # gloss_created_at,
-                "",  # gloss_id
-                "",  # video_id,
-                "",  # gloss_public,
-                "",  # video_public,
-            ]
+            ] + [""] * 6
 
     # Find NZSL keys that are absent from S3 (present handled above)
-    for video_key, [
-        gloss_idgloss,
-        gloss_created_at,
-        gloss_id,
-        video_id,
-        gloss_public,
-        video_public,
-    ] in this_nzsl_raw_keys_dict.items():
+    for video_key, dict_row in this_nzsl_raw_keys_dict.items():
         if video_key not in this_s3_bucket_raw_keys_list:
             this_all_keys_dict[video_key] = [
                 True,  # NZSL PRESENT
                 False,  # S3 Absent
-                gloss_idgloss,
-                gloss_created_at,
-                gloss_id,
-                video_id,
-                gloss_public,
-                video_public,
-            ]
+            ] + dict_row
 
     return this_all_keys_dict
 
@@ -357,8 +322,8 @@ def process_keys(this_all_keys_dict):
 
     print(build_csv_header())
 
-    for video_key, values in this_all_keys_dict.items():
-        print(build_csv_row(video_key, *values))
+    for video_key, dict_row in this_all_keys_dict.items():
+        print(build_csv_row(video_key, *dict_row))
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
