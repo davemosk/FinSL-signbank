@@ -11,6 +11,7 @@ import sys
 import subprocess
 import argparse
 import re
+from time import sleep
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -69,13 +70,26 @@ def pg_cli(args_list):
 
 
 def aws_cli(args_list):
-    return subprocess.run(
-        [AWSCLI] + args_list,
-        env=os.environ,
-        capture_output=True,
-        check=True,
-        text=True,
-    )
+    # Try indefinitely
+    output = None
+    while not output:
+        try:
+            output = subprocess.run(
+                [AWSCLI] + args_list,
+                env=os.environ,
+                capture_output=True,
+                check=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            print(
+                f"Error: subprocess.run returned code {e.returncode}", file=sys.stderr
+            )
+            print(e.cmd, file=sys.stderr)
+            print(e.stdout, file=sys.stderr)
+            print(e.stderr, file=sys.stderr)
+            sleep(1)
+    return output
 
 
 # Get the video files info from NZSL Signbank
