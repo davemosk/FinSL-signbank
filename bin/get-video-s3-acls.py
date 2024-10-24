@@ -120,6 +120,7 @@ def get_nzsl_raw_keys_dict():
             video_key,
         ] = rawl.split("|")
 
+        # This sets the initial field ordering in the dictionary
         this_nzsl_raw_keys_dict[video_key] = [
             gloss_idgloss.replace(CSV_DELIMITER, ""),
             gloss_created_at,
