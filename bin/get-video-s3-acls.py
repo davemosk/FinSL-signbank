@@ -98,7 +98,8 @@ def get_nzsl_raw_keys_dict():
             "vg.is_public AS video_public, "
             "vg.id AS video_id, "
             "vg.videofile AS video_key "
-            "FROM dictionary_gloss AS dg JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id"
+            "FROM dictionary_gloss AS dg "
+            "FULL JOIN video_glossvideo AS vg ON vg.gloss_id = dg.id"
             ") TO STDOUT WITH (FORMAT CSV, DELIMITER '|')",
         ]
     )
