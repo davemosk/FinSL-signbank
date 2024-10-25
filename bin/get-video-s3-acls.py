@@ -26,9 +26,6 @@ get_wsgi_application()
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
-# Test
-from signbank.dictionary.models import FieldChoice, Gloss
-
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
     "Postgres access details, eg. DATABASE_URL env var."
@@ -347,6 +344,7 @@ def build_csv_row(
 # Run some tests against the remote endpoints
 # This is a test-harness for now
 # Takes advantage of the fact we have a lot of setup infrastructure in this script already
+from signbank.dictionary.models import FieldChoice, Gloss
 def do_tests():
     # Debugging safety
     if args.env != "dev":
