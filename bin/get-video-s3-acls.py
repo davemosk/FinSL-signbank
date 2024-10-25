@@ -90,6 +90,7 @@ def pg_cli(args_list):
         print(e.cmd, file=sys.stderr)
         print(e.stdout, file=sys.stderr)
         print(e.stderr, file=sys.stderr)
+        exit()
 
 
 def aws_cli(args_list):
