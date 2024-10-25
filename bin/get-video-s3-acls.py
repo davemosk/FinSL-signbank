@@ -12,6 +12,22 @@ import subprocess
 import argparse
 import re
 from time import sleep
+from pprint import pprint
+import boto3
+import django
+
+# Magic required to allow this script to use Signbank Django classes
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+pprint(sys.path)
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE", "signbank.settings.development")
+from django.core.wsgi import get_wsgi_application
+get_wsgi_application()
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+# Test
+from signbank.dictionary.models import FieldChoice, Gloss
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -35,11 +51,23 @@ parser.add_argument(
     required=False,
     help=f"AWS client path (default: %(default)s)",
 )
+parser.add_argument(
+    "--tests",
+    action="store_true",
+    default=False,
+    required=False,
+    help="Run remote tests instead of generating CSV output",
+)
+
 args = parser.parse_args()
 
 # Globals
 CSV_DELIMITER = ","
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+DATABASE_URL = (
+    "postgres://postgres:postgres@localhost:5432/postgres"
+    if args.tests
+    else os.getenv("DATABASE_URL", "")
+)
 AWSCLI = args.awscli
 PGCLI = args.pgcli
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
@@ -316,6 +344,20 @@ def build_csv_row(
     )
 
 
+# Run some tests against the remote endpoints
+# This is a test-harness for now
+# Takes advantage of the fact we have a lot of setup infrastructure in this script already
+def do_tests():
+    # Debugging safety
+    if args.env != "dev":
+        print("Error: tests must be in 'dev' environment")
+        exit()
+    print(f"DATABASE_URL:{DATABASE_URL}")
+    print("Running tests")
+    s3 = boto3.client("s3")
+    #pprint(s3.list_objects(Bucket=AWS_S3_BUCKET))
+    #get_nzsl_raw_keys_dict()
+
 # From the keys present in NZSL, get all their S3 information
 def process_keys(this_all_keys_dict):
     print(f"Getting detailed S3 data for keys ({AWS_S3_BUCKET}) ...", file=sys.stderr)
@@ -332,6 +374,9 @@ print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
 
-process_keys(
-    create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
-)
+if args.tests:
+    do_tests()
+else:
+    process_keys(
+        create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
+    )
