@@ -14,11 +14,9 @@ import re
 from time import sleep
 from pprint import pprint
 import boto3
-import django
 
 # Magic required to allow this script to use Signbank Django classes
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-pprint(sys.path)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
 from django.core.wsgi import get_wsgi_application
 
@@ -26,6 +24,7 @@ get_wsgi_application()
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
+from signbank.dictionary.models import FieldChoice, Gloss
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -345,9 +344,6 @@ def build_csv_row(
 # Run some tests against the remote endpoints
 # This is a test-harness for now
 # Takes advantage of the fact we have a lot of setup infrastructure in this script already
-from signbank.dictionary.models import FieldChoice, Gloss
-
-
 def do_tests():
     # Debugging safety
     if args.env != "dev":
