@@ -61,16 +61,20 @@ if args.tests:
 
     User = get_user_model()
 
-    from signbank.dictionary.models import FieldChoice, Gloss
-
+    from signbank.dictionary.models import (
+        Dataset,
+        FieldChoice,
+        Gloss,
+        GlossTranslations,
+        Language,
+        ManualValidationAggregation,
+        ShareValidationAggregation,
+        ValidationRecord,
+    )
 
 # Globals
 CSV_DELIMITER = ","
-DATABASE_URL = (
-    "postgres://postgres:postgres@localhost:5432/postgres"
-    if args.tests
-    else os.getenv("DATABASE_URL", "")
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 AWSCLI = args.awscli
 PGCLI = args.pgcli
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
@@ -363,10 +367,15 @@ def do_tests():
         print("Error: tests must be in 'dev' environment")
         exit()
     print(f"DATABASE_URL:{DATABASE_URL}")
+    if DATABASE_URL.find("@localhost") < 0:
+        print("Error: database url must contain '@localhost'")
+        exit()
+
     print("Running tests")
     s3 = boto3.client("s3")
     # pprint(s3.list_objects(Bucket=AWS_S3_BUCKET))
     # get_nzsl_raw_keys_dict()
+    pprint(Gloss.objects.all())
 
 
 # From the keys present in NZSL, get all their S3 information
@@ -387,7 +396,8 @@ print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
 
 if args.tests:
     do_tests()
-else:
-    process_keys(
-        create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
-    )
+    exit()
+
+process_keys(
+    create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
+)
