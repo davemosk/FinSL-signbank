@@ -19,11 +19,12 @@ import django
 # Magic required to allow this script to use Signbank Django classes
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 pprint(sys.path)
-os.environ.setdefault(
-    "DJANGO_SETTINGS_MODULE", "signbank.settings.development")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
 from django.core.wsgi import get_wsgi_application
+
 get_wsgi_application()
 from django.contrib.auth import get_user_model
+
 User = get_user_model()
 
 parser = argparse.ArgumentParser(
@@ -345,6 +346,8 @@ def build_csv_row(
 # This is a test-harness for now
 # Takes advantage of the fact we have a lot of setup infrastructure in this script already
 from signbank.dictionary.models import FieldChoice, Gloss
+
+
 def do_tests():
     # Debugging safety
     if args.env != "dev":
@@ -353,8 +356,9 @@ def do_tests():
     print(f"DATABASE_URL:{DATABASE_URL}")
     print("Running tests")
     s3 = boto3.client("s3")
-    #pprint(s3.list_objects(Bucket=AWS_S3_BUCKET))
-    #get_nzsl_raw_keys_dict()
+    # pprint(s3.list_objects(Bucket=AWS_S3_BUCKET))
+    # get_nzsl_raw_keys_dict()
+
 
 # From the keys present in NZSL, get all their S3 information
 def process_keys(this_all_keys_dict):
