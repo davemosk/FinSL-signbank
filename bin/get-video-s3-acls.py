@@ -15,16 +15,6 @@ from time import sleep
 from pprint import pprint
 import boto3
 
-# Magic required to allow this script to use Signbank Django classes
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
-from django.core.wsgi import get_wsgi_application
-
-get_wsgi_application()
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-from signbank.dictionary.models import FieldChoice, Gloss
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -58,6 +48,22 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+
+if args.tests:
+    # Magic required to allow this script to use Signbank Django classes
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
+    from django.core.wsgi import get_wsgi_application
+
+    get_wsgi_application()
+
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    from signbank.dictionary.models import FieldChoice, Gloss
+
+
 # Globals
 CSV_DELIMITER = ","
 DATABASE_URL = (
@@ -71,13 +77,19 @@ AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
 
 
 def pg_cli(args_list):
-    return subprocess.run(
-        [PGCLI, "-c"] + args_list + [f"{DATABASE_URL}"],
-        env=os.environ,
-        capture_output=True,
-        check=True,
-        text=True,
-    )
+    try:
+        return subprocess.run(
+            [PGCLI, "-c"] + args_list + [f"{DATABASE_URL}"],
+            env=os.environ,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"Error: subprocess.run returned code {e.returncode}", file=sys.stderr)
+        print(e.cmd, file=sys.stderr)
+        print(e.stdout, file=sys.stderr)
+        print(e.stderr, file=sys.stderr)
 
 
 def aws_cli(args_list):
