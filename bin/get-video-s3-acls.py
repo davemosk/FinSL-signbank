@@ -17,14 +17,6 @@ parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
     "Postgres access details, eg. DATABASE_URL env var."
 )
-# 'Go' mode, args.do_actions
-parser.add_argument(
-    "--do-actions",
-    action="store_true",
-    default=False,
-    required=False,
-    help="Actually perform Delete objects or change ACLs (DESTRUCTIVE operation)",
-)
 parser.add_argument(
     "--env",
     default="uat",
@@ -42,12 +34,6 @@ parser.add_argument(
     default="/usr/local/bin/aws",
     required=False,
     help=f"AWS client path (default: %(default)s)",
-)
-parser.add_argument(
-    "--tmpdir",
-    default="/tmp/nzsl",
-    required=False,
-    help=f"Temp dir path (default: %(default)s)",
 )
 args = parser.parse_args()
 
