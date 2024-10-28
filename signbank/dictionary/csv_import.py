@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from pprint import pprint
+
 import codecs
 import csv
 import datetime
@@ -424,6 +426,9 @@ def update_retrieval_videos(videos, gloss_data):
 @permission_required("dictionary.import_csv")
 @transaction.atomic()
 def confirm_import_nzsl_share_gloss_csv(request):
+
+    pprint(request.session.__dict__)
+
     """This view adds the data to database if the user confirms the action"""
     if not request.method == "POST":
         # If request method is not POST, redirect to the import form
@@ -460,7 +465,10 @@ def confirm_import_nzsl_share_gloss_csv(request):
 
 
 def confirm_import_nzsl_share_gloss_csv_inner(session_glosses_new, session_dataset_id):
-    """Performs CSV import actions"""
+    """Does the thing"""
+
+    print("IN CONFIRM INNER")
+
     glosses_added = []
     dataset = None
     translations = []
