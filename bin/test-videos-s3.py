@@ -131,7 +131,7 @@ def do_tests():
     print(f"DATABASE_URL:{DATABASE_URL}")
 
     print("Running tests")
-    #s3 = boto3.client("s3")
+    # s3 = boto3.client("s3")
     # pprint(s3.list_objects(Bucket=AWS_S3_BUCKET))
     # get_nzsl_raw_keys_dict()
     # pprint(Gloss.objects.all())
@@ -181,7 +181,7 @@ def do_tests():
     # Create user and add permissions
     try:
         user = User.objects.create_user(username="test", email=None, password="test")
-        csv_permission = Permission.objects.get(codename='import_csv')
+        csv_permission = Permission.objects.get(codename="import_csv")
         user.user_permissions.add(csv_permission)
     except IntegrityError:
         user = User.objects.get(username="test")
@@ -190,18 +190,14 @@ def do_tests():
     client = Client()
     client.force_login(user)
     s = client.session
-    s.update({
-        "dataset_id": dataset.pk,
-        "glosses_new": csv_content
-    })
+    s.update({"dataset_id": dataset.pk, "glosses_new": csv_content})
     s.save()
     response = client.post(
-        reverse("dictionary:confirm_import_nzsl_share_gloss_csv"),
-        {"confirm": True}
+        reverse("dictionary:confirm_import_nzsl_share_gloss_csv"), {"confirm": True}
     )
 
     # test to see if we have to wait for thread
-    X_SECONDS=20
+    X_SECONDS = 20
     print(f"Sleeping {X_SECONDS} seconds to allow threads to complete ...")
     sleep(X_SECONDS)
 
