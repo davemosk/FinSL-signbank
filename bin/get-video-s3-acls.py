@@ -12,9 +12,8 @@ import subprocess
 import argparse
 import re
 from time import sleep
+from uuid import uuid4
 from pprint import pprint
-import copy
-import csv
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -38,10 +37,18 @@ parser.add_argument(
     required=False,
     help=f"AWS client path (default: %(default)s)",
 )
+parser.add_argument(
+    "--dumpnzsl",
+    default=False,
+    required=False,
+    action="store_true",
+    help=f"Dump raw NZSL database output",
+)
 args = parser.parse_args()
 
 # Globals
 CSV_DELIMITER = ","
+FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 AWSCLI = args.awscli
 PGCLI = args.pgcli
@@ -88,6 +95,15 @@ def aws_cli(args_list):
     return output
 
 
+# Fake key is a hack to handle FULL JOIN
+def maybe_fakekey(instring):
+    return instring if instring else FAKEKEY_PREFIX + str(uuid4())
+
+
+def filter_fakekey(instring):
+    return "" if instring.startswith(FAKEKEY_PREFIX) else instring
+
+
 # Get the video files info from NZSL Signbank
 def get_nzsl_raw_keys_dict():
     print(
@@ -129,6 +145,9 @@ def get_nzsl_raw_keys_dict():
             video_id,
             video_key,
         ] = rawl.split("|")
+
+        # Hack to handle FULL JOIN
+        video_key = maybe_fakekey(video_key.strip())
 
         # This sets the initial field ordering in the all_keys dictionary row
         this_nzsl_raw_keys_dict[video_key] = [
@@ -212,6 +231,7 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
 #   Is        Not         Delete S3 Object
 #   Is        Is          Update ACL
 #   Not       Is          Review
+#      Other              Review
 def get_recommended_action(key_in_nzsl, key_in_s3):
     if key_in_s3:
         if key_in_nzsl:
@@ -312,7 +332,7 @@ def build_csv_row(
     return CSV_DELIMITER.join(
         [
             action,
-            f"{video_key}",
+            f"{filter_fakekey(video_key)}",
             f"{lastmodified}",
             f"{canned_acl_expected}",
             f"{canned_acl}",
@@ -341,6 +361,10 @@ print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
+
+if args.dumpnzsl:
+    pprint(get_nzsl_raw_keys_dict())
+    exit()
 
 process_keys(
     create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
