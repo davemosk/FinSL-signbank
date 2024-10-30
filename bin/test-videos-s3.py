@@ -1,4 +1,5 @@
 #!/usr/bin/env -S python3 -u
+# You need to run this in a venv that has all the right Python site-packages.
 # Bang line above passes '-u' to python, for unbuffered output
 # Permissions required:
 #  psql - access to heroku app's postgres
@@ -30,6 +31,12 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+from django.test import Client
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+from django.db.utils import IntegrityError
+
+
 from signbank.dictionary.models import (
     Dataset,
     FieldChoice,
@@ -41,10 +48,6 @@ from signbank.dictionary.models import (
     ValidationRecord,
 )
 from signbank.video.models import GlossVideo
-from django.test import Client
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.urls import reverse
-from django.db.utils import IntegrityError
 
 parser = argparse.ArgumentParser(
     description="You need to run this in a venv that has all the right Python site-packages. You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
