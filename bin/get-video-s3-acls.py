@@ -13,10 +13,8 @@ import argparse
 import re
 from time import sleep
 from pprint import pprint
-import boto3
 import copy
 import csv
-
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -40,45 +38,7 @@ parser.add_argument(
     required=False,
     help=f"AWS client path (default: %(default)s)",
 )
-parser.add_argument(
-    "--tests",
-    action="store_true",
-    default=False,
-    required=False,
-    help="Run remote tests instead of generating CSV output",
-)
-
 args = parser.parse_args()
-
-
-if args.tests:
-    # Magic required to allow this script to use Signbank Django classes
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
-    from django.core.wsgi import get_wsgi_application
-
-    get_wsgi_application()
-
-    from django.contrib.auth.models import Permission
-    from django.contrib.auth import get_user_model
-
-    User = get_user_model()
-
-    from signbank.dictionary.models import (
-        Dataset,
-        FieldChoice,
-        Gloss,
-        GlossTranslations,
-        Language,
-        ManualValidationAggregation,
-        ShareValidationAggregation,
-        ValidationRecord,
-    )
-    from signbank.video.models import GlossVideo
-    from django.test import Client
-    from django.core.files.uploadedfile import SimpleUploadedFile
-    from django.urls import reverse
-    from django.db.utils import IntegrityError
 
 # Globals
 CSV_DELIMITER = ","
@@ -366,93 +326,6 @@ def build_csv_row(
     )
 
 
-# Run some tests against the remote endpoints
-# This is a test-harness for now
-# Takes advantage of the fact we have a lot of setup infrastructure in this script already
-def do_tests():
-    # Debugging safety
-    if args.env != "dev":
-        print("Error: tests must be in 'dev' environment")
-        exit()
-    if DATABASE_URL.find("@localhost") < 0:
-        print("Error: database url must contain '@localhost'")
-        exit()
-    print(f"DATABASE_URL:{DATABASE_URL}")
-
-    print("Running tests")
-    #s3 = boto3.client("s3")
-    # pprint(s3.list_objects(Bucket=AWS_S3_BUCKET))
-    # get_nzsl_raw_keys_dict()
-    # pprint(Gloss.objects.all())
-
-    # This is a cut and paste of the mock tests, but we're doing it "live" on dev
-    _csv_content = {
-        "id": "111",
-        "word": "Test",
-        "maori": "maori, maori 2",
-        "secondary": "test",
-        "notes": "a note",
-        "created_at": "2023-09-12 22:37:59 UTC",
-        "contributor_email": "ops@ackama.com",
-        "contributor_username": "Ackama Ops",
-        "agrees": "0",
-        "disagrees": "1",
-        "topic_names": "Test Topic|Test",
-        "videos": "/VID_20170815_153446275.mp4",
-        "illustrations": "/kiwifruit-2-6422.png",
-        "usage_examples": "/fire.1923.finalexample1.mb.r480x360.mp4",
-        "sign_comments": ("contribution_limit_test_1: Comment 0|Comment 33"),
-    }
-    file_name = "test.csv"
-    csv_content = [copy.deepcopy(_csv_content)]
-    csv_content[0]["id"] = "12345"
-    with open(file_name, "w") as file:
-        writer = csv.writer(file)
-        writer.writerow(csv_content[0].keys())
-        for row in csv_content:
-            writer.writerow(row.values())
-    data = open(file_name, "rb")
-    file = SimpleUploadedFile(
-        content=data.read(), name=data.name, content_type="content/multipart"
-    )
-    dataset = Dataset.objects.get(name="NZSL")
-
-    try:
-        Gloss.objects.get(idgloss="Share:11").delete()
-    except ValueError:
-        pass
-    Gloss.objects.create(
-        dataset=dataset,
-        idgloss="Share:11",
-        nzsl_share_id="12345",
-    )
-
-    # Create user and add permissions
-    try:
-        user = User.objects.create_user(username="test", email=None, password="test")
-        csv_permission = Permission.objects.get(codename='import_csv')
-        user.user_permissions.add(csv_permission)
-    except IntegrityError:
-        user = User.objects.get(username="test")
-
-    # Create client with change_gloss permission.
-    client = Client()
-    client.force_login(user)
-    s = client.session
-    s.update({
-        "dataset_id": dataset.pk,
-        "glosses_new": csv_content
-    })
-    s.save()
-    pprint("CLIENT SESSION")
-    pprint(client.session.items())
-    response = client.post(
-        reverse("dictionary:confirm_import_nzsl_share_gloss_csv"),
-        {"confirm": True}
-    )
-    pprint(response.__dict__)
-
-
 # From the keys present in NZSL, get all their S3 information
 def process_keys(this_all_keys_dict):
     print(f"Getting detailed S3 data for keys ({AWS_S3_BUCKET}) ...", file=sys.stderr)
@@ -468,10 +341,6 @@ print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
-
-if args.tests:
-    do_tests()
-    exit()
 
 process_keys(
     create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
