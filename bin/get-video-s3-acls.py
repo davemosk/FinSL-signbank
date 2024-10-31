@@ -461,7 +461,7 @@ def process_orphans():
                     if not key_s3_yes:
                         print(f"Anomaly (not in S3): {gloss.idgloss}", file=sys.stderr)
                         continue
-                    csv_rows.append([gloss_id,gloss.idgloss,test_key])
+                    csv_rows.append([gloss_id, gloss.idgloss, test_key])
         if csv_rows:
             for c_row in csv_rows:
                 print(CSV_DELIMITER.join(c_row))
