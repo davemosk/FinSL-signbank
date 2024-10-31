@@ -411,8 +411,6 @@ def process_orphans():
     )
 
     # Traverse all the NZSL Signbank glosses that are missing S3 objects
-    # NOTE This may actually be the wrong way around, we may want to go from
-    # orphaned S3 objects _back_ to glosses, but it depends on what Micky says
     for video_key, [
         key_in_nzsl,
         key_in_s3,
