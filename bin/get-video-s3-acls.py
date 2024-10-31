@@ -66,8 +66,8 @@ args = parser.parse_args()
 if args.pyenv:
     # Magic required to allow this script to use Signbank Django classes
     # This goes away if this script becomes a Django Management Command
-    print("Importing site-packages environment")
-    print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    print("Importing site-packages environment", file=sys.stderr)
+    print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), file=sys.stderr)
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
     from django.core.wsgi import get_wsgi_application
@@ -410,6 +410,8 @@ def process_orphans():
         get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list()
     )
 
+    print("Gloss ID,Gloss,Suggested Video key")
+
     # Traverse all the NZSL Signbank glosses that are missing S3 objects
     for video_key, [
         key_in_nzsl,
@@ -446,6 +448,8 @@ def process_orphans():
 
         gloss_name = gloss.idgloss.split(":")[0].strip()
 
+        csv_rows = []
+
         # We try to find the orphaned S3 object, if it exists
         # TODO We could improve on brute-force by installing new libraries eg. rapidfuzz
         for test_key, [key_nzsl_yes, key_s3_yes, *_] in all_keys_dict.items():
@@ -457,8 +461,10 @@ def process_orphans():
                     if not key_s3_yes:
                         print(f"Anomaly (not in S3): {gloss.idgloss}", file=sys.stderr)
                         continue
-                    print(f"{gloss_id} {gloss.idgloss}")
-                    print(test_key)
+                    csv_rows.append([gloss_id,gloss.idgloss,test_key])
+        if csv_rows:
+            for c_row in csv_rows:
+                print(CSV_DELIMITER.join(c_row))
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
