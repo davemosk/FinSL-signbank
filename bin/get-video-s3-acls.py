@@ -66,7 +66,7 @@ args = parser.parse_args()
 if args.pyenv:
     # Magic required to allow this script to use Signbank Django classes
     # This goes away if this script becomes a Django Management Command
-    print ("Importing site-packages environment")
+    print("Importing site-packages environment")
     print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
@@ -404,6 +404,7 @@ def process_keys(this_all_keys_dict):
     for video_key, dict_row in this_all_keys_dict.items():
         print(build_csv_row(video_key, *dict_row))
 
+
 def process_orphans():
     all_keys_dict = create_all_keys_dict(
         get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list()
@@ -449,7 +450,7 @@ def process_orphans():
 
         # We try to find the orphaned S3 object, if it exists
         # TODO We could improve on brute-force by installing new libraries eg. rapidfuzz
-        for test_key, [ key_nzsl_yes, key_s3_yes, *_ ] in all_keys_dict.items():
+        for test_key, [key_nzsl_yes, key_s3_yes, *_] in all_keys_dict.items():
             if gloss_name in test_key:
                 if str(gloss_id) in test_key:
                     if key_nzsl_yes:
@@ -460,11 +461,6 @@ def process_orphans():
                         continue
                     print(f"{gloss_id} {gloss.idgloss}")
                     print(test_key)
-
-
-
-
-
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
@@ -481,7 +477,9 @@ if args.orphans:
     if args.pyenv:
         process_orphans()
     else:
-        print("Error: You need to tell us you're in an environment with all needed site-packages. See --pyenv")
+        print(
+            "Error: You need to tell us you're in an environment with all needed site-packages. See --pyenv"
+        )
     exit()
 
 process_keys(
