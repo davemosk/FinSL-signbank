@@ -35,8 +35,6 @@ from django.test import Client
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.db.utils import IntegrityError
-
-
 from signbank.dictionary.models import (
     Dataset,
     FieldChoice,
@@ -50,7 +48,8 @@ from signbank.dictionary.models import (
 from signbank.video.models import GlossVideo
 
 parser = argparse.ArgumentParser(
-    description="You need to run this in a venv that has all the right Python site-packages. You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
+    description="You need to run this in a venv that has all the right Python site-packages. "
+    "You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
     "Postgres access details, eg. DATABASE_URL env var."
 )
 parser.add_argument(
