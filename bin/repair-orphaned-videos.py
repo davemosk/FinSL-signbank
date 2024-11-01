@@ -173,8 +173,9 @@ def process_csv():
         )
         print(gloss_video)
 
-        # At this point the repair should be complete
+        # At this point we complete the repair
         # WARNING, it tries to save to the current storage medium, so this needs sorting out!
+        # save() is overridden in the GlossVideo model
         # Hm, maybe we SHOULD just write to the database after all, and hope Django copes?
         #gloss_video.save()
 
