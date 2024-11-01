@@ -136,7 +136,9 @@ def read_csv(csv_filename):
 
 
 def process_csv():
-    main_video_type = FieldChoice.objects.filter(field="video_type", english_name="main").first()
+    main_video_type = FieldChoice.objects.filter(
+        field="video_type", english_name="main"
+    ).first()
 
     csv_rows = read_csv(args.csv_filename)
     for csv_row in csv_rows:
@@ -160,11 +162,9 @@ def process_csv():
             title=video_key,
             version=0,
             is_public=False,
-            video_type=main_video_type
+            video_type=main_video_type,
         )
         print(gloss_video)
-
-
 
 
 print(f"Env:         {args.env}", file=sys.stderr)

@@ -20,6 +20,24 @@ from time import sleep
 from uuid import uuid4
 from pprint import pprint
 
+# Magic required to allow this script to use Signbank Django classes
+# This goes away if this script becomes a Django Management Command
+print("Importing site-packages environment", file=sys.stderr)
+print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), file=sys.stderr)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
+from django.core.wsgi import get_wsgi_application
+
+get_wsgi_application()
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+from signbank.dictionary.models import (
+    Gloss,
+)
+
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -44,24 +62,6 @@ parser.add_argument(
     help=f"AWS client path (default: %(default)s)",
 )
 args = parser.parse_args()
-
-# Magic required to allow this script to use Signbank Django classes
-# This goes away if this script becomes a Django Management Command
-print("Importing site-packages environment", file=sys.stderr)
-print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), file=sys.stderr)
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
-from django.core.wsgi import get_wsgi_application
-
-get_wsgi_application()
-
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-from signbank.dictionary.models import (
-    Gloss,
-)
 
 # Keep synced with other scripts
 GLOSS_ID_COLUMN = "Gloss ID"
