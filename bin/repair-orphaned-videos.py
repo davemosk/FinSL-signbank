@@ -19,6 +19,28 @@ import argparse
 from time import sleep
 from pprint import pprint
 
+# Magic required to allow this script to use Signbank Django classes
+# This goes away if this script becomes a Django Management Command
+print("Importing site-packages environment", file=sys.stderr)
+print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), file=sys.stderr)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
+from django.core.wsgi import get_wsgi_application
+
+get_wsgi_application()
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+from signbank.dictionary.models import (
+    FieldChoice,
+    Gloss,
+)
+from signbank.video.models import GlossVideo
+
+from django.core.exceptions import ObjectDoesNotExist
+
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -48,25 +70,6 @@ parser.add_argument(
     help=f"AWS client path (default: %(default)s)",
 )
 args = parser.parse_args()
-
-# Magic required to allow this script to use Signbank Django classes
-# This goes away if this script becomes a Django Management Command
-print("Importing site-packages environment", file=sys.stderr)
-print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), file=sys.stderr)
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
-from django.core.wsgi import get_wsgi_application
-
-get_wsgi_application()
-
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-from signbank.dictionary.models import (
-    Gloss,
-)
-from signbank.video.models import GlossVideo
 
 # Keep synced with other scripts
 GLOSS_ID_COLUMN = "Gloss ID"
@@ -133,14 +136,35 @@ def read_csv(csv_filename):
 
 
 def process_csv():
+    main_video_type = FieldChoice.objects.filter(field="video_type", english_name="main").first()
+
     csv_rows = read_csv(args.csv_filename)
     for csv_row in csv_rows:
-        gloss_id = int(csv_row[GLOSS_ID_COLUMN])
+        gloss_id = csv_row[GLOSS_ID_COLUMN]
         gloss_idgloss = csv_row[GLOSS_COLUMN]
         video_key = csv_row[GLOSS_VIDEO_COLUMN]
-        print(gloss_id)
-        print(gloss_idgloss)
-        print(video_key)
+        print(CSV_DELIMITER.join([gloss_id, gloss_idgloss, video_key]))
+        gloss_id = int(gloss_id)
+
+        try:
+            gloss = Gloss.objects.get(id=gloss_id)
+            print(gloss)
+        except ObjectDoesNotExist as e:
+            print(e)
+            continue
+
+        gloss_video = GlossVideo(
+            gloss=gloss,
+            dataset=gloss.dataset,
+            videofile=video_key,
+            title=video_key,
+            version=0,
+            is_public=False,
+            video_type=main_video_type
+        )
+        print(gloss_video)
+
+
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
