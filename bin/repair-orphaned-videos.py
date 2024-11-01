@@ -13,6 +13,7 @@
 
 import os
 import sys
+import csv
 import subprocess
 import argparse
 import re
@@ -25,6 +26,14 @@ parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
     "Postgres access details, eg. DATABASE_URL env var."
 )
+
+# Positional arguments
+parser.add_argument(
+    "csv_filename",
+    help="Name of CSV file"
+)
+
+# Optional arguments
 parser.add_argument(
     "--env",
     default="uat",
@@ -55,24 +64,12 @@ from django.core.wsgi import get_wsgi_application
 
 get_wsgi_application()
 
-from django.contrib.auth.models import Permission
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-from django.test import Client
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.urls import reverse
-from django.db.utils import IntegrityError
 from signbank.dictionary.models import (
-    Dataset,
-    FieldChoice,
     Gloss,
-    GlossTranslations,
-    Language,
-    ManualValidationAggregation,
-    ShareValidationAggregation,
-    ValidationRecord,
 )
 from signbank.video.models import GlossVideo
 
@@ -123,6 +120,10 @@ def aws_cli(args_list):
             print(e.stderr, file=sys.stderr)
             sleep(1)
     return output
+
+
+def read_csv(csv_filename):
+    pass
 
 
 print(f"Env:         {args.env}", file=sys.stderr)

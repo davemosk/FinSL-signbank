@@ -55,26 +55,13 @@ from django.core.wsgi import get_wsgi_application
 
 get_wsgi_application()
 
-from django.contrib.auth.models import Permission
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-from django.test import Client
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.urls import reverse
-from django.db.utils import IntegrityError
 from signbank.dictionary.models import (
-    Dataset,
-    FieldChoice,
     Gloss,
-    GlossTranslations,
-    Language,
-    ManualValidationAggregation,
-    ShareValidationAggregation,
-    ValidationRecord,
 )
-from signbank.video.models import GlossVideo
 
 # Globals
 CSV_DELIMITER = ","
