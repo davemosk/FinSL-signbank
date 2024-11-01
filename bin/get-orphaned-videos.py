@@ -1,4 +1,7 @@
 #!/usr/bin/env -S python3 -u
+#
+# This script needs to be run in a pyenv virtualenv with the Django project installed.
+#
 # Bang line above passes '-u' to python, for unbuffered output
 # Permissions required:
 #  psql - access to heroku app's postgres
@@ -39,13 +42,6 @@ parser.add_argument(
     default="/usr/local/bin/aws",
     required=False,
     help=f"AWS client path (default: %(default)s)",
-)
-parser.add_argument(
-    "--pyenv",
-    default=False,
-    required=False,
-    action="store_true",
-    help=f"Yes, we are running in a pyenv virtualenv that has all the right site-packages installed",
 )
 args = parser.parse_args()
 
@@ -304,7 +300,7 @@ def find_orphans():
         video_path = gloss.get_video_path()
 
         # Skip any that already have a video path
-        # These should have an S3 object but don't. For some reason the video never made it to S3
+        # These should have an S3 object but don't: For some reason the video never made it to S3
         # These will have to have their videos reinstated (separate operation)
         if len(video_path) > 0:
             continue
@@ -329,9 +325,4 @@ print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
 
-if args.pyenv:
-    find_orphans()
-else:
-    print(
-        "Error: You need to tell us you're in an environment with all needed site-packages. See --pyenv"
-    )
+find_orphans()
