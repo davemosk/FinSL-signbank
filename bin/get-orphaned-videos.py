@@ -302,8 +302,8 @@ def find_orphans():
         gloss = Gloss.objects.get(id=gloss_id)
         video_path = gloss.get_video_path()
 
-        # Skip any that already have a video path
-        # If these had S3 video candidates they should not have made it this far
+        # Skip any that already have a video path.
+        # These should have an S3 object but don't. For some reason the video never made it to S3.
         # These will have to have their videos reinstated (separate operation)
         if len(video_path) > 0:
             continue
