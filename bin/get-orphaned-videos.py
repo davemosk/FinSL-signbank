@@ -49,37 +49,36 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-if args.pyenv:
-    # Magic required to allow this script to use Signbank Django classes
-    # This goes away if this script becomes a Django Management Command
-    print("Importing site-packages environment", file=sys.stderr)
-    print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), file=sys.stderr)
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
-    from django.core.wsgi import get_wsgi_application
+# Magic required to allow this script to use Signbank Django classes
+# This goes away if this script becomes a Django Management Command
+print("Importing site-packages environment", file=sys.stderr)
+print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), file=sys.stderr)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
+from django.core.wsgi import get_wsgi_application
 
-    get_wsgi_application()
+get_wsgi_application()
 
-    from django.contrib.auth.models import Permission
-    from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.contrib.auth import get_user_model
 
-    User = get_user_model()
+User = get_user_model()
 
-    from django.test import Client
-    from django.core.files.uploadedfile import SimpleUploadedFile
-    from django.urls import reverse
-    from django.db.utils import IntegrityError
-    from signbank.dictionary.models import (
-        Dataset,
-        FieldChoice,
-        Gloss,
-        GlossTranslations,
-        Language,
-        ManualValidationAggregation,
-        ShareValidationAggregation,
-        ValidationRecord,
-    )
-    from signbank.video.models import GlossVideo
+from django.test import Client
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+from django.db.utils import IntegrityError
+from signbank.dictionary.models import (
+    Dataset,
+    FieldChoice,
+    Gloss,
+    GlossTranslations,
+    Language,
+    ManualValidationAggregation,
+    ShareValidationAggregation,
+    ValidationRecord,
+)
+from signbank.video.models import GlossVideo
 
 # Globals
 CSV_DELIMITER = ","
@@ -329,9 +328,4 @@ print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
 
-if args.pyenv:
-    find_orphans()
-else:
-    print(
-        "Error: You need to tell us you're in an environment with all needed site-packages. See --pyenv"
-    )
+find_orphans()
