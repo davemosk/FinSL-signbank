@@ -240,19 +240,25 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
     for video_key in this_s3_bucket_raw_keys_list:
         dict_row = this_nzsl_raw_keys_dict.get(video_key, None)
         if dict_row:
+            # NZSL glossvideo record for this S3 key
             this_all_keys_dict[video_key] = [
                 True,  # NZSL PRESENT
                 True,  # S3 PRESENT
             ] + dict_row
         else:
+            # S3 key with no corresponding NZSL glossvideo record
             this_all_keys_dict[video_key] = [
                 False,  # NZSL Absent
                 True,  # S3 PRESENT
             ] + [""] * 6
 
-    # Find NZSL keys that are absent from S3 (present handled above)
+    # Find NZSL keys that are absent from S3 (present in both handled above)
     for video_key, dict_row in this_nzsl_raw_keys_dict.items():
         if video_key not in this_s3_bucket_raw_keys_list:
+            # gloss/glossvideo record with no corresponding S3 key
+            # Either:
+            # video_key is real, but the S3 object is missing
+            # video_key is fake (to handle the FULL JOIN) and this gloss/glossvideo never had an S3 object
             this_all_keys_dict[video_key] = [
                 True,  # NZSL PRESENT
                 False,  # S3 Absent
