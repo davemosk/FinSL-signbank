@@ -26,7 +26,7 @@ parser = argparse.ArgumentParser(
 )
 
 # Positional arguments
-parser.add_argument("csv_filename", help="Name of CSV file")
+parser.add_argument("csv_filename", help="Name of CSV file, or '-' for STDIN")
 
 # Optional arguments
 parser.add_argument(
@@ -130,7 +130,7 @@ def read_csv(csv_filename):
         f = open(csv_filename, "r")
     csv_dict = csv.DictReader(f)
     for row in csv_dict:
-        pprint(row)
+        pprint(row[GLOSS_COLUMN])
         # print(dict(row))
 
 
