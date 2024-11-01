@@ -123,15 +123,24 @@ def aws_cli(args_list):
     return output
 
 
+# Returns a list of dictionaries, one for each CSV row
 def read_csv(csv_filename):
     if csv_filename == "-":
         f = sys.stdin.read().splitlines()
     else:
         f = open(csv_filename, "r")
-    csv_dict = csv.DictReader(f)
-    for row in csv_dict:
-        pprint(row[GLOSS_COLUMN])
-        # print(dict(row))
+    return csv.DictReader(f)
+
+
+def process_csv():
+    csv_rows = read_csv(args.csv_filename)
+    for csv_row in csv_rows:
+        gloss_id = int(csv_row[GLOSS_ID_COLUMN])
+        gloss_idgloss = csv_row[GLOSS_COLUMN]
+        video_key = csv_row[GLOSS_VIDEO_COLUMN]
+        print(gloss_id)
+        print(gloss_idgloss)
+        print(video_key)
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
@@ -140,4 +149,5 @@ print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
 
-read_csv(args.csv_filename)
+
+process_csv()
