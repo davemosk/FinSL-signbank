@@ -64,6 +64,7 @@ from signbank.dictionary.models import (
 )
 
 # Globals
+GLOBAL_COLUMN_HEADINGS = ["Gloss ID", "Gloss", "Suggested Video key"]  # Keep synced with other scripts
 CSV_DELIMITER = ","
 FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
@@ -254,7 +255,7 @@ def find_orphans():
         get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list()
     )
 
-    print("Gloss ID,Gloss,Suggested Video key")
+    print(CSV_DELIMITER.join(GLOBAL_COLUMN_HEADINGS))
 
     # Traverse all the NZSL Signbank glosses that are missing S3 objects
     for video_key, [

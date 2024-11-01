@@ -16,9 +16,7 @@ import sys
 import csv
 import subprocess
 import argparse
-import re
 from time import sleep
-from uuid import uuid4
 from pprint import pprint
 
 
@@ -28,10 +26,7 @@ parser = argparse.ArgumentParser(
 )
 
 # Positional arguments
-parser.add_argument(
-    "csv_filename",
-    help="Name of CSV file"
-)
+parser.add_argument("csv_filename", help="Name of CSV file")
 
 # Optional arguments
 parser.add_argument(
@@ -74,6 +69,11 @@ from signbank.dictionary.models import (
 from signbank.video.models import GlossVideo
 
 # Globals
+GLOBAL_COLUMN_HEADINGS = [
+    "Gloss ID",
+    "Gloss",
+    "Suggested Video key",
+]  # Keep synced with other scripts
 CSV_DELIMITER = ","
 FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
@@ -123,7 +123,14 @@ def aws_cli(args_list):
 
 
 def read_csv(csv_filename):
-    pass
+    if csv_filename == "-":
+        f = sys.stdin.read().splitlines()
+    else:
+        f = open(csv_filename, "r")
+    csv_dict = csv.DictReader(f)
+    for row in csv_dict:
+        pprint(row)
+        # print(dict(row))
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
@@ -132,3 +139,4 @@ print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
 
+read_csv(args.csv_filename)
