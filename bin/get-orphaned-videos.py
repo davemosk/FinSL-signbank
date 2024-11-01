@@ -306,7 +306,6 @@ def find_orphans():
         # Skip any that already have a video path
         # These should have an S3 object but don't. For some reason the video never made it to S3
         # These will have to have their videos reinstated (separate operation)
-        # TODO If it's worth it, make a --param to output these
         if len(video_path) > 0:
             continue
 
