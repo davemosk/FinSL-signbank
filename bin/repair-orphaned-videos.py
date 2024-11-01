@@ -40,6 +40,7 @@ from signbank.dictionary.models import (
 from signbank.video.models import GlossVideo
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import models
 
 
 parser = argparse.ArgumentParser(
@@ -172,6 +173,8 @@ def process_csv():
             video_type=main_video_type,
         )
         print(gloss_video)
+        # HOLY ****, this works!
+        gloss_video.save = models.Model.save
 
         # At this point we complete the repair
         # WARNING, it tries to save to the current storage medium, so this needs sorting out!
@@ -179,7 +182,8 @@ def process_csv():
         # save() is overridden in the GlossVideo model
         # Hm, maybe we SHOULD just write to the database after all, and hope Django copes?
         # Yeah, starting to think that's the way to go, IF postgres will allow us to do so (constraints)
-        #gloss_video.save()
+        # HOLY ****, this works!
+        gloss_video.save(gloss_video)
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
