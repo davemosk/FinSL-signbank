@@ -17,7 +17,6 @@ from time import sleep
 from uuid import uuid4
 from pprint import pprint
 
-
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
     "Postgres access details, eg. DATABASE_URL env var."
@@ -47,53 +46,7 @@ parser.add_argument(
     action="store_true",
     help=f"Dump raw NZSL database output",
 )
-parser.add_argument(
-    "--pyenv",
-    default=False,
-    required=False,
-    action="store_true",
-    help=f"Yes, we are running in a pyenv virtualenv that has all the right site-packages installed",
-)
-parser.add_argument(
-    "--orphans",
-    default=False,
-    required=False,
-    action="store_true",
-    help=f"Try to identify and match-up S3 orphans (requires --pyenv)",
-)
 args = parser.parse_args()
-
-if args.pyenv:
-    # Magic required to allow this script to use Signbank Django classes
-    # This goes away if this script becomes a Django Management Command
-    print("Importing site-packages environment", file=sys.stderr)
-    print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), file=sys.stderr)
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
-    from django.core.wsgi import get_wsgi_application
-
-    get_wsgi_application()
-
-    from django.contrib.auth.models import Permission
-    from django.contrib.auth import get_user_model
-
-    User = get_user_model()
-
-    from django.test import Client
-    from django.core.files.uploadedfile import SimpleUploadedFile
-    from django.urls import reverse
-    from django.db.utils import IntegrityError
-    from signbank.dictionary.models import (
-        Dataset,
-        FieldChoice,
-        Gloss,
-        GlossTranslations,
-        Language,
-        ManualValidationAggregation,
-        ShareValidationAggregation,
-        ValidationRecord,
-    )
-    from signbank.video.models import GlossVideo
 
 # Globals
 CSV_DELIMITER = ","
@@ -405,68 +358,6 @@ def process_keys(this_all_keys_dict):
         print(build_csv_row(video_key, *dict_row))
 
 
-def process_orphans():
-    all_keys_dict = create_all_keys_dict(
-        get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list()
-    )
-
-    print("Gloss ID,Gloss,Suggested Video key")
-
-    # Traverse all the NZSL Signbank glosses that are missing S3 objects
-    for video_key, [
-        key_in_nzsl,
-        key_in_s3,
-        gloss_idgloss,
-        gloss_created_at,
-        gloss_id,
-        video_id,
-        gloss_public,
-        video_public,
-    ] in all_keys_dict.items():
-
-        if not key_in_nzsl:
-            # This is an S3 object, not a Signbank record
-            continue
-
-        if key_in_s3:
-            # This Signbank record already has an S3 object, all is well
-            continue
-
-        # Business rule
-        if int(gloss_id) < 8000:
-            continue
-
-        # The gloss_id is the only reliable retrieval key at the Signbank end
-        gloss = Gloss.objects.get(id=gloss_id)
-        video_path = gloss.get_video_path()
-
-        # Skip any that already have a video path
-        # If these had S3 video candidates they should not have made it this far
-        # These will have to have their videos reinstated (separate operation)
-        if len(video_path) > 0:
-            continue
-
-        gloss_name = gloss.idgloss.split(":")[0].strip()
-
-        csv_rows = []
-
-        # We try to find the orphaned S3 object, if it exists
-        # TODO We could improve on brute-force by installing new libraries eg. rapidfuzz
-        for test_key, [key_nzsl_yes, key_s3_yes, *_] in all_keys_dict.items():
-            if gloss_name in test_key:
-                if str(gloss_id) in test_key:
-                    if key_nzsl_yes:
-                        print(f"Anomaly (in NZSL): {gloss.idgloss}", file=sys.stderr)
-                        continue
-                    if not key_s3_yes:
-                        print(f"Anomaly (not in S3): {gloss.idgloss}", file=sys.stderr)
-                        continue
-                    csv_rows.append([gloss_id, gloss.idgloss, test_key])
-        if csv_rows:
-            for c_row in csv_rows:
-                print(CSV_DELIMITER.join(c_row))
-
-
 print(f"Env:         {args.env}", file=sys.stderr)
 print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
@@ -475,15 +366,6 @@ print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
 
 if args.dumpnzsl:
     pprint(get_nzsl_raw_keys_dict())
-    exit()
-
-if args.orphans:
-    if args.pyenv:
-        process_orphans()
-    else:
-        print(
-            "Error: You need to tell us you're in an environment with all needed site-packages. See --pyenv"
-        )
     exit()
 
 process_keys(
