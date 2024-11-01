@@ -68,12 +68,13 @@ from signbank.dictionary.models import (
 )
 from signbank.video.models import GlossVideo
 
-# Globals
-GLOBAL_COLUMN_HEADINGS = [
-    "Gloss ID",
-    "Gloss",
-    "Suggested Video key",
-]  # Keep synced with other scripts
+# Keep synced with other scripts
+GLOSS_ID_COLUMN = "Gloss ID"
+GLOSS_COLUMN = "Gloss"
+GLOSS_VIDEO_COLUMN = "Suggested Video key"
+GLOBAL_COLUMN_HEADINGS = [GLOSS_ID_COLUMN, GLOSS_COLUMN, GLOSS_VIDEO_COLUMN]
+
+# Other globals
 CSV_DELIMITER = ","
 FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
