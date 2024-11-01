@@ -41,25 +41,11 @@ parser.add_argument(
     help=f"AWS client path (default: %(default)s)",
 )
 parser.add_argument(
-    "--dumpnzsl",
-    default=False,
-    required=False,
-    action="store_true",
-    help=f"Dump raw NZSL database output",
-)
-parser.add_argument(
     "--pyenv",
     default=False,
     required=False,
     action="store_true",
     help=f"Yes, we are running in a pyenv virtualenv that has all the right site-packages installed",
-)
-parser.add_argument(
-    "--orphans",
-    default=False,
-    required=False,
-    action="store_true",
-    help=f"Try to identify and match-up S3 orphans (requires --pyenv)",
 )
 args = parser.parse_args()
 
@@ -275,137 +261,7 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
     return this_all_keys_dict
 
 
-# Cases
-# In S3     In NZSL     Action
-#   Is        Not         Delete S3 Object
-#   Is        Is          Update ACL
-#   Not       Is          Review
-#      Other              Review
-def get_recommended_action(key_in_nzsl, key_in_s3):
-    if key_in_s3:
-        if key_in_nzsl:
-            return "Update ACL"
-        else:
-            return "Delete S3 Object"
-    return "Review"
-
-
-# Get S3 object's ACL
-def get_s3_canned_acl(video_key):
-    result = aws_cli(
-        [
-            "s3api",
-            "get-object-acl",
-            "--output",
-            "text",
-            "--query",
-            "Grants[*].Permission",
-            "--bucket",
-            AWS_S3_BUCKET,
-            "--key",
-            video_key,
-        ]
-    )
-    acls_grants = result.stdout.strip().split("\t")
-
-    if len(acls_grants) > 1:
-        if acls_grants[0] == "FULL_CONTROL" and acls_grants[1] == "READ":
-            return "public-read"
-    elif acls_grants[0] == "FULL_CONTROL":
-        return "private"
-
-    return "unknown"
-
-
-# Get S3 object's LastModified date/time
-def get_s3_lastmodified(video_key):
-    result = aws_cli(
-        [
-            "s3api",
-            "head-object",
-            "--output",
-            "text",
-            "--query",
-            "LastModified",
-            "--bucket",
-            AWS_S3_BUCKET,
-            "--key",
-            video_key,
-        ]
-    )
-    return result.stdout.strip()
-
-
-def build_csv_header():
-    return CSV_DELIMITER.join(
-        [
-            "Action",
-            "S3 Video key",
-            "S3 LastModified",
-            "S3 Expected Canned ACL",
-            "S3 Actual Canned ACL",
-            "Sbank Gloss ID",
-            "Sbank Video ID",
-            "Sbank Gloss public",
-            "Sbank Video public",
-            "Sbank Gloss",
-            "Sbank Gloss created at",
-        ]
-    )
-
-
-def build_csv_row(
-    video_key,
-    key_in_nzsl=False,
-    key_in_s3=False,
-    gloss_idgloss=None,
-    gloss_created_at=None,
-    gloss_id=None,
-    video_id=None,
-    gloss_public=False,
-    video_public=False,
-):
-    # See signbank/video/models.py, line 59, function set_public_acl()
-    canned_acl_expected = ""
-    if key_in_nzsl:
-        canned_acl_expected = "public-read" if video_public else "private"
-
-    lastmodified = ""
-    canned_acl = ""
-    if key_in_s3:
-        lastmodified = get_s3_lastmodified(video_key)
-        canned_acl = get_s3_canned_acl(video_key)
-
-    action = get_recommended_action(key_in_nzsl, key_in_s3)
-
-    return CSV_DELIMITER.join(
-        [
-            action,
-            f"{filter_fakekey(video_key)}",
-            f"{lastmodified}",
-            f"{canned_acl_expected}",
-            f"{canned_acl}",
-            f"{gloss_id}",
-            f"{video_id}",
-            f"{gloss_public}",
-            f"{video_public}",
-            f"{gloss_idgloss}",
-            f"{gloss_created_at}",
-        ]
-    )
-
-
-# From the keys present in NZSL, get all their S3 information
-def process_keys(this_all_keys_dict):
-    print(f"Getting detailed S3 data for keys ({AWS_S3_BUCKET}) ...", file=sys.stderr)
-
-    print(build_csv_header())
-
-    for video_key, dict_row in this_all_keys_dict.items():
-        print(build_csv_row(video_key, *dict_row))
-
-
-def process_orphans():
+def find_orphans():
     all_keys_dict = create_all_keys_dict(
         get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list()
     )
@@ -473,19 +329,9 @@ print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
 
-if args.dumpnzsl:
-    pprint(get_nzsl_raw_keys_dict())
-    exit()
-
-if args.orphans:
-    if args.pyenv:
-        process_orphans()
-    else:
-        print(
-            "Error: You need to tell us you're in an environment with all needed site-packages. See --pyenv"
-        )
-    exit()
-
-process_keys(
-    create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
-)
+if args.pyenv:
+    find_orphans()
+else:
+    print(
+        "Error: You need to tell us you're in an environment with all needed site-packages. See --pyenv"
+    )
