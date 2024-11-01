@@ -300,17 +300,15 @@ def find_orphans():
 
         # The gloss_id is the only reliable retrieval key at the Signbank end
         gloss = Gloss.objects.get(id=gloss_id)
+        gloss_name = gloss.idgloss.split(":")[0].strip()
         video_path = gloss.get_video_path()
 
-        # Skip any that already have a video path.
-        # These should have an S3 object but don't. For some reason the video never made it to S3.
+        # Skip any that already have a video path
+        # These should have an S3 object but don't. For some reason the video never made it to S3
         # These will have to have their videos reinstated (separate operation)
+        # TODO If it's worth it, make a --param to output these
         if len(video_path) > 0:
             continue
-
-        gloss_name = gloss.idgloss.split(":")[0].strip()
-
-        csv_rows = []
 
         # We try to find the orphaned S3 object, if it exists
         # TODO We could improve on brute-force by installing new libraries eg. rapidfuzz
@@ -323,10 +321,7 @@ def find_orphans():
                     if not key_s3_yes:
                         print(f"Anomaly (not in S3): {gloss.idgloss}", file=sys.stderr)
                         continue
-                    csv_rows.append([gloss_id, gloss.idgloss, test_key])
-        if csv_rows:
-            for c_row in csv_rows:
-                print(CSV_DELIMITER.join(c_row))
+                    print(CSV_DELIMITER.join([gloss_id, gloss.idgloss, test_key]))
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
