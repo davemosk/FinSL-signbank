@@ -155,6 +155,13 @@ def process_csv():
             print(e)
             continue
 
+        try:
+            GlossVideo.objects.get(videofile=video_key)
+            print(f"Error: GlossVideo already exists: {video_key}")
+            continue
+        except ObjectDoesNotExist:
+            pass
+
         gloss_video = GlossVideo(
             gloss=gloss,
             dataset=gloss.dataset,
@@ -165,6 +172,11 @@ def process_csv():
             video_type=main_video_type,
         )
         print(gloss_video)
+
+        # At this point the repair should be complete
+        # WARNING, it tries to save to the current storage medium, so this needs sorting out!
+        # Hm, maybe we SHOULD just write to the database after all, and hope Django copes?
+        #gloss_video.save()
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
