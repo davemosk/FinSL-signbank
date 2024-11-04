@@ -21,6 +21,7 @@ import argparse
 import re
 from time import sleep
 from uuid import uuid4
+import boto3
 from pprint import pprint
 
 # Magic required to allow this script to use Signbank Django classes
@@ -58,12 +59,6 @@ parser.add_argument(
     required=False,
     help=f"Postgres client path (default: %(default)s)",
 )
-parser.add_argument(
-    "--awscli",
-    default="/usr/local/bin/aws",
-    required=False,
-    help=f"AWS client path (default: %(default)s)",
-)
 args = parser.parse_args()
 
 # Keep synced with other scripts
@@ -76,7 +71,6 @@ GLOBAL_COLUMN_HEADINGS = [GLOSS_ID_COLUMN, GLOSS_COLUMN, GLOSS_VIDEO_COLUMN]
 CSV_DELIMITER = ","
 FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-AWSCLI = args.awscli
 PGCLI = args.pgcli
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
 
@@ -96,29 +90,6 @@ def pg_cli(args_list):
         print(e.stdout, file=sys.stderr)
         print(e.stderr, file=sys.stderr)
         exit()
-
-
-def aws_cli(args_list):
-    # Try indefinitely
-    output = None
-    while not output:
-        try:
-            output = subprocess.run(
-                [AWSCLI] + args_list,
-                env=os.environ,
-                capture_output=True,
-                check=True,
-                text=True,
-            )
-        except subprocess.CalledProcessError as e:
-            print(
-                f"Error: subprocess.run returned code {e.returncode}", file=sys.stderr
-            )
-            print(e.cmd, file=sys.stderr)
-            print(e.stdout, file=sys.stderr)
-            print(e.stderr, file=sys.stderr)
-            sleep(1)
-    return output
 
 
 # Fake key is a hack to handle FULL JOIN
@@ -196,20 +167,12 @@ def get_nzsl_raw_keys_dict():
 # Get all keys from AWS S3
 def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
-    result = aws_cli(
-        [
-            "s3",
-            "ls",
-            f"s3://{s3_bucket}",
-            "--recursive",
-        ],
-    )
 
-    # Separate out just the key from date, time, size, key
-    this_s3_bucket_raw_keys_list = []
-    for line in result.stdout.split("\n"):
-        if line:
-            this_s3_bucket_raw_keys_list.append(re.split(r"\s+", line, 3)[3])
+    s3_resource = boto3.resource("s3")
+    s3_resource_bucket = s3_resource.Bucket(s3_bucket)
+    this_s3_bucket_raw_keys_list = [
+        s3_object.key for s3_object in s3_resource_bucket.objects.all()
+    ]
 
     print(
         f"{len(this_s3_bucket_raw_keys_list)} rows retrieved",
@@ -316,7 +279,6 @@ def find_orphans():
 
 print(f"Env:         {args.env}", file=sys.stderr)
 print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
-print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
 
