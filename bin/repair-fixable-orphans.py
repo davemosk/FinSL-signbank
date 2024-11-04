@@ -20,8 +20,6 @@ import sys
 import csv
 import subprocess
 import argparse
-from time import sleep
-from pprint import pprint
 
 # Magic required to allow this script to use Signbank Django classes
 # This goes away if this script becomes a Django Management Command
@@ -68,12 +66,6 @@ parser.add_argument(
     required=False,
     help=f"Postgres client path (default: %(default)s)",
 )
-parser.add_argument(
-    "--awscli",
-    default="/usr/local/bin/aws",
-    required=False,
-    help=f"AWS client path (default: %(default)s)",
-)
 args = parser.parse_args()
 
 # Keep synced with other scripts
@@ -86,7 +78,6 @@ GLOBAL_COLUMN_HEADINGS = [GLOSS_ID_COLUMN, GLOSS_COLUMN, GLOSS_VIDEO_COLUMN]
 CSV_DELIMITER = ","
 FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-AWSCLI = args.awscli
 PGCLI = args.pgcli
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
 
@@ -106,29 +97,6 @@ def pg_cli(args_list):
         print(e.stdout, file=sys.stderr)
         print(e.stderr, file=sys.stderr)
         exit()
-
-
-def aws_cli(args_list):
-    # Try indefinitely
-    output = None
-    while not output:
-        try:
-            output = subprocess.run(
-                [AWSCLI] + args_list,
-                env=os.environ,
-                capture_output=True,
-                check=True,
-                text=True,
-            )
-        except subprocess.CalledProcessError as e:
-            print(
-                f"Error: subprocess.run returned code {e.returncode}", file=sys.stderr
-            )
-            print(e.cmd, file=sys.stderr)
-            print(e.stdout, file=sys.stderr)
-            print(e.stderr, file=sys.stderr)
-            sleep(1)
-    return output
 
 
 # Returns a list of dictionaries, one for each CSV row
@@ -155,7 +123,6 @@ def process_csv():
 
         try:
             gloss = Gloss.objects.get(id=gloss_id)
-            print(gloss)
         except ObjectDoesNotExist as e:
             print(e)
             continue
@@ -176,6 +143,7 @@ def process_csv():
             is_public=False,
             video_type=main_video_type,
         )
+        print(gloss)
         print(gloss_video)
         # At this point we complete the repair
         # We use bulk_create() because we cannot allow save() to run
@@ -185,9 +153,7 @@ def process_csv():
 
 print(f"Env:         {args.env}", file=sys.stderr)
 print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
-print(f"AWSCLI:      {AWSCLI}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
-
 
 process_csv()
