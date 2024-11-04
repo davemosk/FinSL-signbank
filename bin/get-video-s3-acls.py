@@ -46,6 +46,13 @@ parser.add_argument(
     action="store_true",
     help=f"Dump raw NZSL database output",
 )
+parser.add_argument(
+    "--dumps3",
+    default=False,
+    required=False,
+    action="store_true",
+    help=f"Dump raw S3 keys output",
+)
 args = parser.parse_args()
 
 # Globals
@@ -368,6 +375,11 @@ if args.dumpnzsl:
     pprint(get_nzsl_raw_keys_dict())
     exit()
 
+if args.dumps3:
+    pprint(get_s3_bucket_raw_keys_list())
+    exit()
+
 process_keys(
     create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
 )
+
