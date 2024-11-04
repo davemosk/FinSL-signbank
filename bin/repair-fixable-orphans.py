@@ -174,10 +174,8 @@ def process_csv():
         )
         print(gloss_video)
         # At this point we complete the repair
-        # We cannot allow the GlossVideo save() method to run, as it has side-effects including
-        # trying to save the video file to the current storage medium (eg. S3)
-        createds = GlossVideo.objects.bulk_create([gloss_video])
-        if len(createds) < 1:
+        # We use bulk_create() because we cannot allow save() to run
+        if len(GlossVideo.objects.bulk_create([gloss_video])) < 1:
             print(f"Error: could not create {gloss_video}")
 
 
