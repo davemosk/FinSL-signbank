@@ -2,6 +2,10 @@
 #
 # This script needs to be run in a pyenv virtualenv with the Django project installed.
 #
+# Given a CSV file containing S3 objects that can be matched back to NZSL entries.
+# Updates the database to repair the NZSL entries.
+# Essentially repairs one form of import error.
+#
 # Bang line above passes '-u' to python, for unbuffered output
 # Permissions required:
 #  psql - access to heroku app's postgres
