@@ -158,7 +158,7 @@ def process_csv():
 
         try:
             GlossVideo.objects.get(videofile=video_key)
-            print(f"Error: GlossVideo already exists: {video_key}")
+            print(f"Ignoring: GlossVideo already exists: {video_key}")
             continue
         except ObjectDoesNotExist:
             pass
@@ -173,17 +173,12 @@ def process_csv():
             video_type=main_video_type,
         )
         print(gloss_video)
-        # HOLY ****, this works!
-        gloss_video.save = models.Model.save
-
         # At this point we complete the repair
-        # WARNING, it tries to save to the current storage medium, so this needs sorting out!
-        # We absolutely DO NOT want it to try and save!
-        # save() is overridden in the GlossVideo model
-        # Hm, maybe we SHOULD just write to the database after all, and hope Django copes?
-        # Yeah, starting to think that's the way to go, IF postgres will allow us to do so (constraints)
-        # HOLY ****, this works!
-        gloss_video.save(gloss_video)
+        # We cannot allow the GlossVideo save() method to run, as it has side-effects including
+        # trying to save the video file to the current storage medium (eg. S3)
+        createds = GlossVideo.objects.bulk_create([gloss_video])
+        if len(createds) < 1:
+            print(f"Error: could not create {gloss_video}")
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
