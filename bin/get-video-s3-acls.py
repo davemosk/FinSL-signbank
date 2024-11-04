@@ -151,9 +151,11 @@ def get_nzsl_raw_keys_dict():
 def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
 
-    s3_resource = boto3.resource('s3')
+    s3_resource = boto3.resource("s3")
     s3_resource_bucket = s3_resource.Bucket(s3_bucket)
-    this_s3_bucket_raw_keys_list = [ s3_object.key for s3_object in s3_resource_bucket.objects.all() ]
+    this_s3_bucket_raw_keys_list = [
+        s3_object.key for s3_object in s3_resource_bucket.objects.all()
+    ]
 
     print(
         f"{len(this_s3_bucket_raw_keys_list)} rows retrieved",
@@ -214,9 +216,14 @@ def get_recommended_action(key_in_nzsl, key_in_s3):
 # Get S3 object's ACL
 def get_s3_canned_acl(video_key):
     s3_client = boto3.client("s3")
-    acls_grants = s3_client.get_object_acl(Bucket=AWS_S3_BUCKET, Key=video_key)["Grants"]
+    acls_grants = s3_client.get_object_acl(Bucket=AWS_S3_BUCKET, Key=video_key)[
+        "Grants"
+    ]
     if len(acls_grants) > 1:
-        if acls_grants[0]["Permission"] == "FULL_CONTROL" and acls_grants[1]["Permission"] == "READ":
+        if (
+            acls_grants[0]["Permission"] == "FULL_CONTROL"
+            and acls_grants[1]["Permission"] == "READ"
+        ):
             return "public-read"
     elif acls_grants[0]["Permission"] == "FULL_CONTROL":
         return "private"
@@ -226,7 +233,9 @@ def get_s3_canned_acl(video_key):
 
 # Get S3 object's LastModified date/time
 def get_s3_lastmodified(video_key):
-    return boto3.client("s3").head_object(Bucket=AWS_S3_BUCKET, Key=video_key)["LastModified"]
+    return boto3.client("s3").head_object(Bucket=AWS_S3_BUCKET, Key=video_key)[
+        "LastModified"
+    ]
 
 
 def build_csv_header():
@@ -314,4 +323,3 @@ if args.dumps3:
 process_keys(
     create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
 )
-
