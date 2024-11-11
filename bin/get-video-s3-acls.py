@@ -215,6 +215,7 @@ def get_recommended_action(key_in_nzsl, key_in_s3):
 
 # Get S3 object's ACL
 def get_s3_canned_acl(video_key):
+    # TODO pass in a boto client instead of recreating one each time
     s3_client = boto3.client("s3")
     acls_grants = s3_client.get_object_acl(Bucket=AWS_S3_BUCKET, Key=video_key)[
         "Grants"
@@ -233,6 +234,7 @@ def get_s3_canned_acl(video_key):
 
 # Get S3 object's LastModified date/time
 def get_s3_lastmodified(video_key):
+    # TODO pass in a boto client instead of recreating one each time
     return boto3.client("s3").head_object(Bucket=AWS_S3_BUCKET, Key=video_key)[
         "LastModified"
     ]
