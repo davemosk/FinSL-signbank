@@ -18,11 +18,8 @@ import os
 import sys
 import subprocess
 import argparse
-import re
-from time import sleep
 from uuid import uuid4
 import boto3
-from pprint import pprint
 
 # Magic required to allow this script to use Signbank Django classes
 # This goes away if this script becomes a Django Management Command

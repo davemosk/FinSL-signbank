@@ -12,8 +12,6 @@ import os
 import sys
 import subprocess
 import argparse
-import re
-from time import sleep
 from uuid import uuid4
 from pprint import pprint
 import boto3
