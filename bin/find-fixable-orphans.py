@@ -64,8 +64,9 @@ args = parser.parse_args()
 # Keep synced with other scripts
 GLOSS_ID_COLUMN = "Gloss ID"
 GLOSS_COLUMN = "Gloss"
+GLOSS_PUBLIC_COLUMN = "Gloss public"
 GLOSS_VIDEO_COLUMN = "Suggested Video key"
-GLOBAL_COLUMN_HEADINGS = [GLOSS_ID_COLUMN, GLOSS_COLUMN, GLOSS_VIDEO_COLUMN]
+GLOBAL_COLUMN_HEADINGS = [GLOSS_ID_COLUMN, GLOSS_COLUMN, GLOSS_PUBLIC_COLUMN, GLOSS_VIDEO_COLUMN]
 
 # Other globals
 CSV_DELIMITER = ","
@@ -274,7 +275,7 @@ def find_orphans():
                     if not key_s3_yes:
                         print(f"Anomaly (not in S3): {gloss.idgloss}", file=sys.stderr)
                         continue
-                    print(CSV_DELIMITER.join([gloss_id, gloss.idgloss, test_key]))
+                    print(CSV_DELIMITER.join([gloss_id, gloss.idgloss, str(gloss_public), test_key]))
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
