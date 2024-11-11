@@ -226,6 +226,7 @@ def find_orphans():
     all_keys_dict = create_all_keys_dict(
         get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list()
     )
+    print("Finding fixable orphans", file=sys.stderr)
 
     print(CSV_DELIMITER.join(GLOBAL_COLUMN_HEADINGS))
 
