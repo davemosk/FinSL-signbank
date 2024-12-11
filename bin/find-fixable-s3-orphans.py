@@ -285,6 +285,8 @@ def find_orphans():
         # We try to find the orphaned S3 object, if it exists
         # TODO We could improve on brute-force by installing new libraries eg. rapidfuzz
         for test_key, [key_nzsl_yes, key_s3_yes, *_] in all_keys_dict.items():
+            if test_key.startswith(FAKEKEY_PREFIX):
+                continue
             if gloss_name in test_key:
                 if str(gloss_id) in test_key:
                     if key_nzsl_yes:
