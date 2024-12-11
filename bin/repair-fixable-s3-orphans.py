@@ -17,9 +17,9 @@
 
 import os
 import sys
-import csv
 import subprocess
 import argparse
+import csv
 
 # Magic required to allow this script to use Signbank Django classes
 # This goes away if this script becomes a Django Management Command
@@ -127,11 +127,14 @@ def process_csv():
     ).first()
 
     csv_rows = read_csv(args.csv_filename)
+
+    out = csv.writer(sys.stdout, delimiter=CSV_DELIMITER, quoting=csv.QUOTE_NONE)
+
     for csv_row in csv_rows:
         gloss_id = csv_row[GLOSS_ID_COLUMN]
         gloss_idgloss = csv_row[GLOSS_COLUMN]
         video_key = csv_row[GLOSS_VIDEO_COLUMN]
-        print(CSV_DELIMITER.join([gloss_id, gloss_idgloss, video_key]))
+        out.writerow([gloss_id, gloss_idgloss, video_key])
         gloss_id = int(gloss_id)
 
         try:

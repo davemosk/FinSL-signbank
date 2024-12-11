@@ -20,6 +20,7 @@ import subprocess
 import argparse
 from uuid import uuid4
 import boto3
+import csv
 
 # Magic required to allow this script to use Signbank Django classes
 # This goes away if this script becomes a Django Management Command
@@ -250,7 +251,8 @@ def find_orphans():
     )
     print("Finding fixable orphans", file=sys.stderr)
 
-    print(CSV_DELIMITER.join(GLOBAL_COLUMN_HEADINGS))
+    out = csv.writer(sys.stdout, delimiter=CSV_DELIMITER, quoting=csv.QUOTE_NONE)
+    out.writerow(GLOBAL_COLUMN_HEADINGS)
 
     # Traverse all the NZSL Signbank glosses that are missing S3 objects
     for video_key, [
@@ -295,11 +297,7 @@ def find_orphans():
                     if not key_s3_yes:
                         print(f"Anomaly (not in S3): {gloss.idgloss}", file=sys.stderr)
                         continue
-                    print(
-                        CSV_DELIMITER.join(
-                            [gloss_id, gloss.idgloss, str(gloss_public), test_key]
-                        )
-                    )
+                    out.writerow([gloss_id, gloss.idgloss, str(gloss_public), test_key])
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
