@@ -23,8 +23,6 @@ import boto3
 
 # Magic required to allow this script to use Signbank Django classes
 # This goes away if this script becomes a Django Management Command
-print("Importing site-packages environment", file=sys.stderr)
-print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), file=sys.stderr)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
 from django.core.wsgi import get_wsgi_application
@@ -72,10 +70,13 @@ GLOBAL_COLUMN_HEADINGS = [
 
 # Other globals
 CSV_DELIMITER = ","
-FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 PGCLI = args.pgcli
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
+
+# Hack to handle FULL JOIN
+# See get_nzsl_raw_keys_dict()
+FAKEKEY_PREFIX = "this_is_not_a_key_"
 
 
 def pg_cli(args_list):
@@ -146,7 +147,23 @@ def get_nzsl_raw_keys_dict():
             video_key,
         ] = rawl.split("|")
 
-        # Hack to handle FULL JOIN
+        """
+        Hack to handle FULL JOIN.
+        We are storing data rows in a dictionary, indexed by video_key.
+        Because we are doing a FULL JOIN on the NZSL Signbank database,
+        we also get rows where there are gloss entries that do not have
+        a corresponding video_glossvideo.
+        (These are erroneous and one of the reasons this script exists,
+        to find them.)
+        Consequently there is no video_key, and we cannot use it to index
+        the data row.
+        Instead, we create a fake video_key that is unique and, theoretically,
+        impossible for anything else to try and use. It also has a 'safe',
+        easily filtered prefix, which means later code can easily tell
+        a fake key from a real key.
+        Always having a key, in this way, means that code, eg. loops,
+        that depends on there being a dictionary key axis will not break.
+        """
         video_key = maybe_fakekey(video_key.strip())
 
         # This sets the initial field ordering in the all_keys dictionary row
@@ -194,6 +211,9 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
     this_all_keys_dict = {}
 
     # Find S3 keys that are present in NZSL, or absent
+    # TODO This could be changed to use pop(), so that on each pass we are left
+    # with a smaller subset of the rows, which we can search faster. If the
+    # database becomes very large in future this could save a lot of processing.
     for video_key in this_s3_bucket_raw_keys_list:
         dict_row = this_nzsl_raw_keys_dict.get(video_key, None)
         if dict_row:
@@ -252,19 +272,14 @@ def find_orphans():
             # This Signbank record already has an S3 object, all is well
             continue
 
-        # Business rule
-        if int(gloss_id) < 8000:
-            continue
-
         # The gloss_id is the only reliable retrieval key at the Signbank end
         gloss = Gloss.objects.get(id=gloss_id)
         gloss_name = gloss.idgloss.split(":")[0].strip()
-        video_path = gloss.get_video_path()
 
         # Skip any that already have a video path
         # These should have an S3 object but don't: For some reason the video never made it to S3
         # These will have to have their videos reinstated (separate operation)
-        if len(video_path) > 0:
+        if gloss.glossvideo_set.exists():
             continue
 
         # We try to find the orphaned S3 object, if it exists

@@ -66,6 +66,13 @@ parser.add_argument(
     required=False,
     help=f"Postgres client path (default: %(default)s)",
 )
+parser.add_argument(
+    "--dryrun",
+    default=False,
+    required=False,
+    action="store_true",
+    help=f"Don't actually make any changes, just output what would happen",
+)
 args = parser.parse_args()
 
 # Keep synced with other scripts
@@ -151,6 +158,11 @@ def process_csv():
         )
         print(gloss)
         print(gloss_video)
+
+        if args.dryrun:
+            print("Dry run, no changes")
+            continue
+
         # At this point we complete the repair
         # We use bulk_create() because we cannot allow save() to run
         if len(GlossVideo.objects.bulk_create([gloss_video])) < 1:
