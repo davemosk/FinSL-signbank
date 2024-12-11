@@ -15,6 +15,7 @@ import argparse
 from uuid import uuid4
 from pprint import pprint
 import boto3
+import csv
 
 parser = argparse.ArgumentParser(
     description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
@@ -255,21 +256,19 @@ def get_s3_lastmodified(video_key):
 
 
 def build_csv_header():
-    return CSV_DELIMITER.join(
-        [
-            "Action",
-            "S3 Video key",
-            "S3 LastModified",
-            "S3 Expected Canned ACL",
-            "S3 Actual Canned ACL",
-            "Sbank Gloss ID",
-            "Sbank Video ID",
-            "Sbank Gloss public",
-            "Sbank Video public",
-            "Sbank Gloss",
-            "Sbank Gloss created at",
-        ]
-    )
+    return [
+        "Action",
+        "S3 Video key",
+        "S3 LastModified",
+        "S3 Expected Canned ACL",
+        "S3 Actual Canned ACL",
+        "Sbank Gloss ID",
+        "Sbank Video ID",
+        "Sbank Gloss public",
+        "Sbank Video public",
+        "Sbank Gloss",
+        "Sbank Gloss created at",
+    ]
 
 
 def build_csv_row(
@@ -296,31 +295,30 @@ def build_csv_row(
 
     action = get_recommended_action(key_in_nzsl, key_in_s3)
 
-    return CSV_DELIMITER.join(
-        [
-            action,
-            f"{filter_fakekey(video_key)}",
-            f"{lastmodified}",
-            f"{canned_acl_expected}",
-            f"{canned_acl}",
-            f"{gloss_id}",
-            f"{video_id}",
-            f"{gloss_public}",
-            f"{video_public}",
-            f"{gloss_idgloss}",
-            f"{gloss_created_at}",
-        ]
-    )
+    return [
+        action,
+        f"{filter_fakekey(video_key)}",
+        f"{lastmodified}",
+        f"{canned_acl_expected}",
+        f"{canned_acl}",
+        f"{gloss_id}",
+        f"{video_id}",
+        f"{gloss_public}",
+        f"{video_public}",
+        f"{gloss_idgloss}",
+        f"{gloss_created_at}",
+    ]
 
 
 # From the keys present in NZSL, get all their S3 information
 def process_keys(this_all_keys_dict):
     print(f"Getting detailed S3 data for keys ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 
-    print(build_csv_header())
+    out = csv.writer(sys.stdout, delimiter=CSV_DELIMITER, quoting=csv.QUOTE_NONE)
+    out.writerow(build_csv_header())
 
     for video_key, dict_row in this_all_keys_dict.items():
-        print(build_csv_row(video_key, *dict_row))
+        out.writerow(build_csv_row(video_key, *dict_row))
 
 
 print(f"Env:         {args.env}", file=sys.stderr)
