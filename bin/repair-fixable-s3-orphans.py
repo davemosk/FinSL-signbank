@@ -67,11 +67,11 @@ parser.add_argument(
     help=f"Postgres client path (default: %(default)s)",
 )
 parser.add_argument(
-    "--dryrun",
+    "--commit",
     default=False,
     required=False,
     action="store_true",
-    help=f"Don't actually make any changes, just output what would happen",
+    help=f"Actually make changes, instead of just outputting what would happen (default)",
 )
 args = parser.parse_args()
 
@@ -162,8 +162,8 @@ def process_csv():
         print(gloss)
         print(gloss_video)
 
-        if args.dryrun:
-            print("Dry run, no changes")
+        if not args.commit:
+            print("Dry run, no changes (use --commit flag to make changes)")
             continue
 
         # At this point we complete the repair
@@ -176,5 +176,6 @@ print(f"Env:         {args.env}", file=sys.stderr)
 print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
 print(f"PGCLI:       {PGCLI}", file=sys.stderr)
 print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
+print(f"Mode:        {'Commit' if args.commit else 'Dry-run'}")
 
 process_csv()
