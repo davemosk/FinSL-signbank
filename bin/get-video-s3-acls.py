@@ -54,6 +54,8 @@ FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 PGCLI = args.pgcli
 AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
+S3_CLIENT = boto3.client("s3")
+S3_RESOURCE = boto3.resource("s3")
 
 
 def pg_cli(args_list):
@@ -124,7 +126,23 @@ def get_nzsl_raw_keys_dict():
             video_key,
         ] = rawl.split("|")
 
-        # Hack to handle FULL JOIN
+        """
+        Hack to handle FULL JOIN.
+        We are storing data rows in a dictionary, indexed by video_key.
+        Because we are doing a FULL JOIN on the NZSL Signbank database,
+        we also get rows where there are gloss entries that do not have
+        a corresponding video_glossvideo.
+        (These are erroneous and one of the reasons this script exists,
+        to find them.)
+        Consequently there is no video_key, and we cannot use it to index
+        the data row.
+        Instead, we create a fake video_key that is unique and, theoretically,
+        impossible for anything else to try and use. It also has a 'safe',
+        easily filtered prefix, which means later code can easily tell
+        a fake key from a real key.
+        Always having a key, in this way, means that code, eg. loops,
+        that depends on there being a dictionary key axis will not break.
+        """
         video_key = maybe_fakekey(video_key.strip())
 
         # This sets the initial field ordering in the all_keys dictionary row
@@ -149,8 +167,7 @@ def get_nzsl_raw_keys_dict():
 def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
     print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
 
-    s3_resource = boto3.resource("s3")
-    s3_resource_bucket = s3_resource.Bucket(s3_bucket)
+    s3_resource_bucket = S3_RESOURCE.Bucket(s3_bucket)
     this_s3_bucket_raw_keys_list = [
         s3_object.key for s3_object in s3_resource_bucket.objects.all()
     ]
@@ -172,6 +189,9 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
     this_all_keys_dict = {}
 
     # Find S3 keys that are present in NZSL, or absent
+    # TODO This could be changed to use pop(), so that on each pass we are left
+    # with a smaller subset of the rows, which we can search faster. If the
+    # database becomes very large in future this could save a lot of processing.
     for video_key in this_s3_bucket_raw_keys_list:
         dict_row = this_nzsl_raw_keys_dict.get(video_key, None)
         if dict_row:
@@ -196,13 +216,14 @@ def create_all_keys_dict(this_nzsl_raw_keys_dict, this_s3_bucket_raw_keys_list):
     return this_all_keys_dict
 
 
-# Cases
-# In S3     In NZSL     Action
-#   Is        Not         Delete S3 Object
-#   Is        Is          Update ACL
-#   Not       Is          Review
-#      Other              Review
 def get_recommended_action(key_in_nzsl, key_in_s3):
+    """
+    Cases
+    In S3     In NZSL     Action
+      Is        Not         Delete S3 Object
+      Is        Is          Update ACL
+      Not       --          Review
+    """
     if key_in_s3:
         if key_in_nzsl:
             return "Update ACL"
@@ -213,9 +234,7 @@ def get_recommended_action(key_in_nzsl, key_in_s3):
 
 # Get S3 object's ACL
 def get_s3_canned_acl(video_key):
-    # TODO pass in a boto client instead of recreating one each time
-    s3_client = boto3.client("s3")
-    acls_grants = s3_client.get_object_acl(Bucket=AWS_S3_BUCKET, Key=video_key)[
+    acls_grants = S3_CLIENT.get_object_acl(Bucket=AWS_S3_BUCKET, Key=video_key)[
         "Grants"
     ]
     if len(acls_grants) > 1:
@@ -232,10 +251,7 @@ def get_s3_canned_acl(video_key):
 
 # Get S3 object's LastModified date/time
 def get_s3_lastmodified(video_key):
-    # TODO pass in a boto client instead of recreating one each time
-    return boto3.client("s3").head_object(Bucket=AWS_S3_BUCKET, Key=video_key)[
-        "LastModified"
-    ]
+    return S3_CLIENT.head_object(Bucket=AWS_S3_BUCKET, Key=video_key)["LastModified"]
 
 
 def build_csv_header():
