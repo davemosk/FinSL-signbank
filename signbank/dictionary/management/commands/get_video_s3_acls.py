@@ -290,7 +290,7 @@ def process_keys(this_all_keys_dict):
 
 class Command(BaseCommand):
     help = (
-        "Gets all S3 bucket video objects and recommends actions for them. "
+        "Get all S3 bucket video object and recommends actions for them. "
         "You must setup: (1) An AWS auth means, eg. AWS_PROFILE env var. "
         "(2) Postgres access details, eg. DATABASE_URL env var."
     )
