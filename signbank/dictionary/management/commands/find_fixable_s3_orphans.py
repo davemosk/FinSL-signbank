@@ -34,13 +34,10 @@ GLOBAL_COLUMN_HEADINGS = [
 
 # Other globals
 CSV_DELIMITER = ","
+FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 PGCLI = "/usr/bin/psql"
 AWS_S3_BUCKET = ""
-
-# Hack to handle FULL JOIN
-# See get_nzsl_raw_keys_dict()
-FAKEKEY_PREFIX = "this_is_not_a_key_"
 
 
 def pg_cli(args_list):

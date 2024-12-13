@@ -1,7 +1,5 @@
 #!/usr/bin/env -S python3 -u
 #
-# This script needs to be run in a pyenv virtualenv with the Django project installed.
-#
 # Given a CSV file containing S3 objects that can be matched back to NZSL entries.
 # Updates the database to repair the NZSL entries.
 # Essentially repairs one form of import error.
@@ -12,68 +10,19 @@
 #  aws s3 - NZSL IAM access
 #  s3:GetObjectAcl permissions or READ_ACP access to the object
 #  https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object-acl.html
-# For some commands you need to run this in a venv that has all the right Python site-packages.
-# TODO Convert this script to a Django Management Command
 
+from django.core.management.base import BaseCommand
 import os
 import sys
 import subprocess
-import argparse
 import csv
-
-# Magic required to allow this script to use Signbank Django classes
-# This goes away if this script becomes a Django Management Command
-print("Importing site-packages environment", file=sys.stderr)
-print(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), file=sys.stderr)
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
-from django.core.wsgi import get_wsgi_application
-
-get_wsgi_application()
-
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
 from signbank.dictionary.models import (
     FieldChoice,
     Gloss,
 )
 from signbank.video.models import GlossVideo
-
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import models
 
-
-parser = argparse.ArgumentParser(
-    description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
-    "Postgres access details, eg. DATABASE_URL env var."
-)
-
-# Positional arguments
-parser.add_argument("csv_filename", help="Name of CSV file, or '-' for STDIN")
-
-# Optional arguments
-parser.add_argument(
-    "--env",
-    default="uat",
-    required=False,
-    help="Environment to run against, eg 'production, 'uat', etc (default: '%(default)s')",
-)
-parser.add_argument(
-    "--pgcli",
-    default="/usr/bin/psql",
-    required=False,
-    help=f"Postgres client path (default: %(default)s)",
-)
-parser.add_argument(
-    "--commit",
-    default=False,
-    required=False,
-    action="store_true",
-    help=f"Actually make changes, instead of just outputting what would happen (default)",
-)
-args = parser.parse_args()
 
 # Keep synced with other scripts
 GLOSS_ID_COLUMN = "Gloss ID"
@@ -91,8 +40,10 @@ GLOBAL_COLUMN_HEADINGS = [
 CSV_DELIMITER = ","
 FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-PGCLI = args.pgcli
-AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
+PGCLI = "/usr/bin/psql"
+AWS_S3_BUCKET = ""
+DO_COMMIT = False
+CSV_INPUT_FILENAME = "-"
 
 
 def pg_cli(args_list):
@@ -126,7 +77,7 @@ def process_csv():
         field="video_type", english_name="main"
     ).first()
 
-    csv_rows = read_csv(args.csv_filename)
+    csv_rows = read_csv(CSV_INPUT_FILENAME)
 
     out = csv.writer(sys.stdout, delimiter=CSV_DELIMITER, quoting=csv.QUOTE_NONE)
 
@@ -162,7 +113,7 @@ def process_csv():
         print(gloss)
         print(gloss_video)
 
-        if not args.commit:
+        if not DO_COMMIT:
             print("Dry run, no changes (use --commit flag to make changes)")
             continue
 
@@ -172,10 +123,54 @@ def process_csv():
             print(f"Error: could not create {gloss_video}")
 
 
-print(f"Env:         {args.env}", file=sys.stderr)
-print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
-print(f"PGCLI:       {PGCLI}", file=sys.stderr)
-print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
-print(f"Mode:        {'Commit' if args.commit else 'Dry-run'}")
+class Command(BaseCommand):
+    help = (
+        f"Given a CSV file containing S3 objects that can be matched back to NZSL entries: "
+        f"Update the database to repair the NZSL entries. "
+        f"CSV Column headings {GLOBAL_COLUMN_HEADINGS}. "
+        f"You must have setup: An AWS auth means, eg. AWS_PROFILE env var. "
+        f"Postgres access details, eg. DATABASE_URL env var."
+    )
 
-process_csv()
+    def add_arguments(self, parser):
+        # Positional arguments
+        parser.add_argument(
+            "csv_filename", help="Name of CSV input file, or '-' for STDIN"
+        )
+
+        # Optional arguments
+        parser.add_argument(
+            "--env",
+            default="uat",
+            required=False,
+            help="Environment to run against, eg 'production, 'uat', etc (default: '%(default)s')",
+        )
+        parser.add_argument(
+            "--pgcli",
+            default="/usr/bin/psql",
+            required=False,
+            help=f"Postgres client path (default: %(default)s)",
+        )
+        parser.add_argument(
+            "--commit",
+            default=DO_COMMIT,
+            required=False,
+            action="store_true",
+            help=f"Actually make changes, instead of just outputting what would happen (default)",
+        )
+
+    def handle(self, *args, **options):
+        global PGCLI, AWS_S3_BUCKET, CSV_INPUT_FILENAME, DO_COMMIT
+        PGCLI = options["pgcli"]
+        AWS_S3_BUCKET = f"nzsl-signbank-media-{options['env']}"
+        CSV_INPUT_FILENAME = options["csv_filename"]
+        DO_COMMIT = options["commit"]
+
+        print(f"Env:         {options['env']}", file=sys.stderr)
+        print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
+        print(f"PGCLI:       {PGCLI}", file=sys.stderr)
+        print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
+        print(f"Input file:  {options['csv_filename']}", file=sys.stderr)
+        print(f"Mode:        {'Commit' if DO_COMMIT else 'Dry-run'}", file=sys.stderr)
+
+        process_csv()
