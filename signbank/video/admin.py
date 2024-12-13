@@ -75,18 +75,18 @@ class GlossesVideoCountFilter(admin.SimpleListFilter):
             return queryset
 
 
-def set_public(modeladmin, request, queryset):
+def admin_set_public(modeladmin, request, queryset):
     for glossvideo in queryset.all():
         glossvideo.set_public(True)
 
 
-def set_hidden(modeladmin, request, queryset):
+def admin_set_hidden(modeladmin, request, queryset):
     for glossvideo in queryset.all():
         glossvideo.set_public(False)
 
 
-set_public.short_description = _lazy("Set selected videos public")
-set_hidden.short_description = _lazy("Set selected videos hidden")
+admin_set_public.short_description = _lazy("Set selected videos public")
+admin_set_hidden.short_description = _lazy("Set selected videos hidden")
 
 
 class GlossVideoAdmin(admin.ModelAdmin):
@@ -98,7 +98,7 @@ class GlossVideoAdmin(admin.ModelAdmin):
                     'videofile', 'video_type', 'posterfile', 'id', 'version')
     list_filter = ('is_public', 'video_type', 'gloss__dataset',
                    HasGlossFilter, 'dataset', HasPosterFilter, GlossesVideoCountFilter)
-    actions = [set_public, set_hidden]
+    actions = [admin_set_public, admin_set_hidden]
 
     def get_queryset(self, request):
         qs = super(GlossVideoAdmin, self).get_queryset(request)
