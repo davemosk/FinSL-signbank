@@ -1,7 +1,5 @@
 #!/usr/bin/env -S python3 -u
 #
-# This script needs to be run in a pyenv virtualenv with the Django project installed.
-#
 # Finds orphaned S3 objects that can be matched back to NZSL entries that are missing S3 objects.
 # Essentially finds one form of import error.
 #
@@ -11,24 +9,15 @@
 #  aws s3 - NZSL IAM access
 #  s3:GetObjectAcl permissions or READ_ACP access to the object
 #  https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object-acl.html
-# For some commands you need to run this in a venv that has all the right Python site-packages.
-# TODO Convert this script to a Django Management Command
 
+from django.core.management.base import BaseCommand
 import os
 import sys
 import subprocess
-import argparse
 from uuid import uuid4
 import boto3
 import csv
 
-# Magic required to allow this script to use Signbank Django classes
-# This goes away if this script becomes a Django Management Command
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "signbank.settings.development")
-from django.core.wsgi import get_wsgi_application
-
-get_wsgi_application()
 
 from django.contrib.auth import get_user_model
 
@@ -39,23 +28,6 @@ from signbank.dictionary.models import (
 )
 
 
-parser = argparse.ArgumentParser(
-    description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
-    "Postgres access details, eg. DATABASE_URL env var."
-)
-parser.add_argument(
-    "--env",
-    default="uat",
-    required=False,
-    help="Environment to run against, eg 'production, 'uat', etc (default: '%(default)s')",
-)
-parser.add_argument(
-    "--pgcli",
-    default="/usr/bin/psql",
-    required=False,
-    help=f"Postgres client path (default: %(default)s)",
-)
-args = parser.parse_args()
 
 # Keep synced with other scripts
 GLOSS_ID_COLUMN = "Gloss ID"
@@ -72,8 +44,8 @@ GLOBAL_COLUMN_HEADINGS = [
 # Other globals
 CSV_DELIMITER = ","
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-PGCLI = args.pgcli
-AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
+PGCLI = "/usr/bin/psql"
+AWS_S3_BUCKET = ""
 
 # Hack to handle FULL JOIN
 # See get_nzsl_raw_keys_dict()
@@ -186,11 +158,11 @@ def get_nzsl_raw_keys_dict():
 
 
 # Get all keys from AWS S3
-def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
-    print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
+def get_s3_bucket_raw_keys_list():
+    print(f"Getting raw AWS S3 keys recursively ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 
     s3_resource = boto3.resource("s3")
-    s3_resource_bucket = s3_resource.Bucket(s3_bucket)
+    s3_resource_bucket = s3_resource.Bucket(AWS_S3_BUCKET)
     this_s3_bucket_raw_keys_list = [
         s3_object.key for s3_object in s3_resource_bucket.objects.all()
     ]
@@ -300,9 +272,32 @@ def find_orphans():
                     out.writerow([gloss_id, gloss.idgloss, str(gloss_public), test_key])
 
 
-print(f"Env:         {args.env}", file=sys.stderr)
-print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
-print(f"PGCLI:       {PGCLI}", file=sys.stderr)
-print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
+class Command(BaseCommand):
+    help = ( "You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
+    "Postgres access details, eg. DATABASE_URL env var." )
 
-find_orphans()
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--env",
+            default="uat",
+            required=False,
+            help="Environment to run against, eg 'production, 'uat', etc (default: '%(default)s')",
+        )
+        parser.add_argument(
+            "--pgcli",
+            default=PGCLI,
+            required=False,
+            help=f"Postgres client path (default: %(default)s)",
+        )
+
+    def handle(self, *args, **options):
+        global PGCLI, AWS_S3_BUCKET
+        PGCLI = options["pgcli"]
+        AWS_S3_BUCKET = f"nzsl-signbank-media-{options['env']}"
+
+        print(f"Env:         {options['env']}", file=sys.stderr)
+        print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
+        print(f"PGCLI:       {PGCLI}", file=sys.stderr)
+        print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
+
+        find_orphans()
