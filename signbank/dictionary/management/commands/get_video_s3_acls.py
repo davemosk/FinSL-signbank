@@ -6,57 +6,25 @@
 #  s3:GetObjectAcl permissions or READ_ACP access to the object
 #  https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object-acl.html
 # For some commands you need to run this in a venv that has all the right Python site-packages.
-# TODO Convert this script to a Django Management Command
 
+from django.core.management.base import BaseCommand
 import os
 import sys
 import subprocess
-import argparse
 from uuid import uuid4
 from pprint import pprint
 import boto3
 import csv
 
-parser = argparse.ArgumentParser(
-    description="You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
-    "Postgres access details, eg. DATABASE_URL env var."
-)
-parser.add_argument(
-    "--env",
-    default="uat",
-    required=False,
-    help="Environment to run against, eg 'production, 'uat', etc (default: '%(default)s')",
-)
-parser.add_argument(
-    "--pgcli",
-    default="/usr/bin/psql",
-    required=False,
-    help=f"Postgres client path (default: %(default)s)",
-)
-parser.add_argument(
-    "--dumpnzsl",
-    default=False,
-    required=False,
-    action="store_true",
-    help=f"Dump raw NZSL database output",
-)
-parser.add_argument(
-    "--dumps3",
-    default=False,
-    required=False,
-    action="store_true",
-    help=f"Dump raw S3 keys output",
-)
-args = parser.parse_args()
 
 # Globals
 CSV_DELIMITER = ","
 FAKEKEY_PREFIX = "this_is_not_a_key_"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-PGCLI = args.pgcli
-AWS_S3_BUCKET = f"nzsl-signbank-media-{args.env}"
 S3_CLIENT = boto3.client("s3")
 S3_RESOURCE = boto3.resource("s3")
+PGCLI = "/usr/bin/psql"
+AWS_S3_BUCKET = ""
 
 
 def pg_cli(args_list):
@@ -165,10 +133,10 @@ def get_nzsl_raw_keys_dict():
 
 
 # Get all keys from AWS S3
-def get_s3_bucket_raw_keys_list(s3_bucket=AWS_S3_BUCKET):
-    print(f"Getting raw AWS S3 keys recursively ({s3_bucket}) ...", file=sys.stderr)
+def get_s3_bucket_raw_keys_list():
+    print(f"Getting raw AWS S3 keys recursively ({AWS_S3_BUCKET}) ...", file=sys.stderr)
 
-    s3_resource_bucket = S3_RESOURCE.Bucket(s3_bucket)
+    s3_resource_bucket = S3_RESOURCE.Bucket(AWS_S3_BUCKET)
     this_s3_bucket_raw_keys_list = [
         s3_object.key for s3_object in s3_resource_bucket.objects.all()
     ]
@@ -321,19 +289,56 @@ def process_keys(this_all_keys_dict):
         out.writerow(build_csv_row(video_key, *dict_row))
 
 
-print(f"Env:         {args.env}", file=sys.stderr)
-print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
-print(f"PGCLI:       {PGCLI}", file=sys.stderr)
-print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
+class Command(BaseCommand):
+    help = "You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
+    "Postgres access details, eg. DATABASE_URL env var."
 
-if args.dumpnzsl:
-    pprint(get_nzsl_raw_keys_dict())
-    exit()
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--env",
+            default="uat",
+            required=False,
+            help="Environment to run against, eg 'production, 'uat', etc (default: '%(default)s')",
+        )
+        parser.add_argument(
+            "--pgcli",
+            default=PGCLI,
+            required=False,
+            help=f"Postgres client path (default: %(default)s)",
+        )
+        parser.add_argument(
+            "--dumpnzsl",
+            default=False,
+            required=False,
+            action="store_true",
+            help=f"Dump raw NZSL database output",
+        )
+        parser.add_argument(
+            "--dumps3",
+            default=False,
+            required=False,
+            action="store_true",
+            help=f"Dump raw S3 keys output",
+        )
 
-if args.dumps3:
-    pprint(get_s3_bucket_raw_keys_list())
-    exit()
+    def handle(self, *args, **options):
+        global PGCLI, AWS_S3_BUCKET
+        PGCLI = options["pgcli"]
+        AWS_S3_BUCKET = f"nzsl-signbank-media-{options['env']}"
 
-process_keys(
-    create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
-)
+        print(f"Env:         {options['env']}", file=sys.stderr)
+        print(f"S3 bucket:   {AWS_S3_BUCKET}", file=sys.stderr)
+        print(f"PGCLI:       {PGCLI}", file=sys.stderr)
+        print(f"AWS profile: {os.environ.get('AWS_PROFILE', '')}", file=sys.stderr)
+
+        if options["dumpnzsl"]:
+            pprint(get_nzsl_raw_keys_dict())
+            exit()
+
+        if options["dumps3"]:
+            pprint(get_s3_bucket_raw_keys_list())
+            exit()
+
+        process_keys(
+            create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
+        )
