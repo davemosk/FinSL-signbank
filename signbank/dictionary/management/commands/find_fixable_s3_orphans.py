@@ -28,7 +28,6 @@ from signbank.dictionary.models import (
 )
 
 
-
 # Keep synced with other scripts
 GLOSS_ID_COLUMN = "Gloss ID"
 GLOSS_COLUMN = "Gloss"
@@ -273,8 +272,10 @@ def find_orphans():
 
 
 class Command(BaseCommand):
-    help = ( "You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
-    "Postgres access details, eg. DATABASE_URL env var." )
+    help = (
+        "You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
+        "Postgres access details, eg. DATABASE_URL env var."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
