@@ -5,7 +5,6 @@
 #  aws s3 - NZSL IAM access
 #  s3:GetObjectAcl permissions or READ_ACP access to the object
 #  https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object-acl.html
-# For some commands you need to run this in a venv that has all the right Python site-packages.
 
 from django.core.management.base import BaseCommand
 import os
@@ -290,8 +289,11 @@ def process_keys(this_all_keys_dict):
 
 
 class Command(BaseCommand):
-    help = "You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
-    "Postgres access details, eg. DATABASE_URL env var."
+    help = (
+        "Gets all S3 bucket video objects and recommends actions for them. "
+        "You must setup: (1) An AWS auth means, eg. AWS_PROFILE env var. "
+        "(2) Postgres access details, eg. DATABASE_URL env var."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -340,5 +342,7 @@ class Command(BaseCommand):
             exit()
 
         process_keys(
-            create_all_keys_dict(get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list())
+            create_all_keys_dict(
+                get_nzsl_raw_keys_dict(), get_s3_bucket_raw_keys_list()
+            )
         )
