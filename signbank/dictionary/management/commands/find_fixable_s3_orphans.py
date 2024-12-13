@@ -17,15 +17,7 @@ import subprocess
 from uuid import uuid4
 import boto3
 import csv
-
-
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-from signbank.dictionary.models import (
-    Gloss,
-)
+from signbank.dictionary.models import Gloss
 
 
 # Keep synced with other scripts
@@ -273,6 +265,7 @@ def find_orphans():
 
 class Command(BaseCommand):
     help = (
+        "Find orphaned S3 objects that can be matched back to NZSL entries that are missing S3 objects. "
         "You must setup: An AWS auth means, eg. AWS_PROFILE env var. "
         "Postgres access details, eg. DATABASE_URL env var."
     )
