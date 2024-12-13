@@ -188,8 +188,8 @@ def get_recommended_action(key_in_nzsl, key_in_s3):
     """
     Cases
     In S3     In NZSL     Action
-      Is        Not         Delete S3 Object
       Is        Is          Update ACL
+      Is        Not         Delete S3 Object
       Not       --          Review
     """
     if key_in_s3:
