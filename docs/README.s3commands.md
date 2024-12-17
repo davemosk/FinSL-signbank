@@ -4,7 +4,8 @@
 
 There are 3 Management Commands to help with this.
 
-These commands are used to report on relationships between Signbank's Postgres database and Amazon's S3 file storage, and then
+These commands are used to report on relationships between Signbank's Postgres database and Amazon's S3 file storage,
+and then
 _assist_ with effecting some types of repair where discrepancies exist.
 
 Only some actions are performed by these commands, other operations have to be manually commanded using the AWS `cli` or
@@ -63,7 +64,8 @@ Sbank Gloss created at
 - `Delete S3 Object`
 
 The S3 object is "orphaned", that is, it has no corresponding NZSL Signbank postgres database record. Some of these are
-fixable, see the `find-fixable-s3-orphans.py` command. But any that are not should be deleted as they are taking up space
+fixable, see the `find-fixable-s3-orphans.py` command. But any that are not should be deleted as they are taking up
+space
 without being visible to the NZSL Signbank application.
 
 - `Update ACL`
@@ -97,7 +99,7 @@ Example output STDERR:
 (Note that `DATABASE_URL` is never output, for security reasons)
 
 ```
-Env:         uat
+Env:         dev
 S3 bucket:   nzsl-signbank-media-dev
 PGCLI:       /usr/bin/psql
 AWS profile: nzsl
@@ -108,7 +110,6 @@ Getting raw AWS S3 keys recursively (nzsl-signbank-media-dev) ...
 Getting keys present and absent across NZSL Signbank and S3 ...
 Getting detailed S3 data for keys (nzsl-signbank-media-dev) ...
 ```
-
 
 <br />
 
@@ -124,7 +125,6 @@ Update ACL,8273-organic.8273_usageexample_2.mp4,2024-11-11 03:52:32+00:00,privat
 Update ACL,8273-organic.8273_video.mp4,2024-11-11 03:52:33+00:00,private,private,8273,19892,False,False,organic:8273,2024-03-25 20:45:34.050454+00
 ...
 ```
-
 
 <br />
 
@@ -143,31 +143,109 @@ This is not guaranteed to be correct, so the output needs human review.
 It outputs what it finds as CSV with header, in a format that can be digested by the 3rd command
 `repair_fixable_s3_orphans`.
 
+The output columns are as follows:
+
+`Gloss ID`
+The command `repair_fixable_s3_orphans` uses this to find the Gloss and connect it to GlossVideo records
+
+`Gloss`
+This is required by `repair_fixable_s3_orphans` but is mainly for human readability
+
+`Gloss public`
+This is mainly for debugging, and is ignored by `repair_fixable_s3_orphans`
+
+`Suggested Video key`
+This is the closest matching video key the command found for the `Gloss`
+
+
 <br />
 
 Example usage:
 
 ```
-bin/develop.py 
+bin/develop.py find_fixable_s3_orphans --env dev > orphans.csv
 ```
 
+<br />
 
+Example output STDERR:
+
+```
+Env:         dev
+S3 bucket:   nzsl-signbank-media-dev
+PGCLI:       /usr/bin/psql
+AWS profile: nzsl
+Getting raw list of video file info from NZSL Signbank ...
+17470 rows retrieved
+Getting raw AWS S3 keys recursively (nzsl-signbank-media-dev) ...
+20035 rows retrieved
+Getting keys present and absent across NZSL Signbank and S3 ...
+Finding fixable orphans
+```
+
+<br />
+
+Example output STDOUT:
+
+```
+tail -f orphans.csv
+Gloss ID,Gloss,Gloss public,Suggested Video key
+8274,metaphor:8274,8274-Metaphor.8274_usageexample_1.mp4
+8274,metaphor:8274,8274-Metaphor.8274_usageexample_2.mp4
+8274,metaphor:8274,8274-Metaphor.8274_video.mp4
+8319,ecosystem:8319,8319-ecosystem.8319_usageexample_1.mov
+...
+```
 
 <br />
 
 ### repair_fixable_s3_orphans
 
-This attempts to unify NZSL Signbank records with S3 orphans, by digesting a CSV input of the same format as output by
+This command attempts to unify NZSL Signbank records with S3 orphans, by digesting a CSV input of the same format as
+output by
 `find-fixable-orphans.py`. It does this by generating `GlossVideo` Django objects where necessary, and associating them
 with the correct `Gloss` Django objects. This operation _changes_ the database contents and so must be used with
 caution.
+
+If the command is able to successfully create the new `GlossVideo` object, it will output the details of the `Gloss` and
+the new `GlossVideo`.
+
+If, however, the command cannot create a new `GlossVideo`, it will output the reason. Usually this is
+`GlossVideo already exists`.
 
 <br />
 
 Example usage:
 
 ```
-bin/develop.py 
+bin/develop.py repair_fixable_s3_orphans --env dev orphans.csv
 ```
 
+<br />
 
+Example output STDERR:
+
+```
+Env:         dev
+S3 bucket:   nzsl-signbank-media-dev
+PGCLI:       /usr/bin/psql
+AWS profile: nzsl
+Input file:  orphans.csv
+Mode:        Dry-run
+```
+
+<br />
+
+Example output STDOUT:
+
+```
+8274,metaphor:8274,8274-Metaphor.8274_usageexample_1.mp4
+Ignoring: GlossVideo already exists: 8274-Metaphor.8274_usageexample_1.mp4
+8274,metaphor:8274,8274-Metaphor.8274_usageexample_2.mp4
+Ignoring: GlossVideo already exists: 8274-Metaphor.8274_usageexample_2.mp4
+8274,metaphor:8274,8274-Metaphor.8274_video.mp4
+Ignoring: GlossVideo already exists: 8274-Metaphor.8274_video.mp4
+8319,ecosystem:8319,8319-ecosystem.8319_usageexample_1.mov
+Ignoring: GlossVideo already exists: 8319-ecosystem.8319_usageexample_1.mov
+...
+```
