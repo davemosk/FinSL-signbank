@@ -128,9 +128,9 @@ Update ACL,8273-organic.8273_video.mp4,2024-11-11 03:52:33+00:00,private,private
 
 <br />
 
-### find-fixable-s3-orphans
+### find_fixable_s3_orphans
 
-This command accesses the database and S3 in a similar way to `get-video-s3-acls.py`.
+This command accesses the database and S3 in a similar way to `get_video_s3_acls`.
 
 (Dev note: It contains a lot of duplicated code with that command, which should be libratised at some point.)
 
@@ -141,26 +141,33 @@ It then parses the name string of the object and attempts to find an NZSL Signba
 This is not guaranteed to be correct, so the output needs human review.
 
 It outputs what it finds as CSV with header, in a format that can be digested by the 3rd command
-`repair-fixable-s3-orphans.py`.
+`repair_fixable_s3_orphans`.
 
 <br />
 
 Example usage:
 
 ```
-
+bin/develop.py 
 ```
 
 
 
 <br />
 
-### repair-fixable-s3-orphans
+### repair_fixable_s3_orphans
 
 This attempts to unify NZSL Signbank records with S3 orphans, by digesting a CSV input of the same format as output by
 `find-fixable-orphans.py`. It does this by generating `GlossVideo` Django objects where necessary, and associating them
 with the correct `Gloss` Django objects. This operation _changes_ the database contents and so must be used with
 caution.
 
+<br />
+
+Example usage:
+
+```
+bin/develop.py 
+```
 
 
