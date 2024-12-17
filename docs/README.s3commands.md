@@ -130,7 +130,7 @@ Update ACL,8273-organic.8273_video.mp4,2024-11-11 03:52:33+00:00,private,private
 
 ### find_fixable_s3_orphans
 
-This command accesses the database and S3 in a similar way to `get_video_s3_acls`.
+This command accesses the database and S3 in a similar way to `get_video_s3_acls`
 
 (Dev note: It contains a lot of duplicated code with that command, which should be libratised at some point.)
 
@@ -207,11 +207,28 @@ output by
 with the correct `Gloss` Django objects. This operation _changes_ the database contents and so must be used with
 caution.
 
+The CSV file is supplied as a non-optional positional argument.
+
+**Important**
+
+**--commit**
+
+*The default behaviour is dry-run, i.e. the command will make no database changes.*
+*If you provide the optional argument*
+
+`--commit`
+
+*then the command will make database changes.*
+
+<br />
+
+The command always outputs its inputs first, to expose what it is trying to do.
+
 If the command is able to successfully create the new `GlossVideo` object, it will output the details of the `Gloss` and
-the new `GlossVideo`.
+the new `GlossVideo`
 
 If, however, the command cannot create a new `GlossVideo`, it will output the reason. Usually this is
-`GlossVideo already exists`.
+`GlossVideo already exists`
 
 <br />
 
