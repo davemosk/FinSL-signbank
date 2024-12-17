@@ -29,7 +29,7 @@ The scripts have common arguments:
 
 <br />
 
-### get-video-s3-acls.py
+### get_video_s3_acls.py
 
 This script has extra arguments:
 
@@ -74,6 +74,8 @@ This uses AWS *Canned ACLs*, which in our case means the two values `private` an
 Usually means there is a Signbank NZSL database entry with no corresponding S3 object. These are out of scope for these
 scripts, and are expected to be fixed by other means (eg. functionality within the NZSL Signbank app).
 
+<br />
+
 Example usage:
 
 ```
@@ -85,6 +87,42 @@ export AWS_PROFILE=nzsl
 
 get-video-s3-acls.py --env dev > dev.csv
 ```
+
+<br />
+
+Example output STDERR:
+
+(Note that `DATABASE_URL` is never output, for security reasons)
+
+```
+Env:         uat
+S3 bucket:   nzsl-signbank-media-dev
+PGCLI:       /usr/bin/psql
+AWS profile: nzsl
+Getting raw list of video file info from NZSL Signbank ...
+17470 rows retrieved
+Getting raw AWS S3 keys recursively (nzsl-signbank-media-dev) ...
+17442 rows retrieved
+Getting keys present and absent across NZSL Signbank and S3 ...
+Getting detailed S3 data for keys (nzsl-signbank-media-dev) ...
+```
+
+
+<br />
+
+Example output STDOUT (i.e. CSV):
+
+```
+tail -f dev.csv
+Action,S3 Video key,S3 LastModified,S3 Expected Canned ACL,S3 Actual Canned ACL,Sbank Gloss ID,Sbank Video ID,Sbank Gloss public,Sbank Video public,Sbank Gloss,Sbank Gloss created at
+Update ACL,8271-Coronavirus (2 signs).8271_video.mov,2024-11-11 03:52:32+00:00,private,private,8271,19804,False,False,Coronavirus (2 signs):8271,2024-03-25 20:45:34.050097+00
+Update ACL,8272-Coronavirus.8272_video.mov,2024-11-11 03:52:32+00:00,private,private,8272,19658,False,False,Coronavirus:8272,2024-03-25 20:45:34.050294+00
+Update ACL,8273-organic.8273_usageexample_1.mp4,2024-11-11 03:52:32+00:00,private,private,8273,19890,False,False,organic:8273,2024-03-25 20:45:34.050454+00
+Update ACL,8273-organic.8273_usageexample_2.mp4,2024-11-11 03:52:32+00:00,private,private,8273,19891,False,False,organic:8273,2024-03-25 20:45:34.050454+00
+Update ACL,8273-organic.8273_video.mp4,2024-11-11 03:52:33+00:00,private,private,8273,19892,False,False,organic:8273,2024-03-25 20:45:34.050454+00
+...
+```
+
 
 <br />
 
