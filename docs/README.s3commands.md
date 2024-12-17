@@ -204,7 +204,9 @@ Gloss ID,Gloss,Gloss public,Suggested Video key
 This command attempts to unify NZSL Signbank records with S3 orphans, by digesting a CSV input of the same format as
 output by
 `find-fixable-orphans.py`. It does this by generating `GlossVideo` Django objects where necessary, and associating them
-with the correct `Gloss` Django objects. This operation _changes_ the database contents and so must be used with
+with the correct `Gloss` Django objects.
+
+This operation _changes_ the database contents and so must be used with
 caution.
 
 The CSV file is supplied as a non-optional positional argument.
@@ -310,7 +312,7 @@ The file `orphans-uat.csv` was generated using command `find_fixable_s3_orphans`
 
 This is because you have de-orphaned some of the S3 objects
 
-Here in our exampls this file is named `uat.csv`
+Here in our examples this file is named `uat.csv`
 
 <br />
 
