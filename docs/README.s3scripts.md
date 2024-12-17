@@ -1,25 +1,27 @@
-## Diagnosing and manipulating S3/Postgres video relatioinships
+## Diagnosing and manipulating S3/Postgres video relationships
 
-There are 3 scripts to help with this.
+<br />
 
-These are used to report on relationships between Signbank's Postgres database and Amazon's S3 file storage, and then
+There are 3 Management Commands to help with this.
+
+These commands are used to report on relationships between Signbank's Postgres database and Amazon's S3 file storage, and then
 _assist_ with effecting some types of repair where discrepancies exist.
 
-Only some actions are performed by these scripts, other operations have to be manually scripted using the AWS `cli` or
-other means, using the output from these scripts as data.
+Only some actions are performed by these commands, other operations have to be manually commanded using the AWS `cli` or
+other means, using the output from these commands as data.
 
-The scripts use the `Boto3` python library to talk to AWS S3.
+The commands use the `Boto3` python library to talk to AWS S3.
 They use an external client to talk to Postgres.
 
 They output diagnostic and progress information on STDERR.
 All data output is on STDOUT and may be safely redirected.
 
-The scripts require, usually in the environment:
+The commands require, usually in the environment:
 
 - An AWS profile - eg. `AWS_PROFILE` environment variable set to a pre-configured profile.
 - A Postgres context - eg. `DATABASE_URL` environment variable with target and credentials.
 
-The scripts have common arguments:
+The commands have common arguments:
 
 - `--help` or `-h` - emit a Help message showing the available arguments.
 - `--env` - specifies the target environment, eg. `dev`, `uat`, `production`. This is used to contruct the name of the
@@ -29,14 +31,14 @@ The scripts have common arguments:
 
 <br />
 
-### get_video_s3_acls.py
+### get_video_s3_acls
 
-This script has extra arguments:
+This command has extra arguments:
 
 - `--dumpnzsl` Just get the NZSL Signbank database contents, output it, then exit. Mainly for debugging.
 - `--dumps3` Just get the AWS S3 contents, output it, then exit. Mainly for debugging.
 
-This script produces a full report on Postgres vs S3.
+This command produces a full report on Postgres vs S3.
 It outputs as CSV, with headers.
 The columns are as follows:
 
@@ -54,14 +56,14 @@ Sbank Gloss
 Sbank Gloss created at
 ```
 
-`Action` is a fix suggested by the script.
+`Action` is a fix suggested by the command.
 
 `Action` is one of:
 
 - `Delete S3 Object`
 
 The S3 object is "orphaned", that is, it has no corresponding NZSL Signbank postgres database record. Some of these are
-fixable, see the `find-fixable-s3-orphans.py` script. But any that are not should be deleted as they are taking up space
+fixable, see the `find-fixable-s3-orphans.py` command. But any that are not should be deleted as they are taking up space
 without being visible to the NZSL Signbank application.
 
 - `Update ACL`
@@ -72,7 +74,7 @@ This uses AWS *Canned ACLs*, which in our case means the two values `private` an
 - `Review`
 
 Usually means there is a Signbank NZSL database entry with no corresponding S3 object. These are out of scope for these
-scripts, and are expected to be fixed by other means (eg. functionality within the NZSL Signbank app).
+commands, and are expected to be fixed by other means (eg. functionality within the NZSL Signbank app).
 
 <br />
 
@@ -85,7 +87,7 @@ and an AWS S3 bucket called 'nzsl-signbank-media-dev' and output the resulting C
 export DATABASE_URL="postgres://postgres:postgres@localhost:5432/postgres"
 export AWS_PROFILE=nzsl
 
-get-video-s3-acls.py --env dev > dev.csv
+bin/develop.py get-video-s3-acls --env dev > dev.csv
 ```
 
 <br />
@@ -126,22 +128,34 @@ Update ACL,8273-organic.8273_video.mp4,2024-11-11 03:52:33+00:00,private,private
 
 <br />
 
-### find-fixable-s3-orphans.py
+### find-fixable-s3-orphans
 
-This script accesses the database and S3 in a similar way to `get-video-s3-acls.py`.
-(Dev note: It contains a lot of duplicated code with that script, which should be libratised at some point.)
+This command accesses the database and S3 in a similar way to `get-video-s3-acls.py`.
+
+(Dev note: It contains a lot of duplicated code with that command, which should be libratised at some point.)
 
 It finds S3 objects that have no corresponding NZSL Signbank database record. These are 'orphaned' S3 objects.
-It then parses the name string of the object and attempts to find an NZSL Signbank record that matches it. This is not
-guaranteed to be correct, so the output needs human review.
-It outputs what it finds as CSV with header, in a format that can be digested by the 3rd script
+
+It then parses the name string of the object and attempts to find an NZSL Signbank record that matches it.
+
+This is not guaranteed to be correct, so the output needs human review.
+
+It outputs what it finds as CSV with header, in a format that can be digested by the 3rd command
 `repair-fixable-s3-orphans.py`.
+
+<br />
+
+Example usage:
+
+```
+
+```
 
 
 
 <br />
 
-### repair-fixable-s3-orphans.py
+### repair-fixable-s3-orphans
 
 This attempts to unify NZSL Signbank records with S3 orphans, by digesting a CSV input of the same format as output by
 `find-fixable-orphans.py`. It does this by generating `GlossVideo` Django objects where necessary, and associating them
