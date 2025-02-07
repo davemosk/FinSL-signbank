@@ -34,4 +34,6 @@ whitenoise = "6.2.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+# setuptools > 69.1 has a known issue
+setuptools = "~69.1"
 
