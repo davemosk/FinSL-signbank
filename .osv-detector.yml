@@ -1,11 +1,11 @@
 ignore:
+  - GHSA-248v-346w-9cwc
   - GHSA-6c3j-c64m-qhgq
+  - GHSA-9mvj-f7w8-pvh2
+  - GHSA-g92j-qhmh-64v2
   - GHSA-gxr4-xjj5-5px2
   - GHSA-jpcq-cgw6-v4j6
   - GHSA-rmxg-73gg-4p98
-  - GHSA-257q-pv89-v3xv # GHSA says affected versions are jQuery v.2.2.0 until v.3.5.0
-  - GHSA-vm8q-m57g-pff3
-  - GHSA-w3h3-4rj7-4ph4
   - GHSA-248v-346w-9cwc # Certifi removes GLOBALTRUST root certificate (https://github.com/advisories/GHSA-248v-346w-9cwc)
   - GHSA-g92j-qhmh-64v2 # Sentry's Python SDK unintentionally exposes environment variables to subprocesses (https://github.com/advisories/GHSA-g92j-qhmh-64v2)
   - GHSA-9mvj-f7w8-pvh2 # Bootstrap Cross-Site Scripting (XSS) vulnerability (https://github.com/advisories/GHSA-9mvj-f7w8-pvh2)
