@@ -14,7 +14,7 @@ FROM python:3.9
 
 ENV DJANGO_SETTINGS_MODULE=signbank.settings.development
 
-RUN pip install "poetry==1.8.3"
+RUN pip install "poetry==2.1.1"
 
 CMD bin/develop.py migrate --noinput && \
     bin/develop.py createcachetable && \
