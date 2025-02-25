@@ -11,7 +11,7 @@ from django.core.files.base import ContentFile
 from django.http import HttpResponse, HttpResponseNotAllowed, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from django.views.generic.edit import FormView
 from django.views.generic.list import ListView
 from djqscsv import render_to_csv_response
@@ -287,7 +287,7 @@ uploaded_glossvideos_listview = permission_required('video.change_glossvideo')(U
 
 def update_glossvideo(request):
     """Process the post request for updating a glossvideo."""
-    if request.is_ajax():
+    if request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest':
         # If request is AJAX, follow this procedure.
         data = json.loads(request.body.decode('utf-8'))
         if request.method == 'POST':
