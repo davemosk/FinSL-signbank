@@ -117,20 +117,14 @@ class GlossListView(ListView):
         'id':                               'id',                           # Signbank ID
         'dataset__name':                    'dataset',                      # Dataset
         'variant_no':                       'variant_number',
-
-        # aggregated multi-value fields
         'gloss_main_aggregate':             'gloss_main',                   # Gloss
         'gloss_secondary_aggregate':        'gloss_secondary',
         'gloss_minor_aggregate':            'gloss_minor',
-
         'gloss_maori_aggregate':            'gloss_maori',                  # Gloss Māori
         'strong_handshape__english_name':   'handshape',
         'location__english_name':           'location_name',
         'one_or_two_hand':                  'one_or_two_handed',
-
-        # aggregated multi-value field
         'wordclasses_aggregate':            'word_classes',
-
         'inflection_manner_degree':         'inflection_manner_and_degree',
         'inflection_temporal':              'inflection_temporal',
         'inflection_plural':                'inflection_plural',
@@ -149,10 +143,8 @@ class GlossListView(ListView):
         'hint':                             'hint',
         'notes':                            'usage_notes',                  # Notes
         'age_variation__english_name':      'age_groups',
-        'relationtoforeignsign__other_lang':'related_to',
-        'usage__english_name':              'usage',
-
-        # aggregated multi-value field
+        'relationtoforeignsign_aggregate':  'related_to',
+        'usage_aggregate':                  'usage',
         'semantic_field_aggregate':         'semantic_field',
 
         # The fields below are not necessary but Micky Vale is happy for them to remain
@@ -230,6 +222,16 @@ class GlossListView(ListView):
                     distinct=True,
                     output_field=CharField()
                 ),
+                relationtoforeignsign_aggregate=StringAgg(
+                    RelationToForeignSign.objects.filter(
+                        gloss=OuterRef('pk')
+                    ).
+                    values('other_lang')[:1],
+                    self.CSV_AGG_DELIM,
+                    distinct=True,
+                    output_field=CharField()
+                ),
+                usage_aggregate=StringAgg('usage__english_name', self.CSV_AGG_DELIM, distinct=True),
                 semantic_field_aggregate=StringAgg('semantic_field__english_name', self.CSV_AGG_DELIM, distinct=True),
                 wordclasses_aggregate=StringAgg('wordclasses__english_name', self.CSV_AGG_DELIM, distinct=True)
             )\
