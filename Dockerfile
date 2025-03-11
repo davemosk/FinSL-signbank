@@ -54,6 +54,8 @@ RUN poetry config installer.max-workers 10 && \
 COPY --from=node /app/signbank/static/js ./signbank/static/js
 COPY --from=node /app/signbank/static/css ./signbank/static/css
 
+RUN ls ./signbank/static/js
+
 # Install application
 ADD . /app
 

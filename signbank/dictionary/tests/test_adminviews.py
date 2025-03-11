@@ -27,10 +27,13 @@ from signbank.dictionary.models import (
     SignLanguage, ShareValidationAggregation, ValidationRecord
 )
 from signbank.video.models import GlossVideo, GlossVideoToken
+import os
+from pprint import pprint
 
 
 class GlossListViewTestCase(TestCase):
     def setUp(self):
+
         # Create user and add permissions
         self.user = User.objects.create_user(username="test", email=None, password="test")
         permission = Permission.objects.get(codename='search_gloss')
@@ -46,6 +49,10 @@ class GlossListViewTestCase(TestCase):
         # Create client for user with no permission
         self.client_noperm = Client()
         self.client_noperm.force_login(self.user_noperm)
+
+    def test_print_js_dir(self):
+        print("STATIC JS CONTENT")
+        pprint(os.listdir('signbank/static/js'))
 
     def test_get_user_not_authenticated(self):
         """Test that non-authenticated user can't access the search page via GET."""
