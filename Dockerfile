@@ -12,6 +12,9 @@ RUN npm ci &&\
 
 FROM python:3.9
 
+# Install application
+ADD . /app
+
 ENV DJANGO_SETTINGS_MODULE=signbank.settings.development
 
 RUN pip install "poetry==2.1.1"
@@ -55,9 +58,6 @@ COPY --from=node /app/signbank/static/js ./signbank/static/js
 COPY --from=node /app/signbank/static/css ./signbank/static/css
 
 RUN ls ./signbank/static/js
-
-# Install application
-ADD . /app
 
 # Collect static assets
 RUN bin/develop.py collectstatic --no-input
