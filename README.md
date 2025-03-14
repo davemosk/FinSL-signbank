@@ -194,6 +194,19 @@ To run the application locally you will need:
 
 1. Run `cp example.env .env`
 
+Note that the local static JS and CSS files have to be installed into place 
+for the app to work properly.
+If you are using docker, you have two choices:
+- Comment out the `volumes` directive in `docker-compose.yml`, OR
+- Manually perform the install step as below (see `Dockerfile` also).
+
+> Install files to signbank/static/js and signbank/static/css:
+> 
+> npm ci
+> 
+> npm run collectjs && npm run collectcss
+
+
 To start the application using docker-compose, simply run:
 
 `docker-compose up`
